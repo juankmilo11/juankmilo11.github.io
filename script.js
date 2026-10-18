@@ -11,6 +11,39 @@ button2.addEventListener("click", () => {
     document.body.style.backgroundColor = colores[i];
 });
 
+const estilos = [
+    { fontFamily: "serif", fontSize: "50px"},
+    { fontFamily: "sans-serif", fontSize: "55px"},
+    { fontFamily: "monospace", fontSize: "60px"},
+    { fontFamily: "cursive", fontSize: "50px"},
+    { fontFamily: "fantasy", fontSize: "55px"},
+    { fontFamily: "cursive", fontSize: "50px"},
+    { fontFamily: "monospace", fontSize: "55px"},
+    { fontFamily: "sans-serif", fontSize: "60px"},
+    { fontFamily: "serif", fontSize: "55px"},
+    { fontFamily: "sans-serif", fontSize: "60px"},
+    { fontFamily: "monospace", fontSize: "50px"},
+    { fontFamily: "cursive", fontSize: "55px"},
+    { fontFamily: "fantasy", fontSize: "60px"},
+    { fontFamily: "cursive", fontSize: "50px"},
+    { fontFamily: "monospace", fontSize: "55px"},
+    { fontFamily: "sans-serif", fontSize: "50px"},
+    { fontFamily: "Homer Simpson UI", fontSize: "60px"}
+];
+
+const button1 = document.querySelector(".button1");
+const titulo = document.querySelector("h1");
+
+button1.addEventListener("click", () => {
+    estilos.forEach((estilo, posicion) => {
+        setTimeout(() => {
+            titulo.style.textAlign = "center";
+            titulo.style.fontSize = estilo.fontSize;
+            titulo.style.fontFamily = estilo.fontFamily;
+        }, posicion * 150);
+    });
+});
+
 function actualizarHora() {
     const ahora = new Date();
 
@@ -25,3 +58,4 @@ function actualizarHora() {
 
 actualizarHora();
 setInterval(actualizarHora, 1000);
+
