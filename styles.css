@@ -15,6 +15,19 @@ body {
     background-color: #ADADAD;
 }
 
+.padre {
+    margin-left: 37%;
+    position: absolute;
+    width: auto;
+    height: auto;
+}
+
+.yinyang {
+    margin-top: 200px;
+    overflow: hidden;
+    position: relative;
+}
+
 .button1 {
     margin: 5px;
     margin-left: 70px;
@@ -45,18 +58,30 @@ body {
 }
 
 .titulo {
-    font-weight: 700;
     text-align: center;
-    margin-top: 40px;
+    margin-top: 90px;
+    margin-bottom: 50px;
+    margin-right: 150px;
     letter-spacing: 2px;
     color: #ffffff;
     font-size: 60px;
     text-transform: uppercase;
+    font-family: "Homer Simpson UI";
 }
 
 .imagen {
-    margin-top: 60px;
-    margin-left: 40%;
+    margin-top: 150px;
+    left: 0;
     width: 300px;
     height: 300px;
+    animation: recorrer 20s linear infinite;
 }
+
+@keyframes recorrer {
+    from {
+        transform: translateX(-100%);
+    }
+
+    to {
+        transform: translateX(100vw);
+    }
