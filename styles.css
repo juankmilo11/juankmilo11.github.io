@@ -57,7 +57,7 @@ body {
 }
 
 .button1:active {
-  transform: translateY(2px);
+  transform: translateY(1px);
   box-shadow: 0 0 0 #333;
 }
 
@@ -116,7 +116,7 @@ body {
 }
 
 .button2:active {
-  transform: translateY(2px);
+  transform: translateY(1px);
   box-shadow: 0 0 0 #333;
 }
 
