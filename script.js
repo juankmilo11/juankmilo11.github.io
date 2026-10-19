@@ -1,18 +1,22 @@
 let i = 0;
 
-const colores = ["#FF0000", "#FFA12E", "#D22EFF", "#2EA1FF"];
+const colores = ["#FF0000", "#FFA12E", "#D22EFF", "#2EA1FF","#27F52E"];
 const button2 = document.querySelector(".button2");
+
+ window.addEventListener("DOMContentLoaded", () => {
+    document.querySelector(".button1").click();
+  });
 
 button2.addEventListener("click", () => {
     i = (i + 1);
-    if (i == 4) {
+    if (i == 5) {
         i = 0;
     }
     document.body.style.backgroundColor = colores[i];
 });
 
 const estilos = [
-    { fontFamily: "serif", fontSize: "50px"},
+    { fontFamily: "serif", fontSize: "55px"},
     { fontFamily: "sans-serif", fontSize: "55px"},
     { fontFamily: "monospace", fontSize: "60px"},
     { fontFamily: "cursive", fontSize: "50px"},
@@ -28,7 +32,7 @@ const estilos = [
     { fontFamily: "cursive", fontSize: "50px"},
     { fontFamily: "monospace", fontSize: "55px"},
     { fontFamily: "sans-serif", fontSize: "50px"},
-    { fontFamily: "Homer Simpson UI", fontSize: "60px"}
+    { fontFamily: 'Verdana', fontSize: "55px"}
 ];
 
 const button1 = document.querySelector(".button1");
