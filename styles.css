@@ -10,12 +10,18 @@ body {
 
 .menu {
     width: 100%;
-    height: 40px;
+    height: 23px;
     display: flex;
-    background-color: #ADADAD;
+    background-color: #E7E7E7;
+    border-top: 1px solid white;
+    border-left: 1px solid white;
+    border-right: 1px solid black;
+    border-bottom: 1px solid black;
 }
 
 .padre {
+    -webkit-user-select: none;
+    user-select: none;
     margin-left: 37%;
     position: absolute;
     width: auto;
@@ -23,65 +29,143 @@ body {
 }
 
 .yinyang {
-    margin-top: 200px;
-    overflow: hidden;
-    position: relative;
+    -webkit-user-select: none;
+    user-select: none;
+    width: 100%;
+    height: 460px;
 }
 
 .button1 {
-    margin: 5px;
-    margin-left: 70px;
-    padding: 5px;
-    padding-left: 40px;
-    padding-right: 40px;
+    -webkit-user-select: none;
+    user-select: none;
+    margin-top: 3px;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    margin-left: 5px;
+    height: 15px;
+    padding-left: 15px;
+    padding-right: 15px;
+    border-top: 1px solid white;
+    border-left: 1px solid white;
+    border-right: 1px solid black;
+    border-bottom: 1px solid black;
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
+    box-shadow: 0 2px 0 #333;
+}
+
+.button1:active {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 #333;
+}
+
+.img2 {
+    -webkit-user-select: none;
+    user-select: none;
+    margin-top: 3px;
+    margin-bottom: 2px;
+    margin-left: 10px;
+    height: 15px;
 }
 
 .reloj {
-    margin-left: 32%;
-    padding-left: 60px;
-    padding-right: 60px;
+    margin-top: 3px;
+    height: 15px;
+    margin-left: 90.2%;
+    padding-left: 15px;
+    padding-right: 15px;
     font-family: 'Courier New', Courier, monospace;
-    font-size: 1rem;
+    font-size: 0.8rem;
     background-color: #333;
     color: #0f0;
-    align-content: center;
-    text-align: center;
+    border-top: 1px solid white;
+    border-left: 1px solid white;
+    border-right: 1px solid black;
+    border-bottom: 1px solid black;
+}
+
+.reloj::selection {
+  color: #0f0;
+  background-color: #0f0;
 }
 
 .button2 {
-    margin: 5px;
+    -webkit-user-select: none;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    margin-top: 3px;
+    margin-bottom: 2px;
     margin-left: auto;
-    margin-right: 70px;
-    padding: 5px;
-    padding-left: 40px;
-    padding-right: 40px;
+    margin-right: 5px;
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-bottom: 2px;
+    width: 26px;
+    height: 15px;
+    border-top: 1px solid white;
+    border-left: 1px solid white;
+    border-right: 1px solid black;
+    border-bottom: 1px solid black;
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
+    box-shadow: 0 2px 0 #333;
+}
+
+.button2:active {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 #333;
 }
 
 .titulo {
+    -webkit-user-select: none;
+    user-select: none;
     text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 139px;
     margin-top: 90px;
     margin-bottom: 50px;
-    margin-right: 150px;
+    margin-right: 120px;
     letter-spacing: 2px;
     color: #ffffff;
-    font-size: 60px;
+    font-size: 55px;
     text-transform: uppercase;
-    font-family: "Homer Simpson UI";
+    font-family: 'Verdana', sans-serif;
 }
 
 .imagen {
-    margin-top: 150px;
-    left: 0;
+    -webkit-user-select: none;
+    user-select: none;
+    position: absolute;
+    top: 370px;
+    left: 50%;
+    transform: translateX(-50%);
     width: 300px;
     height: 300px;
-    animation: recorrer 15s linear infinite alternate;
+    object-fit: contain;
 }
 
-@keyframes recorrer {
-    from {
-        transform: translateX(-100%);
-    }
+.imagen2 {
+    -webkit-user-select: none;
+    user-select: none;
+    margin-top: 350px;
+    margin-left: 800px;
+    width: 300px;
+    height: 300px;
+    animation: desplazamiento 6s infinite alternate linear;
+}
 
-    to {
-        transform: translateX(100vw);
-    }
+@keyframes desplazamiento {
+    from{
+        transform: translateX(-5px);
+    }    to{
+        transform: translateX(21px);
+    } 
+}
+
+
