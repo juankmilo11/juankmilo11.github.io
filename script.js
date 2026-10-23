@@ -57,6 +57,27 @@ function actualizarHora() {
     document.getElementById("reloj").textContent = `${horas}:${minutos}`;
 }
 
+const boton_acc = document.querySelector(".boton_acc");
+
+const yin = document.querySelector(".yin");
+const yang = document.querySelector(".yang");
+
+const velocidades = ['7s', '2s','0.5s','30s'];
+let i = 0;
+
+boton_acc.addEventListener("click", () => {
+
+    // const velocidadAleatoria = (Math.random() * 50 + 0.5).toFixed(2);
+    // yin.style.setProperty('--tiempo-rotacion', `${velocidadAleatoria}s`);
+    // yang.style.setProperty('--tiempo-rotacion', `${velocidadAleatoria}s`);
+
+    const nuevaVelocidad = velocidades[i];
+    yin.style.setProperty('--tiempo-rotacion', nuevaVelocidad);
+    yang.style.setProperty('--tiempo-rotacion', nuevaVelocidad);
+    i = (i + 1) % velocidades.length;
+
+});
+
 actualizarHora();
 setInterval(actualizarHora, 1000);
 
