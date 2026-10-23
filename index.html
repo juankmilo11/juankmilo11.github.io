@@ -1,36 +1,51 @@
 <!DOCTYPE html>
-<html lang="en, es">
-
+<html lang="es">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JK</title>
-    <link rel="icon" type="image/png" href="yin_yang_complete.png">
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#bb3116">
+  <title>JK</title>
+  <link rel="icon" type="image/png" href="img/yin_yang_complete.png">
+  <link rel="stylesheet" href="styles.css">
+  <script src="script.js" defer></script>
 </head>
-
 <body>
+  <header class="menu_superior" aria-label="Barra de herramientas">
+    <img src="img/col_icon.png" alt="Colombia" class="col_icon">
+    <button class="boton_titulo" type="button" aria-label="Animar título" title="Animar título">ツ</button>
+    <div id="reloj" class="reloj" role="timer" aria-label="Hora local">00:00</div>
+    <button class="boton_color" type="button" title="Cambiar color de fondo" aria-label="Cambiar color de fondo">光</button>
+    <button class="boton_acc" type="button" title="Cambiar velocidad de rotación" aria-label="Cambiar velocidad de rotación">+</button>
+  </header>
 
-    <div class="menu_superior">
-        <img src="col_icon.png" alt="COL" class="col_icon">
-        <button class="boton_titulo">ツ</button>
-        <div id="reloj" class="reloj">00:00</div>
-        <button class="boton_color">光</button>
-        <button class="boton_acc">+</button>
+  <main class="pagina">
+    <h1 class="titulo">ツ</h1>
+    <div class="escenario" role="img" aria-label="Símbolo yin y yang en rotación">
+      <img src="img/black_yang.png" alt="" class="yin-yang yang">
+      <img src="img/white_yin.png" alt="" class="yin-yang yin">
     </div>
 
-    <div class="contenedor1">
-        <h1 class="titulo">ツ</h1>
-    </div>
+    <nav class="enlaces" aria-label="Enlaces">
+      <a class="enlace" href="https://www.segurossura.com.co/" target="_blank" rel="noopener noreferrer">
+        <img src="img/seguros.ico" alt="SURA" class="icono_imagen">
+        <span>SURA<br>Asesor de seguros</span>
+      </a>
+      </div>
+      <a class="enlace" href="https://www.instagram.com/paulaadaniiela/" target="_blank" rel="noopener noreferrer">
+        <img src="img/pauladaniiela.ico" alt="Nails & Tattoos" class="icono_imagen">
+        <span>Paula Daniiela<br>Nails | Tattoos</span>
+      </a>
+      <a class="enlace" href="#" target="_blank" rel="noopener noreferrer">
+        <img src="img/xbox.ico" alt="?" class="icono_imagen">
+        <span>?</span>
+      </a>
+      <a class="enlace" href="https://google.com/" target="_blank" rel="noopener noreferrer">
+        <img src="img/construction.ico" alt="Under construction" class="icono_imagen">
+        <span>Under construction</span>
+      </a>
+    </nav>
+  </main>
 
-    <div class="contenedor2">
-        <div class="contenedor3">
-            <img src="black_yang.png" alt="Yang" class="yang">
-        </div>
-        <img src="white_yin.png" alt="Yin" class="yin">
-    </div>
-
-        <script src="script.js"></script>
+  <footer class="footer">2026</footer>
 </body>
-
 </html>
