@@ -5,13 +5,13 @@
 }
 
 body {
-    background-color: red;
+    background-color: #BB3116;
 }
 
-.menu {
-    width: 100%;
-    height: 23px;
+.menu_superior {
     display: flex;
+    height:24px;
+    width: 100%;
     background-color: #E7E7E7;
     border-top: 1px solid white;
     border-left: 1px solid white;
@@ -19,33 +19,29 @@ body {
     border-bottom: 1px solid black;
 }
 
-.padre {
+.contenedor1 {
     -webkit-user-select: none;
     user-select: none;
-    margin-left: 37%;
     position: absolute;
-    width: auto;
-    height: auto;
-}
-
-.yinyang {
-    -webkit-user-select: none;
-    user-select: none;
     width: 100%;
-    height: 460px;
 }
 
-.button1 {
+.contenedor2 {
     -webkit-user-select: none;
     user-select: none;
+    margin-top:25%;
+}
+
+.boton_titulo {
+    -webkit-user-select: none;
+    user-select: none;
+    text-align: center;
+    align-items: center;
+    height: 15px;
     margin-top: 3px;
     margin-bottom: 2px;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    margin-left: 5px;
-    height: 15px;
+    margin-left: 30px;
     padding-left: 15px;
     padding-right: 15px;
     border-top: 1px solid white;
@@ -53,27 +49,73 @@ body {
     border-right: 1px solid black;
     border-bottom: 1px solid black;
     transition: transform 0.08s ease, box-shadow 0.08s ease;
-    box-shadow: 0 1px 0 #333;
+    box-shadow: 1px 1px 0 #333;
+    cursor: pointer;
+    transition: background-color 0.2s;
 }
 
-.button1:active {
-  transform: translateY(1px);
-  box-shadow: 0 0 0 #333;
+.boton_titulo:active {
+   transform: translateX(1px);
+   box-shadow: 0 0 0 #333;
+   background-color: #C7C3C2;
+   border-top: 1px solid black;
+   border-left: 1px solid black;
+   border-right: 1px solid white;
+   border-bottom: 1px solid white;
 }
 
-.img2 {
+.boton_color {
     -webkit-user-select: none;
     user-select: none;
+    display: flex;
+    height: 15px;
+    text-align: center;
+    align-items: center;
     margin-top: 3px;
     margin-bottom: 2px;
-    margin-left: 10px;
-    height: 15px;
+    margin-right: 5px;
+    margin-left: 1.5%;
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-bottom: 2px;
+    border-top: 1px solid white;
+    border-left: 1px solid white;
+    border-right: 1px solid black;
+    border-bottom: 1px solid black;
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
+    box-shadow: 1px 1px 0 #333;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.boton_color:active {
+   transform: translateX(1px);
+   box-shadow: 0 0 0 #333;
+   background-color: #C7C3C2;
+   border-top: 1px solid black;
+   border-left: 1px solid black;
+   border-right: 1px solid white;
+   border-bottom: 1px solid white;
+}
+
+.col_icon {
+    -webkit-user-select: none;
+    user-select: none;
+    height: 16px;
+    margin-top: 3px;
+    margin-bottom: 2px;
+    margin-left: 15px;
+    border-top: 1px solid white;
+    border-left: 1px solid white;
+    border-right: 1px solid black;
+    border-bottom: 1px solid black;
 }
 
 .reloj {
     margin-top: 3px;
-    height: 15px;
-    margin-left: 90.2%;
+    height: 16px;
+    margin-left: 70%;
+    padding-top:1px;
     padding-left: 15px;
     padding-right: 15px;
     font-family: 'Courier New', Courier, monospace;
@@ -89,35 +131,6 @@ body {
 .reloj::selection {
   color: #0f0;
   background-color: #0f0;
-}
-
-.button2 {
-    -webkit-user-select: none;
-    user-select: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    margin-top: 3px;
-    margin-bottom: 2px;
-    margin-left: auto;
-    margin-right: 5px;
-    padding-left: 6px;
-    padding-right: 6px;
-    padding-bottom: 2px;
-    width: 26px;
-    height: 15px;
-    border-top: 1px solid white;
-    border-left: 1px solid white;
-    border-right: 1px solid black;
-    border-bottom: 1px solid black;
-    transition: transform 0.08s ease, box-shadow 0.08s ease;
-    box-shadow: 0 1px 0 #333;
-}
-
-.button2:active {
-  transform: translateY(1px);
-  box-shadow: 0 0 0 #333;
 }
 
 .titulo {
@@ -138,34 +151,35 @@ body {
     font-family: 'Verdana', sans-serif;
 }
 
-.imagen {
+.yin {
     -webkit-user-select: none;
     user-select: none;
+    width: 10%;
     position: absolute;
-    top: 370px;
+    top: 50%;
     left: 50%;
-    transform: translateX(-50%);
-    width: 300px;
-    height: 300px;
-    object-fit: contain;
+    animation: rotacion_continua 30s linear infinite;
 }
 
-.imagen2 {
+.yang {
     -webkit-user-select: none;
     user-select: none;
-    margin-top: 350px;
-    margin-left: 800px;
-    width: 300px;
-    height: 300px;
-    animation: desplazamiento 6s infinite alternate linear;
+    width: 10%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    animation: rotacion_continua 30s linear infinite;
 }
 
-@keyframes desplazamiento {
-    from{
-        transform: translateX(-5px);
-    }    to{
-        transform: translateX(21px);
-    } 
+@keyframes rotacion_continua {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
 }
+
+
 
 
