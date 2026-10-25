@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#bb3116">
+  <title>JK</title><link rel="icon" type="image/png" href="img/yin_yang_complete.png"><link rel="stylesheet" href="styles.css"><script src="script.js" defer></script>
+</head>
+<body>
+  <header class="menu_superior" aria-label="Barra de herramientas">
+    <img src="img/col_icon.png" alt="Colombia" class="col_icon">
+    <button class="boton_titulo" type="button" aria-label="Animar título y cerrar todas las ventanas" title="Animar título y cerrar todas las ventanas">?</button>
+    <div id="reloj" class="reloj" role="timer" aria-label="Hora local">00:00</div>
+    <button class="boton_color" type="button" title="Cambiar color de fondo" aria-label="Cambiar color de fondo">光</button>
+    <button class="boton_gif" type="button" title="Alternar fondo GIF" aria-label="Alternar fondo GIF">ツ</button>
+    <button class="boton_acc" type="button" title="Cambiar velocidad de rotación" aria-label="Cambiar velocidad de rotación">+</button>
+  </header>
+  <main class="pagina">
+    <h1 class="titulo">JK</h1>
+    <div class="escenario" role="img" aria-label="Símbolo yin y yang en rotación"><img src="img/black_yang.png" alt="" class="yin-yang yang"><img src="img/white_yin.png" alt="" class="yin-yang yin"></div>
+    <nav class="enlaces" aria-label="Secciones del sitio">
+      <a class="enlace" href="pages/sura/index.html" data-window-title="SURA | Asesor de seguros" data-bar-color="#8ecae6"><img src="img/seguros.ico" alt="" class="icono_imagen"><span>SURA<br>Asesor de seguros</span></a>
+      <a class="enlace" href="pages/paula/index.html" data-window-title="Paula Daniiela | Nails & Tattoos" data-bar-color="#ed9ab5"><img src="img/pauladaniiela.ico" alt="" class="icono_imagen"><span>Paula Daniiela<br>Nails | Tattoos</span></a>
+      <a class="enlace" href="pages/xbox/index.html" data-window-title="?" data-bar-color="#176b3a"><img src="img/xbox.ico" alt="" class="icono_imagen"><span>?</span></a>
+      <a class="enlace" href="pages/construccion/index.html" data-window-title="Under construction" data-bar-color="#f2a541"><img src="img/construction.ico" alt="" class="icono_imagen"><span>Under construction</span></a>
+    </nav>
+  </main>
+  <footer class="footer"><span class="copyright">2026</span><nav class="redes" aria-label="Redes sociales">
+    <a href="https://www.facebook.com/juankmilo.iv" target="_blank" rel="noopener noreferrer" aria-label="Facebook" title="Facebook"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 21v-8.2h2.8l.4-3.2h-3.2V7.5c0-.9.3-1.6 1.6-1.6h1.7V3.1c-.3 0-1.3-.1-2.5-.1-2.5 0-4.2 1.5-4.2 4.3v2.3H7.3v3.2h2.8V21h3.4Z" fill="currentColor"/></svg></a>
+    <a href="https://www.instagram.com/motleyxz/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" title="Instagram"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.7" cy="6.7" r="1.2" fill="currentColor"/></svg></a>
+  </nav></footer>
+  <template id="plantilla-ventana"><section class="ventana" role="dialog" aria-modal="false"><header class="barra-ventana"><h2>Sección</h2><button class="cerrar-ventana" type="button" aria-label="Cerrar ventana">×</button></header><iframe title="Contenido de la sección" src="about:blank"></iframe></section></template>
+</body>
+</html>
