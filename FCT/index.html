@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#101411" />
+    <meta name="description" content="FCT: Fantasy Chess Tactics, ajedrez clásico con ambientación de fantasía táctica." />
+    <title>FCT: Fantasy Chess Tactics</title>
+    <script type="module" crossorigin src="/FCT/assets/index-BWABu5iw.js"></script>
+    <link rel="stylesheet" crossorigin href="/FCT/assets/index-QdweYiA9.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="#" aria-label="FCT: Fantasy Chess Tactics, inicio">
+          <span class="brand-mark" aria-hidden="true">✦</span>
+        <span class="brand-copy"><strong>FCT</strong><small>FANTASY CHESS: TACTICS</small></span>
+        </a>
+      </header>
+
+      <audio id="background-music" src="/FCT/assets/Incarnam-CIRBA8bW.mp3" autoplay loop preload="auto"></audio>
+      <div class="audio-control" aria-label="Controles de música" hidden>
+        <button id="audio-toggle" type="button" aria-label="Silenciar música" aria-pressed="false" title="Silenciar música">♫</button>
+        <label class="visually-hidden" for="audio-volume">Volumen de música</label>
+        <input id="audio-volume" type="range" min="0" max="1" step="0.01" value="0.35" aria-label="Volumen de música" title="Volumen de música" />
+        <button id="audio-hide" type="button" aria-label="Ocultar controles de audio" title="Ocultar controles de audio">×</button>
+      </div>
+      <button class="audio-reopen" id="audio-reopen" type="button" aria-label="Mostrar controles de audio" title="Mostrar controles de audio">♫</button>
+
+      <main class="workspace">
+        <aside class="sidebar">
+          <section class="match-card">
+            <div class="eyebrow">PREPARAR COMBATE</div>
+            <h1>La colina del<br />juramento</h1>
+            <p class="muted">Partida clásica</p>
+
+            <div class="players">
+              <div class="player-row is-human">
+                <div class="player-avatar avatar-human">✧</div>
+                <div class="player-details"><span>JUGADOR</span><strong>Viajero de Ivalice</strong></div>
+                <span class="side-badge light-badge">TÚ</span>
+              </div>
+              <div class="versus"><span></span><small>VS</small><span></span></div>
+              <div class="player-row">
+                <div class="player-avatar avatar-ai">♜</div>
+                <div class="player-details"><span>RIVAL LOCAL</span><strong>El estratega</strong></div>
+                <span class="side-badge dark-badge">IA</span>
+              </div>
+            </div>
+
+            <button class="new-game-button" id="new-game" type="button"><span>⚔</span> Iniciar combate</button>
+          </section>
+        </aside>
+
+        <section class="game-area" aria-label="Tablero de ajedrez">
+          <div class="game-toolbar">
+            <div class="map-title"><span class="map-icon">⌖</span><div><small>RUINAS</small><strong>La colina del juramento</strong></div></div>
+            <div class="game-status-badge" aria-live="polite"><span class="turn-pulse" id="turn-pulse"></span><strong id="game-status">Tu turno</strong></div>
+            <div class="toolbar-actions">
+              <div class="view-switch" role="group" aria-label="Vista del tablero">
+                <button type="button" class="view-button active" data-view="2d" aria-pressed="true"><span>▦</span> 2D</button>
+                <button type="button" class="view-button" data-view="3d" aria-pressed="false"><span>◇</span> 3D</button>
+              </div>
+              <button class="toolbar-icon" id="reset-camera" type="button" title="Restablecer cámara" aria-label="Restablecer cámara">⟳</button>
+              <button class="menu-return-button" id="return-to-menu" type="button">Salir</button>
+            </div>
+          </div>
+
+          <div class="board-stage">
+            <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+            <div class="board-frame">
+              <div class="file-labels top-files" aria-hidden="true"><span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span></div>
+              <div class="rank-labels" aria-hidden="true"><span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span></div>
+              <div id="board-2d" class="board-2d" role="grid" aria-label="Tablero de ajedrez 8 por 8"></div>
+              <div id="board-3d" class="board-3d hidden" aria-label="Tablero 3D interactivo"></div>
+              <div class="remaining-piece-strip remaining-black" id="remaining-black" aria-live="polite" aria-label="Piezas restantes y capturadas del jugador negro">
+                <div class="piece-line"><span class="remaining-count">16</span><span class="remaining-icons"></span></div>
+                <div class="captured-icons" aria-label="Piezas capturadas"></div>
+              </div>
+              <div class="remaining-piece-strip remaining-white" id="remaining-white" aria-live="polite" aria-label="Piezas restantes y capturadas del jugador blanco">
+                <div class="piece-line"><span class="remaining-count">16</span><span class="remaining-icons"></span></div>
+                <div class="captured-icons" aria-label="Piezas capturadas"></div>
+              </div>
+              <div class="file-labels bottom-files" aria-hidden="true"><span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span></div>
+            </div>
+            <div class="drag-help" id="drag-help">Arrastra para girar · rueda para acercar</div>
+          </div>
+
+          <div class="lower-panel">
+            <section class="piece-inspector" aria-live="polite">
+              <div class="inspector-icon" id="inspector-icon">✦</div>
+              <div><small>CLASE EN FOCO</small><strong id="inspector-name">Elige una pieza</strong><span id="inspector-description">Selecciona una pieza para ver su clase en el campo.</span></div>
+            </section>
+          </div>
+        </section>
+      </main>
+
+    </div>
+
+    <dialog id="promotion-dialog" class="promotion-dialog">
+      <form method="dialog"><p>El peón ha llegado al final del camino.</p><h2>Elige su promoción</h2><div class="promotion-options">
+        <button value="q" type="submit"><span>♛</span><b>Reina</b></button><button value="r" type="submit"><span>♜</span><b>Torre</b></button><button value="b" type="submit"><span>♝</span><b>Alfil</b></button><button value="n" type="submit"><span>♞</span><b>Caballo</b></button>
+      </div></form>
+    </dialog>
+
+    <dialog id="exit-confirmation" class="promotion-dialog exit-confirmation">
+      <form method="dialog"><p>¿Quieres abandonar el combate?</p><h2>La partida terminará.</h2><div class="exit-actions">
+        <button value="cancel" type="submit">Seguir jugando</button><button value="exit" type="submit">Salir</button>
+      </div></form>
+    </dialog>
+
+  </body>
+</html>

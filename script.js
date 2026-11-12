@@ -7,6 +7,7 @@ const titulo = document.querySelector(".titulo");
 const reloj = document.querySelector("#reloj");
 const plantillaVentana = document.querySelector("#plantilla-ventana");
 const enlaces = [...document.querySelectorAll(".enlace")];
+const enlacesVentana = enlaces.filter((enlace) => !enlace.hasAttribute("data-open-tab"));
 
 const fondosGif = [
   "img/fondos/fondo1.gif",
@@ -149,6 +150,7 @@ botonAcc.addEventListener("click", () => {
 });
 
 enlaces.forEach((enlace) => {
+  if (enlace.hasAttribute("data-open-tab")) return;
   enlace.addEventListener("click", (evento) => {
     evento.preventDefault();
     crearVentana(enlace);
@@ -176,7 +178,7 @@ actualizarHora();
 setInterval(actualizarHora, 1000);
 
 // Stagger the welcome windows so they do not all open at the same instant.
-enlaces.forEach((enlace, indice) => {
+enlacesVentana.forEach((enlace, indice) => {
   setTimeout(() => crearVentana(enlace), 900 + indice * 1800);
 });
 
