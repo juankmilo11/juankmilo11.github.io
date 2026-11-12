@@ -102,6 +102,10 @@ button { cursor: pointer; font: inherit; }
   aspect-ratio: 1;
   flex: none;
   margin: 12px auto clamp(30px, 6vh, 64px);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
 }
 
 .yin-yang {
@@ -114,6 +118,13 @@ button { cursor: pointer; font: inherit; }
   user-select: none;
   pointer-events: none;
   animation: rotacion_continua var(--rotation-speed) linear infinite;
+}
+
+.yin {
+  background-color: var(--yin-color, #fff);
+  -webkit-mask: url("img/white_yin.png") center / 100% 100% no-repeat;
+  mask: url("img/white_yin.png") center / 100% 100% no-repeat;
+  transition: background-color 180ms ease;
 }
 
 .enlaces {

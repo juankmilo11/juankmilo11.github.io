@@ -6,14 +6,25 @@ const botonAcc = document.querySelector(".boton_acc");
 const titulo = document.querySelector(".titulo");
 const reloj = document.querySelector("#reloj");
 const plantillaVentana = document.querySelector("#plantilla-ventana");
+const escenario = document.querySelector(".escenario");
 const enlaces = [...document.querySelectorAll(".enlace")];
 const enlacesVentana = enlaces.filter((enlace) => !enlace.hasAttribute("data-open-tab"));
 
 const fondosGif = [
-  "img/fondos/fondo1.gif",
-  "img/fondos/fondo2.gif",
-  "img/fondos/fondo3.gif",
-  "img/fondos/fondo4.gif"
+  "img/fondos/gif1.gif",
+  "img/fondos/gif2.gif",
+  "img/fondos/gif3.gif",
+  "img/fondos/gif4.gif",
+  "img/fondos/gif5.gif",
+  "img/fondos/gif6.gif",
+  "img/fondos/gif7.gif",
+  "img/fondos/gif8.gif",
+  "img/fondos/gif9.gif",
+  "img/fondos/gif10.gif",
+  "img/fondos/gif11.gif",
+  "img/fondos/gif12.gif",
+  "img/fondos/gif13.gif",
+  "img/fondos/gif14.gif"
 ];
 const velocidades = ["7s", "2s", "0.5s", "30s"];
 let velocidadActual = 0;
@@ -46,6 +57,22 @@ function cambiarFondoGif() {
   document.body.classList.add("fondo-gif");
   document.body.style.setProperty("--gif-fondo", `url("${fondosGif[indiceGif]}")`);
   botonGif.setAttribute("aria-label", `Fondo GIF ${indiceGif + 1} de ${fondosGif.length}`);
+}
+
+function actualizarColorYinYang(enlace) {
+  document.documentElement.style.setProperty(
+    "--yin-color",
+    enlace.dataset.barColor || "#fff"
+  );
+}
+
+function restaurarColorYinYang() {
+  const enlaceActivo = enlaces.find((enlace) => enlace.matches(":hover, :focus-visible"));
+  if (enlaceActivo) {
+    actualizarColorYinYang(enlaceActivo);
+    return;
+  }
+  document.documentElement.style.removeProperty("--yin-color");
 }
 
 function enfocarVentana(ventana) {
@@ -129,6 +156,14 @@ function crearVentana(enlace) {
 
 botonColor.addEventListener("click", cambiarColorFondo);
 botonGif.addEventListener("click", cambiarFondoGif);
+escenario.addEventListener("click", () => window.location.reload());
+
+enlaces.forEach((enlace) => {
+  enlace.addEventListener("pointerenter", () => actualizarColorYinYang(enlace));
+  enlace.addEventListener("pointerleave", restaurarColorYinYang);
+  enlace.addEventListener("focus", () => actualizarColorYinYang(enlace));
+  enlace.addEventListener("blur", restaurarColorYinYang);
+});
 
 botonTitulo.addEventListener("click", () => {
   titulo.animate(
