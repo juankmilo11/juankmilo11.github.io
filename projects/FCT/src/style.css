@@ -110,7 +110,7 @@ h1,h2,p { margin: 0; }
 .board-2d { display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); box-shadow: 0 4px 20px #05080575; background: #595a49; }
 .board-2d.hidden,.board-3d.hidden { display: none; }
 .square { position: relative; display: grid; place-items: center; min-width: 0; min-height: 0; padding: 0; border: 0; cursor: pointer; overflow: hidden; touch-action: none; }
-.square.light { background: linear-gradient(145deg, #ded8c5, #c9c2aa); }
+.square.light { background: linear-gradient(145deg, #c5a47b, #ac875f); }
 .square.dark { background: linear-gradient(145deg, #597665, #405a4c); }
 .square.light::after,.square.dark::after { content: ''; position: absolute; inset: 0; opacity: .16; pointer-events: none; background-image: repeating-linear-gradient(32deg, transparent 0 7px, #ffffff16 8px 9px); }
 .square:hover { filter: brightness(1.09); }

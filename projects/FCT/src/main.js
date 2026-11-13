@@ -1,5 +1,6 @@
 import { Chess } from 'chess.js';
 import './style.css';
+import { moveSound } from './audio-cues.js';
 
 const game = new Chess();
 const board2d = document.querySelector('#board-2d');
@@ -299,7 +300,7 @@ function applyMove(move, requestAiAfterMove) {
     return false;
   }
   const captured = Boolean(playedMove.captured);
-  playUiSound(requestAiAfterMove ? 'AI_piece_move' : 'user_piece_move');
+  playUiSound(moveSound(captured));
   const capturedSquare = playedMove.flags.includes('e') ? `${playedMove.to[0]}${playedMove.from[1]}` : playedMove.to;
   if (captured) animateCapturedPiece(capturedSquare);
   const animation = movementAnimation(playedMove);

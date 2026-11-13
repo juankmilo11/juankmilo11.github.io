@@ -19,6 +19,12 @@ locales. `pages/fct/index.html` preserva la ruta antigua con una redirección.
   de solicitud y devuelve una jugada. Usa negamax, poda alfa-beta y evaluación.
 - `src/board3d.js`: escena Three.js, cámara con OrbitControls, terreno,
   piezas, animaciones y entrada del tablero. Se carga de forma diferida.
+- `src/environment.js`: materiales procedurales y paisaje de piedra, césped,
+  ruinas y vegetación. Usa instancias para piedras pequeñas y hierba.
+- `src/terrain.js`: alturas concéntricas del tablero; las cuatro casillas
+  centrales son la cima. Las alturas se comparten con piezas y marcadores.
+- `src/audio-cues.js`: selección del sonido de movimiento o captura,
+  independiente del bando; pruebas en `projects/FCT/tests/`.
 - `src/style.css`: presentación principal del juego.
 - `public/game-status.js` y `public/status.css`: comportamiento y estilos
   complementarios de estado, controles y revisión de partida.

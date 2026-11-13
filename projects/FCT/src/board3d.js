@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { buildLandscape, stoneMaterial } from './environment.js';
+import { tileElevation } from './terrain.js';
 
 const spriteUrls = import.meta.glob('../sprites/cropped/*.png', { eager: true, query: '?url', import: 'default' });
 const spriteTextures = new Map();
@@ -9,7 +12,7 @@ const voxelMaterials = new Map();
 const BOARD_SIZE = 8;
 const FILES = 'abcdefgh';
 const palette = {
-  light: 0xd0cbb8,
+  light: 0xc5a47b,
   dark: 0x455d50,
   selected: 0xffc83f,
   target: 0x32d18a,
@@ -44,6 +47,8 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
   sun.shadow.camera.right = 10;
   sun.shadow.camera.top = 10;
   sun.shadow.camera.bottom = -10;
+  sun.shadow.normalBias = 0.035;
+  sun.shadow.bias = -0.0002;
   scene.add(sun);
   const fill = new THREE.DirectionalLight(0x88a7ba, 1.35);
   fill.position.set(8, 5, -7);
@@ -76,7 +81,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
   controls.update();
   controls.saveState();
 
-  buildHill(world);
+  buildLandscape(world);
   buildBoard(world, tileMeshes, tileHeights, tileMaterials);
   for (const tile of tileMeshes) {
     const square = tile.userData.square;
@@ -97,7 +102,6 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
     world.add(highlight);
     tileHighlights.set(square, highlight);
   }
-  buildRuins(world);
   const windParticles = buildWindParticles(world, reducedMotion);
 
   const dropIndicatorMaterial = new THREE.MeshBasicMaterial({
@@ -199,7 +203,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
       draggedFrom = draggedPiece.userData.square;
       dragging = false;
       originalPosition = draggedPiece.position.clone();
-      dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -draggedPiece.position.y);
+      dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(tileElevation(3, 3) + 0.32));
       controls.enabled = false;
       renderer.domElement.setPointerCapture(event.pointerId);
       onSquare(draggedFrom);
@@ -217,7 +221,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
     if (raycaster.ray.intersectPlane(dragPlane, point)) {
       draggedPiece.position.x = THREE.MathUtils.clamp(point.x, -4.1, 4.1);
       draggedPiece.position.z = THREE.MathUtils.clamp(point.z, -4.1, 4.1);
-      draggedPiece.position.y = originalPosition.y + 0.3;
+      draggedPiece.position.y = tileElevation(3, 3) + 0.32;
     }
   });
 
@@ -508,7 +512,8 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
         const progress = Math.min(1, (now - motion.startTime) / motion.duration);
         const eased = 1 - (1 - progress) ** 3;
         piece.position.lerpVectors(motion.from, motion.to, eased);
-        piece.position.y += Math.sin(Math.PI * progress) * (motion.capture ? 0.24 : 0.16);
+        // Use the same progress as X/Z so long moves clear the central terraces.
+        piece.position.y += Math.sin(Math.PI * eased) * 0.65;
         piece.rotation.y = Math.sin(Math.PI * progress) * 0.18;
         piece.scale.setScalar(1 + Math.sin(Math.PI * progress) * 0.035);
         if (progress >= 1) {
@@ -594,49 +599,6 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
   return { update, resize, resetCamera, playIntro, cancelIntro };
 }
 
-function buildHill(world) {
-  const base = new THREE.Mesh(
-    new THREE.CylinderGeometry(6.7, 8.1, 1.25, 10, 1),
-    new THREE.MeshStandardMaterial({ color: 0x555e49, roughness: 0.96, flatShading: true }),
-  );
-  base.position.y = -0.65;
-  base.receiveShadow = true;
-  world.add(base);
-
-  const plateau = new THREE.Mesh(
-    new THREE.CylinderGeometry(5.95, 6.7, 0.28, 10, 1),
-    new THREE.MeshStandardMaterial({ color: 0x303a31, roughness: 0.9, flatShading: true }),
-  );
-  plateau.position.y = -0.17;
-  plateau.receiveShadow = true;
-  world.add(plateau);
-
-  const standMaterial = new THREE.MeshStandardMaterial({ color: 0x71644a, roughness: 0.84, flatShading: true });
-  const stepMaterial = new THREE.MeshStandardMaterial({ color: 0x8d7952, roughness: 0.78, flatShading: true });
-  for (const side of [-1, 1]) {
-    const stand = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.22, 8.65), standMaterial);
-    stand.position.set(side * 5.15, -0.015, 0);
-    stand.castShadow = true;
-    stand.receiveShadow = true;
-    world.add(stand);
-    for (let row = 0; row < 2; row += 1) {
-      const step = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12 + row * 0.1, 8.8), stepMaterial);
-      step.position.set(side * (6.35 + row * 0.48), 0.06 + row * 0.12, 0);
-      step.castShadow = true;
-      world.add(step);
-    }
-  }
-
-  const path = new THREE.Mesh(
-    new THREE.RingGeometry(5.9, 6.65, 10),
-    new THREE.MeshStandardMaterial({ color: 0x867f66, roughness: 1, side: THREE.DoubleSide }),
-  );
-  path.rotation.x = -Math.PI / 2;
-  path.position.y = 0.13;
-  world.add(path);
-
-}
-
 function buildBoard(world, tileMeshes, tileHeights, tileMaterials) {
   const frameMaterial = new THREE.MeshStandardMaterial({ color: 0x514936, roughness: 0.72, metalness: 0.28 });
   const frame = new THREE.Mesh(new THREE.BoxGeometry(8.42, 0.18, 8.42), frameMaterial);
@@ -654,22 +616,23 @@ function buildBoard(world, tileMeshes, tileHeights, tileMaterials) {
     for (let file = 0; file < BOARD_SIZE; file += 1) {
       const square = `${FILES[file]}${8 - row}`;
       const light = (row + file) % 2 === 0;
-      const material = new THREE.MeshStandardMaterial({
+      const material = stoneMaterial({
         color: light ? palette.light : palette.dark,
         roughness: 0.82,
         metalness: 0.03,
         emissive: 0x000000,
         emissiveIntensity: 0,
       });
-      const height = 0.035;
-      const tile = new THREE.Mesh(new THREE.BoxGeometry(0.96, 0.16 + height, 0.96), material);
-      tile.position.set(file - 3.5, height / 2, row - 3.5);
+      const top = tileElevation(row, file);
+      const height = top + 0.08;
+      const tile = new THREE.Mesh(new RoundedBoxGeometry(0.976, height, 0.976, 2, 0.018), material);
+      tile.position.set(file - 3.5, top - height / 2, row - 3.5);
       tile.castShadow = true;
       tile.receiveShadow = true;
       tile.userData = { kind: 'tile', square };
       world.add(tile);
       tileMeshes.push(tile);
-      tileHeights.set(square, height + 0.08);
+      tileHeights.set(square, top);
       tileMaterials.set(square, material);
     }
   }
@@ -741,25 +704,6 @@ function createSunsetSky() {
   texture.mapping = THREE.EquirectangularReflectionMapping;
   texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
-}
-
-function buildRuins(world) {
-  const darkStone = new THREE.MeshStandardMaterial({ color: 0x6a6b5b, roughness: 0.96, flatShading: true });
-
-  const blocks = [
-    [-7.2, 0.29, 1.8, 0.8, 0.42], [7.2, 0.22, -1.1, 0.8, 0.38],
-    [-7.3, 0.22, -1.7, 0.75, 0.48], [7.3, 0.28, 1.7, 0.75, 0.6],
-    [-2.9, 0.22, -5.1, 1.1, 0.37], [2.7, 0.2, 5.2, 0.92, 0.4],
-  ];
-  for (const [x, y, z, width, height] of blocks) {
-    const block = new THREE.Mesh(new THREE.BoxGeometry(width, height, 0.45), darkStone);
-    block.position.set(x, y, z);
-    block.rotation.y = (x + z) * 0.025;
-    block.castShadow = true;
-    block.receiveShadow = true;
-    world.add(block);
-  }
-
 }
 
 function createPiece(type, color) {
