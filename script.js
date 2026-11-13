@@ -62,7 +62,7 @@ function cambiarFondoGif() {
 function actualizarColorYinYang(enlace) {
   document.documentElement.style.setProperty(
     "--yin-color",
-    `color-mix(in srgb, ${enlace.dataset.barColor || "#fff"} 78%, #000 22%)`
+    `color-mix(in srgb, ${enlace.dataset.barColor || "#fff"} 62%, #000 38%)`
   );
   document.documentElement.style.setProperty("--yang-color", "#fff");
 }

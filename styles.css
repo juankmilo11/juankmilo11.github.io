@@ -141,8 +141,8 @@ button { cursor: pointer; font: inherit; }
   background-color: var(--yin-color, #fff);
   -webkit-mask-image: url("img/white_yin.png");
   mask-image: url("img/white_yin.png");
-  -webkit-mask-size: 100.35% 100.35%;
-  mask-size: 100.35% 100.35%;
+  -webkit-mask-size: 99.3% 99.3%;
+  mask-size: 99.3% 99.3%;
 }
 
 .enlaces {
