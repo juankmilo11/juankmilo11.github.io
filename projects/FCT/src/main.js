@@ -22,6 +22,7 @@ let musicEnabledByCombat = false;
 
 const classNames = { p: 'Squire', r: 'Knight', n: 'Dragoon', b: 'Mago', q: 'Agrias', k: 'Ramza' };
 const pieceNames = { p: 'Peón', r: 'Torre', n: 'Caballo', b: 'Alfil', q: 'Reina', k: 'Rey' };
+const pieceValues = { p: 1, r: 5, n: 3, b: 3, q: 9, k: 0 };
 const pieceGlyphs = {
   w: { p: '♙', r: '♖', n: '♘', b: '♗', q: '♕', k: '♔' },
   b: { p: '♙', r: '♜', n: '♞', b: '♝', q: '♛', k: '♚' },
@@ -40,9 +41,11 @@ let pendingPromotion = null;
 let reviewMoves = [];
 let reviewPosition = 0;
 let isReviewing = false;
+let resumeAiAfterReview = false;
 let threeBoard;
 let threeBoardPromise;
 const appShell = document.querySelector('.app-shell');
+const battleCurtain = document.querySelector('#battle-curtain');
 
 function requestAiMove() {
   aiRequestId += 1;
@@ -152,8 +155,11 @@ function render2D() {
 function renderRemainingPieces(board) {
   const piecesByColor = { w: [], b: [] };
   const capturedByColor = { w: [], b: [] };
+  const materialByColor = { w: 0, b: 0 };
   board.flat().forEach((piece) => {
-    if (piece) piecesByColor[piece.color].push(piece);
+    if (!piece) return;
+    piecesByColor[piece.color].push(piece);
+    materialByColor[piece.color] += pieceValues[piece.type];
   });
   game.history({ verbose: true }).forEach((move) => {
     if (move.captured) capturedByColor[move.color === 'w' ? 'b' : 'w'].push(move.captured);
@@ -164,7 +170,10 @@ function renderRemainingPieces(board) {
     const captured = strip.querySelector('.captured-icons');
     const count = strip.querySelector('.remaining-count');
     const pieces = piecesByColor[color].sort((a, b) => 'kqrbnp'.indexOf(a.type) - 'kqrbnp'.indexOf(b.type));
-    count.textContent = String(pieces.length);
+    const advantage = materialByColor[color] - materialByColor[color === 'w' ? 'b' : 'w'];
+    count.textContent = advantage > 0 ? `+${advantage}` : String(advantage);
+    count.title = advantage === 0 ? 'Material igualado' : `Balance material: ${advantage > 0 ? 'ventaja' : 'desventaja'} de ${Math.abs(advantage)} puntos`;
+    strip.setAttribute('aria-label', `${color === 'w' ? 'Blancas' : 'Negras'}: ${count.title}`);
     icons.replaceChildren(...pieces.map((piece) => {
       const icon = document.createElement('span');
       icon.textContent = pieceGlyphs[color][piece.type];
@@ -342,8 +351,25 @@ window.fctReview = {
     if (!isReviewing) reviewMoves = game.history({ verbose: true }).map(({ from, to, promotion, san }) => ({ from, to, promotion, san }));
     return { total: reviewMoves.length };
   },
-  setReviewing(value) { isReviewing = Boolean(value); },
-  reset() { isReviewing = false; reviewMoves = []; reviewPosition = 0; },
+  setReviewing(value) {
+    const reviewing = Boolean(value);
+    if (reviewing === isReviewing) return;
+    if (reviewing) {
+      resumeAiAfterReview = thinking;
+      thinking = false;
+      aiRequestId += 1;
+      isReviewing = true;
+      return;
+    }
+    isReviewing = false;
+    if (resumeAiAfterReview && game.turn() === 'b' && !game.isGameOver()) {
+      thinking = true;
+      requestAiMove();
+      renderStatus();
+    }
+    resumeAiAfterReview = false;
+  },
+  reset() { isReviewing = false; resumeAiAfterReview = false; reviewMoves = []; reviewPosition = 0; },
 };
 
 function commitMove(move) {
@@ -439,6 +465,9 @@ async function setView(view) {
 document.querySelectorAll('.view-button').forEach((button) => button.addEventListener('click', () => setView(button.dataset.view)));
 document.querySelector('#reset-camera').addEventListener('click', () => threeBoard?.resetCamera());
 async function startCombat() {
+  battleCurtain.classList.remove('is-revealing');
+  battleCurtain.classList.add('is-covering');
+  await new Promise((resolve) => window.setTimeout(resolve, 190));
   musicEnabledByCombat = true;
   startBackgroundMusic();
   aiRequestId += 1;
@@ -454,6 +483,11 @@ async function startCombat() {
   appShell.classList.add('is-playing');
   await setView('3d');
   threeBoard?.playIntro();
+  window.requestAnimationFrame(() => {
+    battleCurtain.classList.remove('is-covering');
+    battleCurtain.classList.add('is-revealing');
+    window.setTimeout(() => battleCurtain.classList.remove('is-revealing'), 1900);
+  });
 }
 
 document.querySelector('#new-game').addEventListener('click', startCombat);

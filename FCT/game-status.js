@@ -7,6 +7,7 @@ const newGameButton = document.querySelector("#play-again");
 const reviewMatchButton = document.querySelector("#review-match");
 const reviewControls = document.querySelector("#review-controls");
 const reviewPosition = document.querySelector("#review-position");
+const reviewReturnButton = document.querySelector("#review-return");
 const appShell = document.querySelector(".app-shell");
 const backgroundMusic = document.querySelector("#background-music");
 let isReviewing = false;
@@ -35,7 +36,8 @@ function updateGameStatus() {
   statusBadge.classList.toggle("is-check", isCheck);
   statusBadge.classList.toggle("is-checkmate", isCheckmate);
   checkmateOverlay.hidden = isReviewing || !hasResult;
-  reviewControls.hidden = !isReviewing && !hasResult;
+  reviewControls.hidden = !isReviewing && !appShell.classList.contains("is-playing");
+  reviewReturnButton.textContent = hasResult ? "Resultado" : "Volver";
 
   if (isDraw) {
     resultTitle.textContent = "Tablas";

@@ -7,10 +7,10 @@
     <meta name="description" content="FCT: Fantasy Chess Tactics, ajedrez clásico con ambientación de fantasía táctica." />
     <link rel="icon" type="image/png" href="./fct-potion.png?v=20261113-6" />
     <link rel="apple-touch-icon" href="./fct-potion.png?v=20261113-6" />
-    <link rel="stylesheet" href="./status.css?v=20261113-7" />
+    <link rel="stylesheet" href="./status.css?v=20261113-8" />
     <title>FCT: Fantasy Chess Tactics</title>
-    <script type="module" crossorigin src="/FCT/assets/index-B64MmHrt.js"></script>
-    <link rel="stylesheet" crossorigin href="/FCT/assets/index-BjOl0kfE.css">
+    <script type="module" crossorigin src="/FCT/assets/index-BVxqidU3.js"></script>
+    <link rel="stylesheet" crossorigin href="/FCT/assets/index-DTQqQwP_.css">
   </head>
   <body>
     <div class="app-shell">
@@ -57,7 +57,7 @@
           <div class="game-toolbar">
             <div class="map-title"><span class="map-icon">⌖</span><div><small>RUINAS</small><strong>La colina del juramento</strong></div></div>
             <div class="game-status-badge" aria-live="polite"><span class="turn-pulse" id="turn-pulse"></span><strong id="game-status">Tu turno</strong></div>
-            <div class="review-controls" id="review-controls" role="group" aria-label="Revisión cronológica de la partida" hidden><button id="review-first" type="button" title="Ir a la posición inicial" aria-label="Ir a la posición inicial">|‹</button><button id="review-previous" type="button" title="Movimiento anterior" aria-label="Movimiento anterior">‹</button><output id="review-position" aria-live="polite">Inicio · 0/0</output><button id="review-next" type="button" title="Movimiento siguiente" aria-label="Movimiento siguiente">›</button><button id="review-last" type="button" title="Ir a la posición final" aria-label="Ir a la posición final">›|</button><button id="review-return" type="button" title="Volver al resultado final">Resultado</button></div>
+            <div class="review-controls" id="review-controls" role="group" aria-label="Revisión cronológica de la partida" hidden><button id="review-first" type="button" title="Ir a la posición inicial" aria-label="Ir a la posición inicial">|‹</button><button id="review-previous" type="button" title="Movimiento anterior" aria-label="Movimiento anterior">‹</button><output id="review-position" aria-live="polite">Inicio · 0/0</output><button id="review-next" type="button" title="Movimiento siguiente" aria-label="Movimiento siguiente">›</button><button id="review-last" type="button" title="Ir a la posición actual" aria-label="Ir a la posición actual">›|</button><button id="review-return" type="button" title="Volver a la posición actual">Volver</button></div>
             <div class="toolbar-actions">
               <div class="view-switch" role="group" aria-label="Vista del tablero">
                 <button type="button" class="view-button active" data-view="2d" aria-pressed="true"><span>▦</span> 2D</button>
@@ -75,12 +75,12 @@
               <div class="rank-labels" aria-hidden="true"><span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span></div>
               <div id="board-2d" class="board-2d" role="grid" aria-label="Tablero de ajedrez 8 por 8"></div>
               <div id="board-3d" class="board-3d hidden" aria-label="Tablero 3D interactivo"></div>
-              <div class="remaining-piece-strip remaining-black" id="remaining-black" aria-live="polite" aria-label="Piezas restantes y capturadas del jugador negro">
-                <div class="piece-line"><span class="remaining-count">16</span><span class="remaining-icons"></span></div>
+              <div class="remaining-piece-strip remaining-black" id="remaining-black" aria-live="polite" aria-label="Ventaja material del jugador negro">
+                <div class="piece-line"><span class="remaining-count" title="Material igualado">0</span><span class="remaining-icons"></span></div>
                 <div class="captured-icons" aria-label="Piezas capturadas"></div>
               </div>
-              <div class="remaining-piece-strip remaining-white" id="remaining-white" aria-live="polite" aria-label="Piezas restantes y capturadas del jugador blanco">
-                <div class="piece-line"><span class="remaining-count">16</span><span class="remaining-icons"></span></div>
+              <div class="remaining-piece-strip remaining-white" id="remaining-white" aria-live="polite" aria-label="Ventaja material del jugador blanco">
+                <div class="piece-line"><span class="remaining-count" title="Material igualado">0</span><span class="remaining-icons"></span></div>
                 <div class="captured-icons" aria-label="Piezas capturadas"></div>
               </div>
               <div class="file-labels bottom-files" aria-hidden="true"><span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span></div>
@@ -121,6 +121,8 @@
       </div>
     </section>
 
-    <script src="./game-status.js?v=20261113-7"></script>
+    <div id="battle-curtain" class="battle-curtain" aria-hidden="true"></div>
+
+    <script src="./game-status.js?v=20261113-8"></script>
   </body>
 </html>

@@ -98,6 +98,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
     tileHighlights.set(square, highlight);
   }
   buildRuins(world);
+  const windParticles = buildWindParticles(world, reducedMotion);
 
   const dropIndicatorMaterial = new THREE.MeshBasicMaterial({
     color: palette.target,
@@ -363,9 +364,9 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
         const tier = Math.floor(index / 8);
         const slot = index % 8;
         const position = new THREE.Vector3(
-          side * (4.65 + tier + (Math.random() - 0.5) * 0.1),
+          side * (4.65 + tier + (Math.random() - 0.5) * 0.28),
           0.12,
-          slot - 3.5 + (Math.random() - 0.5) * 0.14,
+          slot - 3.5 + (Math.random() - 0.5) * 0.24,
         );
         const facing = (Math.random() - 0.5) * Math.PI * 2;
         mesh.position.copy(origin);
@@ -470,9 +471,13 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
   observer.observe(host);
   resize();
 
+  let previousFrameTime = 0;
   function animate() {
     requestAnimationFrame(animate);
-    const time = performance.now() * 0.001;
+    const now = performance.now();
+    const time = now * 0.001;
+    const delta = previousFrameTime ? Math.min((now - previousFrameTime) / 1000, 0.05) : 0;
+    previousFrameTime = now;
     for (const piece of pieceMeshes) {
       if (piece === draggedPiece) continue;
       const base = piece.userData.basePosition;
@@ -481,7 +486,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
       if (!base || !idle) continue;
 
       if (motion) {
-        const progress = Math.min(1, (performance.now() - motion.startTime) / motion.duration);
+        const progress = Math.min(1, (now - motion.startTime) / motion.duration);
         const eased = 1 - (1 - progress) ** 3;
         piece.position.lerpVectors(motion.from, motion.to, eased);
         piece.position.y += Math.sin(Math.PI * progress) * (motion.capture ? 0.24 : 0.16);
@@ -503,9 +508,43 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
       piece.rotation.z = reducedMotion || !selected ? 0 : Math.cos(time * 2.6 + idle.phase) * 0.025;
       piece.scale.setScalar(1 + (reducedMotion ? 0 : Math.max(0, wave) * (selected ? 0.018 : idle.scale)));
     }
+    if (windParticles) {
+      const positions = windParticles.positions;
+      for (let index = 0; index < windParticles.count; index += 1) {
+        const offset = index * 3;
+        positions[offset] += windParticles.drift[index * 2] * delta;
+        positions[offset + 1] += Math.sin(time * 0.65 + windParticles.phase[index]) * delta * 0.018;
+        positions[offset + 2] += windParticles.drift[index * 2 + 1] * delta;
+        if (positions[offset] > 7.2) positions[offset] = -7.2;
+        if (positions[offset] < -7.2) positions[offset] = 7.2;
+        if (positions[offset + 2] > 7.2) positions[offset + 2] = -7.2;
+        if (positions[offset + 2] < -7.2) positions[offset + 2] = 7.2;
+      }
+      windParticles.geometry.attributes.position.needsUpdate = true;
+    }
+    for (const mesh of capturedMeshes) {
+      const cheer = mesh.userData.cheer;
+      const base = mesh.userData.capturedPosition;
+      if (!cheer || !base) continue;
+      if (!cheer.startedAt && now >= cheer.nextAt) cheer.startedAt = now;
+      if (!cheer.startedAt) continue;
+      const progress = Math.min(1, (now - cheer.startedAt) / cheer.duration);
+      const hop = Math.sin(Math.PI * progress);
+      mesh.position.set(base.x, base.y + hop * cheer.height, base.z);
+      mesh.rotation.z = hop * cheer.tilt;
+      if (progress >= 1) {
+        mesh.position.copy(base);
+        mesh.rotation.z = 0;
+        cheer.startedAt = 0;
+        cheer.nextAt = now + 2400 + Math.random() * 6400;
+        cheer.duration = 520 + Math.random() * 280;
+        cheer.height = 0.09 + Math.random() * 0.1;
+        cheer.tilt = (Math.random() - 0.5) * 0.12;
+      }
+    }
     for (let index = capturedPieces.length - 1; index >= 0; index -= 1) {
       const effect = capturedPieces[index];
-      const progress = Math.min(1, (performance.now() - effect.startTime) / effect.duration);
+      const progress = Math.min(1, (now - effect.startTime) / effect.duration);
       const eased = progress * progress * (3 - 2 * progress);
       effect.mesh.position.lerpVectors(effect.from, effect.position, eased);
       effect.mesh.position.y += Math.sin(Math.PI * progress) * 0.38;
@@ -516,6 +555,14 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
         effect.mesh.position.copy(effect.position);
         effect.mesh.rotation.z = 0;
         effect.mesh.scale.setScalar(1);
+        effect.mesh.userData.capturedPosition = effect.position.clone();
+        effect.mesh.userData.cheer = reducedMotion ? null : {
+          nextAt: now + 1800 + Math.random() * 5200,
+          duration: 520 + Math.random() * 280,
+          height: 0.09 + Math.random() * 0.1,
+          tilt: (Math.random() - 0.5) * 0.12,
+          startedAt: 0,
+        };
         capturedMeshes.push(effect.mesh);
         capturedPieces.splice(index, 1);
       }
@@ -614,6 +661,37 @@ function buildBoard(world, tileMeshes, tileHeights, tileMaterials) {
     marker.position.set(file - 3.5, 0.16, 4.24);
     world.add(marker);
   }
+}
+
+function buildWindParticles(world, reducedMotion) {
+  if (reducedMotion) return null;
+  const count = 32;
+  const positions = new Float32Array(count * 3);
+  const drift = new Float32Array(count * 2);
+  const phase = new Float32Array(count);
+  for (let index = 0; index < count; index += 1) {
+    const offset = index * 3;
+    positions[offset] = Math.random() * 14.4 - 7.2;
+    positions[offset + 1] = 0.55 + Math.random() * 2.2;
+    positions[offset + 2] = Math.random() * 14.4 - 7.2;
+    drift[index * 2] = 0.12 + Math.random() * 0.22;
+    drift[index * 2 + 1] = (Math.random() - 0.5) * 0.08;
+    phase[index] = Math.random() * Math.PI * 2;
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const material = new THREE.PointsMaterial({
+    color: 0xd9dcc7,
+    size: 0.045,
+    transparent: true,
+    opacity: 0.34,
+    depthWrite: false,
+    sizeAttenuation: true,
+  });
+  const particles = new THREE.Points(geometry, material);
+  particles.frustumCulled = false;
+  world.add(particles);
+  return { geometry, positions, drift, phase, count };
 }
 
 function buildRuins(world) {

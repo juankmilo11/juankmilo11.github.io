@@ -177,10 +177,10 @@
   .game-status-badge.is-check strong,
   .game-status-badge.is-checkmate strong { font-size: 14px; }
 
-  .app-shell.is-playing .review-controls {
+.app-shell.is-playing .review-controls:not([hidden]) {
   display: flex;
     position: absolute;
-    top: 50px;
+    top: 84px;
     left: 8px;
     max-width: calc(100vw - 16px);
     gap: 3px;
