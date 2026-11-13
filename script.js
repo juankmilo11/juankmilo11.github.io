@@ -8,7 +8,7 @@ const reloj = document.querySelector("#reloj");
 const plantillaVentana = document.querySelector("#plantilla-ventana");
 const escenario = document.querySelector(".escenario");
 const enlaces = [...document.querySelectorAll(".enlace")];
-const enlacesVentana = enlaces.filter((enlace) => !enlace.hasAttribute("data-manual-open"));
+const enlacesVentana = enlaces.filter((enlace) => !enlace.hasAttribute("data-open-tab"));
 
 const fondosGif = [
   "img/fondos/gif1.gif",
@@ -180,6 +180,7 @@ enlaces.forEach((enlace) => {
   enlace.addEventListener("pointerleave", restaurarColorYinYang);
   enlace.addEventListener("focus", () => actualizarColorYinYang(enlace));
   enlace.addEventListener("blur", restaurarColorYinYang);
+  if (enlace.hasAttribute("data-open-tab")) return;
   enlace.addEventListener("click", (evento) => {
     evento.preventDefault();
     crearVentana(enlace);
