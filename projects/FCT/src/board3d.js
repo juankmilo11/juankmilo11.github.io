@@ -1,0 +1,781 @@
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const spriteUrls = import.meta.glob('../sprites/cropped/*.png', { eager: true, query: '?url', import: 'default' });
+const spriteTextures = new Map();
+const voxelGeometryCache = new Map();
+const voxelMaterials = new Map();
+
+const BOARD_SIZE = 8;
+const FILES = 'abcdefgh';
+const palette = {
+  light: 0xd0cbb8,
+  dark: 0x455d50,
+  selected: 0xffc83f,
+  target: 0x32d18a,
+  capture: 0xe94f43,
+  lastMove: 0xe4bb39,
+  check: 0xb64c3f,
+};
+
+export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => true) {
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x1d2925);
+  scene.fog = new THREE.Fog(0x1d2925, 11, 26);
+  const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
+  camera.position.set(0, 7.8, 11.5);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.1;
+  renderer.domElement.setAttribute('aria-label', 'Tablero tridimensional; clic o arrastra una pieza para moverla y arrastra el fondo para girar la cámara.');
+  host.append(renderer.domElement);
+
+  scene.add(new THREE.HemisphereLight(0xe0e9d2, 0x394339, 2.1));
+  const sun = new THREE.DirectionalLight(0xffd79a, 3.2);
+  sun.position.set(-5, 11, 6);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.camera.left = -10;
+  sun.shadow.camera.right = 10;
+  sun.shadow.camera.top = 10;
+  sun.shadow.camera.bottom = -10;
+  scene.add(sun);
+  const fill = new THREE.DirectionalLight(0x88a7ba, 1.35);
+  fill.position.set(8, 5, -7);
+  scene.add(fill);
+
+  const world = new THREE.Group();
+  scene.add(world);
+  const tileMeshes = [];
+  const pieceMeshes = [];
+  const capturedPieces = [];
+  const capturedMeshes = [];
+  const capturedCounts = { w: 0, b: 0 };
+  const tileHeights = new Map();
+  const tileMaterials = new Map();
+  const tileHighlights = new Map();
+  const raycaster = new THREE.Raycaster();
+  const pointer = new THREE.Vector2();
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const controls = new OrbitControls(camera, renderer.domElement);
+  let cameraProfile = { radius: 11.5, height: 7.8, fov: 36, targetY: 0.35 };
+  let lastPortrait = null;
+  controls.target.set(0, cameraProfile.targetY, 0);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.075;
+  controls.minDistance = 8;
+  controls.maxDistance = 20;
+  controls.minPolarAngle = 0.3;
+  controls.maxPolarAngle = Math.PI / 2.08;
+  controls.maxTargetRadius = 1.8;
+  controls.update();
+  controls.saveState();
+
+  buildHill(world);
+  buildBoard(world, tileMeshes, tileHeights, tileMaterials);
+  for (const tile of tileMeshes) {
+    const square = tile.userData.square;
+    const highlightMaterial = new THREE.MeshBasicMaterial({
+      color: palette.target,
+      transparent: true,
+      opacity: 0.7,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+    });
+    const highlight = new THREE.Mesh(new THREE.PlaneGeometry(0.94, 0.94), highlightMaterial);
+    highlight.rotation.x = -Math.PI / 2;
+    highlight.position.set(tile.position.x, tileHeights.get(square) + 0.003, tile.position.z);
+    highlight.visible = false;
+    highlight.renderOrder = 2;
+    world.add(highlight);
+    tileHighlights.set(square, highlight);
+  }
+  buildRuins(world);
+
+  const dropIndicatorMaterial = new THREE.MeshBasicMaterial({
+    color: palette.target,
+    transparent: true,
+    opacity: 0.54,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+  });
+  const dropIndicator = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.9), dropIndicatorMaterial);
+  dropIndicator.rotation.x = -Math.PI / 2;
+  dropIndicator.visible = false;
+  dropIndicator.renderOrder = 3;
+  world.add(dropIndicator);
+  const dropShadowMaterial = new THREE.MeshBasicMaterial({
+    color: 0x151b12,
+    transparent: true,
+    opacity: 0.66,
+    alphaTest: 0.06,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    toneMapped: false,
+  });
+  const dropShadow = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 0.88), dropShadowMaterial);
+  dropShadow.rotation.x = -Math.PI / 2;
+  dropShadow.visible = false;
+  dropShadow.renderOrder = 4;
+  world.add(dropShadow);
+
+  let pointerDown = null;
+  let draggedPiece = null;
+  let draggedFrom = null;
+  let dragging = false;
+  let legalTargets = new Set();
+  let dragPlane = null;
+  let originalPosition = null;
+
+  function setPointer(event) {
+    const rect = renderer.domElement.getBoundingClientRect();
+    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(pointer, camera);
+  }
+
+  function hit(event) {
+    setPointer(event);
+    const intersections = raycaster.intersectObjects([...pieceMeshes, ...tileMeshes], true);
+    for (const intersection of intersections) {
+      let object = intersection.object;
+      while (object && !object.userData.kind) object = object.parent;
+      if (object?.userData.kind === 'piece' || object?.userData.kind === 'tile') return { object, intersection };
+    }
+    return null;
+  }
+
+  function squareAtPointer(event) {
+    setPointer(event);
+    const intersections = raycaster.intersectObjects(tileMeshes, false);
+    if (intersections[0]) return intersections[0].object.userData.square;
+    const ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.25);
+    const point = new THREE.Vector3();
+    if (!raycaster.ray.intersectPlane(ground, point)) return null;
+    return worldToSquare(point.x, point.z);
+  }
+
+  function showDropIndicator(square) {
+    if (!square) {
+      dropIndicator.visible = false;
+      dropShadow.visible = false;
+      return;
+    }
+    const file = FILES.indexOf(square[0]);
+    const row = 8 - Number(square[1]);
+    const legal = legalTargets.has(square);
+    dropIndicator.position.set(file - 3.5, tileHeights.get(square) + 0.012, row - 3.5);
+    dropIndicatorMaterial.color.setHex(legal ? palette.target : palette.capture);
+    dropIndicatorMaterial.opacity = legal ? 0.58 : 0.48;
+    dropIndicator.visible = true;
+    if (draggedPiece) {
+      dropShadowMaterial.map = getSpriteTexture(draggedPiece.userData.type, draggedPiece.userData.color);
+      dropShadowMaterial.needsUpdate = true;
+      dropShadow.position.set(file - 3.5, tileHeights.get(square) + 0.014, row - 3.5);
+      dropShadow.visible = true;
+    }
+  }
+
+  renderer.domElement.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0) return;
+    pointerDown = { x: event.clientX, y: event.clientY };
+    const result = hit(event);
+    if (result?.object.userData.kind === 'piece' &&
+      (result.object.userData.color !== 'w' || !canDragPiece(result.object.userData))) {
+      event.stopPropagation();
+      onSquare(result.object.userData.square);
+      return;
+    }
+    if (result?.object.userData.kind === 'piece' && !result.object.userData.moveAnimation) {
+      draggedPiece = result.object;
+      draggedFrom = draggedPiece.userData.square;
+      dragging = false;
+      originalPosition = draggedPiece.position.clone();
+      dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -draggedPiece.position.y);
+      controls.enabled = false;
+      renderer.domElement.setPointerCapture(event.pointerId);
+      onSquare(draggedFrom);
+    }
+  }, true);
+
+  renderer.domElement.addEventListener('pointermove', (event) => {
+    if (!draggedPiece || !pointerDown) return;
+    const distance = Math.hypot(event.clientX - pointerDown.x, event.clientY - pointerDown.y);
+    if (distance > 6) dragging = true;
+    if (!dragging) return;
+    showDropIndicator(squareAtPointer(event));
+    setPointer(event);
+    const point = new THREE.Vector3();
+    if (raycaster.ray.intersectPlane(dragPlane, point)) {
+      draggedPiece.position.x = THREE.MathUtils.clamp(point.x, -4.1, 4.1);
+      draggedPiece.position.z = THREE.MathUtils.clamp(point.z, -4.1, 4.1);
+      draggedPiece.position.y = originalPosition.y + 0.3;
+    }
+  });
+
+  renderer.domElement.addEventListener('pointerup', (event) => {
+    if (!pointerDown) return;
+    const distance = Math.hypot(event.clientX - pointerDown.x, event.clientY - pointerDown.y);
+    if (draggedPiece) {
+      const from = draggedFrom;
+      const to = dragging ? squareAtPointer(event) : from;
+      showDropIndicator(null);
+      draggedPiece.position.copy(originalPosition);
+      draggedPiece = null;
+      draggedFrom = null;
+      dragging = false;
+      originalPosition = null;
+      dragPlane = null;
+      controls.enabled = true;
+      if (distance < 6) onSquare(from);
+      else if (to) onDragMove(from, to);
+    } else if (distance < 6) {
+      const result = hit(event);
+      const square = result?.object.userData.square;
+      if (square) onSquare(square);
+    }
+    pointerDown = null;
+  }, true);
+
+  renderer.domElement.addEventListener('pointercancel', () => {
+    if (draggedPiece && originalPosition) draggedPiece.position.copy(originalPosition);
+    showDropIndicator(null);
+    draggedPiece = null;
+    draggedFrom = null;
+    dragging = false;
+    pointerDown = null;
+    originalPosition = null;
+    dragPlane = null;
+    controls.enabled = true;
+  });
+
+  function update(board, state) {
+    if (board.flat().filter(Boolean).length === 32 && (capturedMeshes.length || capturedPieces.length)) {
+      capturedMeshes.forEach((mesh) => world.remove(mesh));
+      capturedMeshes.length = 0;
+      capturedPieces.forEach(({ mesh }) => world.remove(mesh));
+      capturedPieces.length = 0;
+      capturedCounts.w = 0;
+      capturedCounts.b = 0;
+    }
+    legalTargets = new Set(state.targets);
+    const previousBySquare = new Map(pieceMeshes.map((mesh) => [mesh.userData.square, mesh]));
+    const retained = new Set();
+    const nextPieces = [];
+    const movement = state.animationMove ?? state.lastMove;
+    const movingMesh = movement ? previousBySquare.get(movement.from) : null;
+    const capturedMesh = !state.animationMove && state.lastMove?.captured ? previousBySquare.get(state.lastMove.to) : null;
+    const lastSquares = new Set(state.lastMove ? [state.lastMove.from, state.lastMove.to] : []);
+    for (const tile of tileMeshes) {
+      const square = tile.userData.square;
+      const material = tileMaterials.get(square);
+      material.color.setHex((FILES.indexOf(square[0]) + Number(square[1])) % 2 ? palette.light : palette.dark);
+      material.emissive.setHex(0x000000);
+      material.emissiveIntensity = 0;
+      const highlight = tileHighlights.get(square);
+      const isLastMove = lastSquares.has(square);
+      const isLegalTarget = state.targets.has(square);
+      highlight.visible = isLastMove || isLegalTarget;
+      if (isLastMove) {
+        highlight.material.color.setHex(0xf4ca37);
+        highlight.material.opacity = 0.82;
+      } else if (isLegalTarget) {
+        const occupied = board[8 - Number(square[1])][FILES.indexOf(square[0])];
+        highlight.material.color.setHex(occupied ? palette.capture : palette.target);
+        highlight.material.opacity = 0.7;
+      }
+      if (lastSquares.has(square)) {
+        material.emissive.setHex(palette.lastMove);
+        material.emissiveIntensity = 0.42;
+      }
+      if (square === state.selectedSquare) {
+        material.emissive.setHex(palette.selected);
+        material.emissiveIntensity = 0.98;
+      }
+      if (square === state.checkedKing) {
+        material.emissive.setHex(palette.check);
+        material.emissiveIntensity = 0.7;
+      }
+    }
+
+    board.forEach((rank, row) => rank.forEach((piece, file) => {
+      if (!piece) return;
+      const square = `${FILES[file]}${8 - row}`;
+      let mesh = previousBySquare.get(square);
+      if (mesh && (mesh.userData.type !== piece.type || mesh.userData.color !== piece.color)) mesh = null;
+      if (!mesh && square === movement?.to && movingMesh &&
+        movingMesh.userData.type === piece.type && movingMesh.userData.color === piece.color) mesh = movingMesh;
+      if (mesh && retained.has(mesh)) mesh = null;
+      if (!mesh) mesh = createPiece(piece.type, piece.color);
+      const previousSquare = mesh.userData.square;
+      const previousPosition = mesh.userData.basePosition?.clone() ?? mesh.position.clone();
+      const isMovingPiece = mesh === movingMesh && previousSquare === movement?.from && square === movement?.to;
+      const targetPosition = new THREE.Vector3(file - 3.5, tileHeights.get(square) + 0.008, row - 3.5);
+      retained.add(mesh);
+      Object.assign(mesh.userData, { kind: 'piece', square, color: piece.color, type: piece.type });
+      mesh.userData.selected = square === state.selectedSquare;
+      if (mesh.userData.basePosition) mesh.userData.basePosition.copy(targetPosition);
+      else mesh.userData.basePosition = targetPosition.clone();
+      if (isMovingPiece) {
+        mesh.position.copy(previousPosition);
+        mesh.userData.moveAnimation = {
+          from: previousPosition,
+          to: targetPosition.clone(),
+          startTime: performance.now(),
+          duration: reducedMotion ? 160 : 380 + Math.random() * 180,
+          capture: Boolean(movement.captured),
+        };
+      } else if (!mesh.userData.moveAnimation) {
+        mesh.position.copy(targetPosition);
+      }
+      if (mesh.parent !== world) world.add(mesh);
+      nextPieces.push(mesh);
+    }));
+    for (const mesh of pieceMeshes) {
+      if (retained.has(mesh)) continue;
+      if (mesh === capturedMesh) {
+        const origin = mesh.userData.basePosition?.clone() ?? mesh.position.clone();
+        const index = capturedCounts[mesh.userData.color]++ % 16;
+        const side = mesh.userData.color === 'w' ? 1 : -1;
+        const tier = Math.floor(index / 8);
+        const slot = index % 8;
+        const position = new THREE.Vector3(
+          side * (4.65 + tier + (Math.random() - 0.5) * 0.1),
+          0.12,
+          slot - 3.5 + (Math.random() - 0.5) * 0.14,
+        );
+        const facing = (Math.random() - 0.5) * Math.PI * 2;
+        mesh.position.copy(origin);
+        mesh.rotation.y = facing;
+        capturedPieces.push({
+          mesh,
+          position,
+          from: origin,
+          rotation: facing,
+          startTime: performance.now(),
+          duration: reducedMotion ? 180 : 360 + Math.random() * 120,
+          phase: Math.random() * Math.PI * 2,
+        });
+      } else {
+        world.remove(mesh);
+      }
+    }
+    pieceMeshes.splice(0, pieceMeshes.length, ...nextPieces);
+  }
+
+  function resize() {
+    const width = Math.max(1, host.clientWidth);
+    const height = Math.max(1, host.clientHeight);
+    renderer.setSize(width, height, false);
+    camera.aspect = width / height;
+    if (width > height * 1.1 || height > width * 1.1) {
+      const portrait = height > width;
+      if (portrait !== lastPortrait) {
+        const azimuth = Math.atan2(
+          camera.position.x - controls.target.x,
+          camera.position.z - controls.target.z
+        );
+        cameraProfile = portrait
+          ? { radius: 13.8, height: 9.3, fov: 46, targetY: 0.12 }
+          : window.matchMedia('(max-width: 640px)').matches
+            ? { radius: 10, height: 6.6, fov: 36, targetY: 0.35 }
+            : { radius: 11.5, height: 7.8, fov: 36, targetY: 0.35 };
+        controls.target.set(0, cameraProfile.targetY, 0);
+        camera.position.set(
+          Math.sin(azimuth) * cameraProfile.radius,
+          cameraProfile.height,
+          Math.cos(azimuth) * cameraProfile.radius
+        );
+        camera.fov = cameraProfile.fov;
+        lastPortrait = portrait;
+        controls.update();
+        controls.saveState();
+      }
+    }
+    camera.updateProjectionMatrix();
+  }
+
+  function resetCamera() {
+    cancelIntro();
+    controls.reset();
+  }
+
+  let introFrame = 0;
+  let introToken = 0;
+  function cancelIntro() {
+    introToken += 1;
+    if (introFrame) cancelAnimationFrame(introFrame);
+    introFrame = 0;
+    controls.enabled = true;
+  }
+
+  function playIntro() {
+    cancelIntro();
+    const token = ++introToken;
+    controls.enabled = false;
+    const target = controls.target.clone();
+    const endRadius = cameraProfile.radius;
+    const endAngle = 0;
+    const startRadius = endRadius + 1.1;
+    const endY = cameraProfile.height;
+    const startY = endY + 2.4;
+    const start = performance.now();
+    const duration = 4600;
+    const step = (now) => {
+      if (token !== introToken) return;
+      const t = Math.min(1, (now - start) / duration);
+      const eased = t * t * (3 - 2 * t);
+      const angle = endAngle + (1 - eased) * Math.PI * 2;
+      const radius = startRadius + (endRadius - startRadius) * eased;
+      const y = startY + (endY - startY) * eased;
+      camera.position.set(target.x + Math.sin(angle) * radius, y, target.z + Math.cos(angle) * radius);
+      camera.lookAt(target);
+      if (t < 1) introFrame = requestAnimationFrame(step);
+      else {
+        introFrame = 0;
+        controls.enabled = true;
+        controls.update();
+        controls.saveState();
+      }
+    };
+    introFrame = requestAnimationFrame(step);
+  }
+
+  const observer = new ResizeObserver(resize);
+  observer.observe(host);
+  resize();
+
+  function animate() {
+    requestAnimationFrame(animate);
+    const time = performance.now() * 0.001;
+    for (const piece of pieceMeshes) {
+      if (piece === draggedPiece) continue;
+      const base = piece.userData.basePosition;
+      const idle = piece.userData.idleAnimation;
+      const motion = piece.userData.moveAnimation;
+      if (!base || !idle) continue;
+
+      if (motion) {
+        const progress = Math.min(1, (performance.now() - motion.startTime) / motion.duration);
+        const eased = 1 - (1 - progress) ** 3;
+        piece.position.lerpVectors(motion.from, motion.to, eased);
+        piece.position.y += Math.sin(Math.PI * progress) * (motion.capture ? 0.24 : 0.16);
+        piece.rotation.y = Math.sin(Math.PI * progress) * 0.18;
+        piece.scale.setScalar(1 + Math.sin(Math.PI * progress) * 0.035);
+        if (progress >= 1) {
+          piece.userData.moveAnimation = null;
+          piece.position.copy(base);
+          piece.rotation.set(0, 0, 0);
+          piece.scale.setScalar(1);
+        }
+        continue;
+      }
+
+      const selected = piece.userData.selected;
+      const wave = Math.sin(time * idle.speed + idle.phase);
+      piece.position.set(base.x, base.y + (reducedMotion ? 0 : wave * (selected ? 0.045 : idle.lift)), base.z);
+      piece.rotation.y = reducedMotion ? 0 : wave * (selected ? 0.12 : idle.sway);
+      piece.rotation.z = reducedMotion || !selected ? 0 : Math.cos(time * 2.6 + idle.phase) * 0.025;
+      piece.scale.setScalar(1 + (reducedMotion ? 0 : Math.max(0, wave) * (selected ? 0.018 : idle.scale)));
+    }
+    for (let index = capturedPieces.length - 1; index >= 0; index -= 1) {
+      const effect = capturedPieces[index];
+      const progress = Math.min(1, (performance.now() - effect.startTime) / effect.duration);
+      const eased = progress * progress * (3 - 2 * progress);
+      effect.mesh.position.lerpVectors(effect.from, effect.position, eased);
+      effect.mesh.position.y += Math.sin(Math.PI * progress) * 0.22;
+      effect.mesh.rotation.y = effect.rotation + eased * (0.4 + Math.sin(effect.phase) * 0.1);
+      effect.mesh.scale.setScalar(1 - eased * 0.28);
+      if (progress >= 1) {
+        effect.mesh.position.copy(effect.position);
+        effect.mesh.scale.setScalar(1);
+        capturedMeshes.push(effect.mesh);
+        capturedPieces.splice(index, 1);
+      }
+    }
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  return { update, resize, resetCamera, playIntro, cancelIntro };
+}
+
+function buildHill(world) {
+  const base = new THREE.Mesh(
+    new THREE.CylinderGeometry(6.7, 8.1, 1.25, 10, 1),
+    new THREE.MeshStandardMaterial({ color: 0x555e49, roughness: 0.96, flatShading: true }),
+  );
+  base.position.y = -0.65;
+  base.receiveShadow = true;
+  world.add(base);
+
+  const plateau = new THREE.Mesh(
+    new THREE.CylinderGeometry(5.95, 6.7, 0.28, 10, 1),
+    new THREE.MeshStandardMaterial({ color: 0x303a31, roughness: 0.9, flatShading: true }),
+  );
+  plateau.position.y = -0.17;
+  plateau.receiveShadow = true;
+  world.add(plateau);
+
+  const standMaterial = new THREE.MeshStandardMaterial({ color: 0x71644a, roughness: 0.84, flatShading: true });
+  const stepMaterial = new THREE.MeshStandardMaterial({ color: 0x8d7952, roughness: 0.78, flatShading: true });
+  for (const side of [-1, 1]) {
+    const stand = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.22, 8.65), standMaterial);
+    stand.position.set(side * 5.15, -0.015, 0);
+    stand.castShadow = true;
+    stand.receiveShadow = true;
+    world.add(stand);
+    for (let row = 0; row < 2; row += 1) {
+      const step = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12 + row * 0.1, 8.8), stepMaterial);
+      step.position.set(side * (6.35 + row * 0.48), 0.06 + row * 0.12, 0);
+      step.castShadow = true;
+      world.add(step);
+    }
+  }
+
+  const path = new THREE.Mesh(
+    new THREE.RingGeometry(5.9, 6.65, 10),
+    new THREE.MeshStandardMaterial({ color: 0x867f66, roughness: 1, side: THREE.DoubleSide }),
+  );
+  path.rotation.x = -Math.PI / 2;
+  path.position.y = 0.13;
+  world.add(path);
+
+  const rockMaterial = new THREE.MeshStandardMaterial({ color: 0x5b6251, roughness: 1, flatShading: true });
+  for (let i = 0; i < 18; i += 1) {
+    const angle = (i / 18) * Math.PI * 2;
+    const radius = 7.0 + (i % 3) * 0.25;
+    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.32 + (i % 4) * 0.09, 0), rockMaterial);
+    rock.position.set(Math.cos(angle) * radius, 0.15, Math.sin(angle) * radius);
+    rock.rotation.set(i * 0.3, i * 0.57, i * 0.18);
+    rock.castShadow = true;
+    world.add(rock);
+  }
+}
+
+function buildBoard(world, tileMeshes, tileHeights, tileMaterials) {
+  const frameMaterial = new THREE.MeshStandardMaterial({ color: 0x514936, roughness: 0.72, metalness: 0.28 });
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(8.42, 0.18, 8.42), frameMaterial);
+  frame.position.y = -0.14;
+  frame.castShadow = true;
+  frame.receiveShadow = true;
+  world.add(frame);
+
+  const rimMaterial = new THREE.MeshStandardMaterial({ color: 0xb08a50, roughness: 0.46, metalness: 0.55 });
+  const rim = new THREE.Mesh(new THREE.BoxGeometry(8.52, 0.07, 8.52), rimMaterial);
+  rim.position.y = -0.08;
+  world.add(rim);
+
+  for (let row = 0; row < BOARD_SIZE; row += 1) {
+    for (let file = 0; file < BOARD_SIZE; file += 1) {
+      const square = `${FILES[file]}${8 - row}`;
+      const light = (row + file) % 2 === 0;
+      const material = new THREE.MeshStandardMaterial({
+        color: light ? palette.light : palette.dark,
+        roughness: 0.82,
+        metalness: 0.03,
+        emissive: 0x000000,
+        emissiveIntensity: 0,
+      });
+      const height = 0.035;
+      const tile = new THREE.Mesh(new THREE.BoxGeometry(0.96, 0.16 + height, 0.96), material);
+      tile.position.set(file - 3.5, height / 2, row - 3.5);
+      tile.castShadow = true;
+      tile.receiveShadow = true;
+      tile.userData = { kind: 'tile', square };
+      world.add(tile);
+      tileMeshes.push(tile);
+      tileHeights.set(square, height + 0.08);
+      tileMaterials.set(square, material);
+    }
+  }
+
+  const edgeMaterial = new THREE.MeshStandardMaterial({ color: 0x9c885f, roughness: 0.72 });
+  for (let file = 0; file < 8; file += 1) {
+    const marker = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.055, 0.16), edgeMaterial);
+    marker.position.set(file - 3.5, 0.16, 4.24);
+    world.add(marker);
+  }
+}
+
+function buildRuins(world) {
+  const darkStone = new THREE.MeshStandardMaterial({ color: 0x6a6b5b, roughness: 0.96, flatShading: true });
+
+  const blocks = [
+    [-7.2, 0.29, 1.8, 0.8, 0.42], [7.2, 0.22, -1.1, 0.8, 0.38],
+    [-7.3, 0.22, -1.7, 0.75, 0.48], [7.3, 0.28, 1.7, 0.75, 0.6],
+    [-2.9, 0.22, -5.1, 1.1, 0.37], [2.7, 0.2, 5.2, 0.92, 0.4],
+  ];
+  for (const [x, y, z, width, height] of blocks) {
+    const block = new THREE.Mesh(new THREE.BoxGeometry(width, height, 0.45), darkStone);
+    block.position.set(x, y, z);
+    block.rotation.y = (x + z) * 0.025;
+    block.castShadow = true;
+    block.receiveShadow = true;
+    world.add(block);
+  }
+
+}
+
+function createPiece(type, color) {
+  const texture = getSpriteTexture(type, color);
+  const placeholderMaterial = new THREE.MeshBasicMaterial({ map: texture, transparent: true, alphaTest: 0.08, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
+  const piece = new THREE.Group();
+  const figure = new THREE.Mesh(new THREE.PlaneGeometry(0.82, 1.02), placeholderMaterial);
+  // White pieces face north and black pieces face south; this rotation stays fixed as the camera orbits.
+  figure.rotation.y = color === 'w' ? Math.PI : 0;
+  figure.position.y = 0.52;
+  figure.castShadow = true;
+  figure.receiveShadow = true;
+  piece.add(figure);
+  piece.userData.visual = figure;
+  piece.userData.isVoxel = false;
+  piece.userData.idleAnimation = {
+    phase: Math.random() * Math.PI * 2,
+    speed: 0.65 + Math.random() * 0.75,
+    lift: 0.012 + Math.random() * 0.018,
+    sway: 0.018 + Math.random() * 0.025,
+    scale: 0.004 + Math.random() * 0.006,
+  };
+  getVoxelGeometry(type, color).then((geometry) => {
+    if (!geometry) return;
+    const oldGeometry = figure.geometry;
+    figure.geometry = geometry;
+    oldGeometry.dispose();
+    figure.material = getVoxelMaterial(color);
+    figure.position.y = 0;
+    piece.userData.isVoxel = true;
+  });
+  return piece;
+}
+
+function getSpriteTexture(type, color) {
+  const key = `${type}-${color}`;
+  if (spriteTextures.has(key)) return spriteTextures.get(key);
+  const url = spriteUrls[`../sprites/cropped/${type}-${color}-0.png`];
+  const texture = new THREE.TextureLoader().load(url);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.magFilter = THREE.NearestFilter;
+  texture.minFilter = THREE.NearestFilter;
+  spriteTextures.set(key, texture);
+  return texture;
+}
+
+function getVoxelGeometry(type, color) {
+  const key = `${type}-${color}`;
+  if (voxelGeometryCache.has(key)) return voxelGeometryCache.get(key);
+  const promise = loadSpritePixels(type, color).then((pixels) => pixels ? createVoxelGeometry(pixels) : null);
+  voxelGeometryCache.set(key, promise);
+  return promise;
+}
+
+function loadSpritePixels(type, color) {
+  const url = spriteUrls[`../sprites/cropped/${type}-${color}-0.png`];
+  if (!url) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 32;
+      canvas.height = 40;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      context.drawImage(image, 0, 0);
+      resolve(context.getImageData(0, 0, 32, 40));
+    };
+    image.onerror = () => resolve(null);
+    image.src = url;
+  });
+}
+
+function getVoxelMaterial(color) {
+  if (!voxelMaterials.has(color)) {
+    voxelMaterials.set(color, new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 0.86,
+      metalness: 0,
+      side: THREE.DoubleSide,
+    }));
+  }
+  return voxelMaterials.get(color);
+}
+
+function createVoxelGeometry(imageData) {
+  const width = 32;
+  const height = 40;
+  const pixelSize = 0.026;
+  const pixelWidth = 0.0234;
+  const depth = 0.18;
+  const halfDepth = depth / 2;
+  const pixels = imageData.data;
+  let bottomRow = 0;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (pixels[(y * width + x) * 4 + 3] > 16) bottomRow = Math.max(bottomRow, y);
+    }
+  }
+
+  const occupied = new Map();
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const offset = (y * width + x) * 4;
+      if (pixels[offset + 3] < 16) continue;
+      occupied.set(`${x},${y}`, {
+        x0: (x - width / 2) * pixelWidth,
+        y0: (bottomRow - y) * pixelSize,
+        color: [pixels[offset] / 255, pixels[offset + 1] / 255, pixels[offset + 2] / 255],
+      });
+    }
+  }
+
+  const positions = [];
+  const normals = [];
+  const colors = [];
+  function quad(points, normal, color) {
+    const order = [0, 1, 2, 0, 2, 3];
+    for (const i of order) {
+      positions.push(...points[i]);
+      normals.push(...normal);
+      colors.push(...color);
+    }
+  }
+
+  for (const [key, cell] of occupied) {
+    const [x, y] = key.split(',').map(Number);
+    const x0 = cell.x0;
+    const x1 = x0 + pixelWidth;
+    const y0 = cell.y0;
+    const y1 = y0 + pixelSize;
+    const front = halfDepth;
+    const back = -halfDepth;
+    quad([[x0,y0,front],[x1,y0,front],[x1,y1,front],[x0,y1,front]], [0,0,1], cell.color);
+    quad([[x1,y0,back],[x0,y0,back],[x0,y1,back],[x1,y1,back]], [0,0,-1], cell.color);
+    if (!occupied.has(`${x - 1},${y}`)) quad([[x0,y0,back],[x0,y0,front],[x0,y1,front],[x0,y1,back]], [-1,0,0], cell.color);
+    if (!occupied.has(`${x + 1},${y}`)) quad([[x1,y0,front],[x1,y0,back],[x1,y1,back],[x1,y1,front]], [1,0,0], cell.color);
+    if (!occupied.has(`${x},${y - 1}`)) quad([[x0,y1,back],[x0,y1,front],[x1,y1,front],[x1,y1,back]], [0,1,0], cell.color);
+    if (!occupied.has(`${x},${y + 1}`)) quad([[x0,y0,front],[x0,y0,back],[x1,y0,back],[x1,y0,front]], [0,-1,0], cell.color);
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.computeBoundingSphere();
+  return geometry;
+}
+
+function worldToSquare(x, z) {
+  const file = Math.round(x + 3.5);
+  const row = Math.round(z + 3.5);
+  if (file < 0 || file > 7 || row < 0 || row > 7) return null;
+  return `${FILES[file]}${8 - row}`;
+}

@@ -26,16 +26,16 @@ function updatePositionControls() {
 
 function updateGameStatus() {
   const message = statusText.textContent.trim();
-  const isCheckmate = /^Checkmate\b/i.test(message);
-  const isCheck = /^Check\b/i.test(message) && !isCheckmate;
+  const isCheckmate = /^(Checkmate|Jaque mate)\b/i.test(message);
+  const isCheck = /^(Check|Jaque)\b/i.test(message) && !isCheckmate;
 
   statusBadge.classList.toggle("is-check", isCheck);
   statusBadge.classList.toggle("is-checkmate", isCheckmate);
   checkmateOverlay.hidden = isReviewing || !isCheckmate;
-  reviewControls.hidden = !isReviewing && !appShell.classList.contains("is-playing");
+  reviewControls.hidden = !isReviewing && !isCheckmate;
 
   if (isCheckmate) {
-    winnerMessage.textContent = /Checkmate · Tú ganas/i.test(message) ? "Tú ganas" : "Tú pierdes";
+    winnerMessage.textContent = /(?:Tú ganas|Tú gana)/i.test(message) ? "Tú ganas" : "Tú pierdes";
   }
 
   if (!isReviewing && window.fctReview) {

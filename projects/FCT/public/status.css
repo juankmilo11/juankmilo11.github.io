@@ -1,0 +1,192 @@
+.game-status-badge.is-check,
+.game-status-badge.is-checkmate {
+  position: relative;
+  z-index: 30;
+  border-color: #e2c580;
+  color: #fff2c4;
+  background: #252218f2;
+  box-shadow: 0 0 24px #d2ad534d;
+}
+
+.game-status-badge.is-check strong,
+.game-status-badge.is-checkmate strong {
+  font-size: clamp(17px, 2vw, 25px);
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.app-shell.is-playing .game-status-badge.is-check,
+.app-shell.is-playing .game-status-badge.is-checkmate {
+  position: relative;
+  inset: auto;
+  transform: none;
+  padding: 5px 9px;
+}
+
+.turn-pulse.is-thinking {
+  background: #ed4545;
+  box-shadow: 0 0 10px #ed4545;
+  animation: .8s ease-in-out infinite alternate pulse-red;
+}
+
+@keyframes pulse-red {
+  from { opacity: .55; box-shadow: 0 0 5px #ed4545; }
+  to { opacity: 1; box-shadow: 0 0 14px #ed4545; }
+}
+
+.piece-inspector[hidden] { display: none; }
+
+.review-controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 8px;
+  color: #e7dfca;
+  background: #111713e8;
+  border: 1px solid #d9cfaa3d;
+  box-shadow: 0 4px 18px #0006;
+}
+
+.review-controls[hidden] { display: none; }
+
+.review-controls button {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 7px;
+  color: #ead8a9;
+  background: #252b25;
+  border: 1px solid #d9cfaa42;
+  cursor: pointer;
+  font: 700 11px/1 "DM Mono", monospace;
+}
+
+.review-controls button:hover:not(:disabled),
+.review-controls button:focus-visible {
+  color: #171a14;
+  background: #dfc47f;
+}
+
+.review-controls button:disabled { opacity: .38; cursor: not-allowed; }
+
+.review-controls output {
+  min-width: 150px;
+  text-align: center;
+  color: #c7c2b4;
+  font: 9px/1.2 "DM Mono", monospace;
+}
+
+.app-shell.is-reviewing .game-status-badge { display: none; }
+.app-shell.is-reviewing .board-frame { pointer-events: none; }
+.app-shell.is-reviewing .board-2d,
+.app-shell.is-reviewing .board-3d { pointer-events: none; }
+
+.review-match-button {
+  margin: 8px 0 14px;
+  padding: 11px 16px;
+  color: #e8d39a;
+  background: #252b25;
+  border: 1px solid #d9cfaa55;
+  cursor: pointer;
+  font: 700 11px/1.2 "DM Mono", monospace;
+}
+
+.review-match-button:hover,
+.review-match-button:focus-visible { background: #353b30; }
+
+.checkmate-overlay {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  color: #ede6d4;
+  background: #080c0be0;
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+}
+
+.checkmate-overlay[hidden] { display: none; }
+
+.checkmate-card {
+  width: min(460px, 100%);
+  padding: clamp(26px, 6vw, 54px) 24px;
+  text-align: center;
+  background: linear-gradient(145deg, #202820, #141a16);
+  border: 1px solid #d2c9aa55;
+  box-shadow: 0 24px 80px #000b;
+}
+
+.checkmate-kicker {
+  margin-bottom: 14px;
+  color: #cbb06d;
+  letter-spacing: .18em;
+  font: 700 9px/1.4 "DM Mono", monospace;
+}
+
+.checkmate-card h2 {
+  color: #f0dfae;
+  font: 700 clamp(42px, 10vw, 68px)/.98 Georgia, serif;
+}
+
+.checkmate-winner {
+  margin-top: 16px;
+  color: #f0ede3;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.review-match-button,
+.play-again-button {
+  width: min(260px, 100%);
+  min-height: 44px;
+  padding: 11px 16px;
+  cursor: pointer;
+  font: 700 11px/1.2 "DM Mono", monospace;
+}
+
+.review-match-button {
+  margin: 22px 0 8px;
+  color: #e8d39a;
+  background: #252b25;
+  border: 1px solid #d9cfaa66;
+}
+
+.play-again-button {
+  color: #171a14;
+  background: #dfc47f;
+  border: 1px solid #f0dfa8;
+}
+
+.review-match-button:hover,
+.review-match-button:focus-visible,
+.play-again-button:hover,
+.play-again-button:focus-visible { filter: brightness(1.12); }
+
+@media (max-width: 640px) {
+  .app-shell.is-playing .game-status-badge.is-check,
+  .app-shell.is-playing .game-status-badge.is-checkmate {
+    position: absolute;
+    top: 52px;
+    left: 8px;
+    right: auto;
+    padding: 4px 7px;
+    transform: none;
+  }
+
+  .game-status-badge.is-check strong,
+  .game-status-badge.is-checkmate strong { font-size: 14px; }
+
+  .app-shell.is-playing .review-controls {
+  display: flex;
+    position: absolute;
+    top: 50px;
+    left: 8px;
+    max-width: calc(100vw - 16px);
+    gap: 3px;
+    padding: 4px;
+  }
+
+  .review-controls button { min-width: 24px; height: 25px; padding-inline: 4px; }
+  .review-controls output { min-width: 105px; font-size: 8px; }
+}

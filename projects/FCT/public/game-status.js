@@ -1,0 +1,118 @@
+const statusText = document.querySelector("#game-status");
+const statusBadge = document.querySelector(".game-status-badge");
+const checkmateOverlay = document.querySelector("#checkmate-overlay");
+const winnerMessage = document.querySelector("#checkmate-message");
+const newGameButton = document.querySelector("#play-again");
+const reviewMatchButton = document.querySelector("#review-match");
+const reviewControls = document.querySelector("#review-controls");
+const reviewPosition = document.querySelector("#review-position");
+const appShell = document.querySelector(".app-shell");
+const backgroundMusic = document.querySelector("#background-music");
+let isReviewing = false;
+let currentMove = 0;
+let totalMoves = 0;
+
+if (backgroundMusic) backgroundMusic.volume = 0.5;
+
+function updatePositionControls() {
+  reviewPosition.textContent = currentMove === 0
+    ? `Inicio · 0/${totalMoves}`
+    : `Jugada ${currentMove} de ${totalMoves}`;
+  document.querySelector("#review-first").disabled = currentMove === 0;
+  document.querySelector("#review-previous").disabled = currentMove === 0;
+  document.querySelector("#review-next").disabled = currentMove === totalMoves;
+  document.querySelector("#review-last").disabled = currentMove === totalMoves;
+}
+
+function updateGameStatus() {
+  const message = statusText.textContent.trim();
+  const isCheckmate = /^(Checkmate|Jaque mate)\b/i.test(message);
+  const isCheck = /^(Check|Jaque)\b/i.test(message) && !isCheckmate;
+
+  statusBadge.classList.toggle("is-check", isCheck);
+  statusBadge.classList.toggle("is-checkmate", isCheckmate);
+  checkmateOverlay.hidden = isReviewing || !isCheckmate;
+  reviewControls.hidden = !isReviewing && !isCheckmate;
+
+  if (isCheckmate) {
+    winnerMessage.textContent = /(?:Tú ganas|Tú gana)/i.test(message) ? "Tú ganas" : "Tú pierdes";
+  }
+
+  if (!isReviewing && window.fctReview) {
+    const state = window.fctReview.refresh();
+    currentMove = state.total;
+    totalMoves = state.total;
+    updatePositionControls();
+  }
+}
+
+function goToMove(index) {
+  const state = window.fctReview.goTo(index);
+  currentMove = state.index;
+  totalMoves = state.total;
+  updatePositionControls();
+}
+
+function startReview() {
+  if (isReviewing || !window.fctReview) return;
+  totalMoves = window.fctReview.begin();
+  currentMove = totalMoves;
+  isReviewing = true;
+  window.fctReview.setReviewing(true);
+  appShell.classList.add("is-reviewing");
+  checkmateOverlay.hidden = true;
+  reviewControls.hidden = false;
+  updatePositionControls();
+}
+
+reviewMatchButton.addEventListener("click", () => {
+  startReview();
+  goToMove(totalMoves);
+  document.querySelector("#review-previous").focus({ preventScroll: true });
+});
+
+document.querySelector("#review-first").addEventListener("click", () => {
+  startReview();
+  goToMove(0);
+});
+document.querySelector("#review-previous").addEventListener("click", () => {
+  startReview();
+  goToMove(currentMove - 1);
+});
+document.querySelector("#review-next").addEventListener("click", () => {
+  startReview();
+  goToMove(currentMove + 1);
+});
+document.querySelector("#review-last").addEventListener("click", () => {
+  startReview();
+  goToMove(totalMoves);
+});
+
+document.querySelector("#review-return").addEventListener("click", () => {
+  if (!window.fctReview) return;
+  goToMove(totalMoves);
+  window.fctReview.setReviewing(false);
+  isReviewing = false;
+  appShell.classList.remove("is-reviewing");
+  checkmateOverlay.hidden = !/^Checkmate\b/i.test(statusText.textContent.trim());
+  updateGameStatus();
+});
+
+newGameButton.addEventListener("click", () => {
+  isReviewing = false;
+  appShell.classList.remove("is-reviewing");
+  reviewControls.hidden = true;
+  checkmateOverlay.hidden = true;
+  window.fctReview?.reset();
+  document.querySelector("#new-game").click();
+});
+
+new MutationObserver(updateGameStatus).observe(appShell, { attributes: true, attributeFilter: ["class"] });
+
+new MutationObserver(updateGameStatus).observe(statusText, {
+  childList: true,
+  characterData: true,
+  subtree: true
+});
+
+updateGameStatus();
