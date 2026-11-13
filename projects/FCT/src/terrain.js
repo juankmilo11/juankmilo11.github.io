@@ -2,4 +2,3 @@
 export function tileElevation(row, file) {
   return 0.115 + Math.min(row, file, 7 - row, 7 - file) * 0.16;
 }
-
