@@ -10,7 +10,7 @@
 
 .game-status-badge.is-check strong,
 .game-status-badge.is-checkmate strong {
-  font-size: clamp(18px, 2.2vw, 28px);
+  font-size: clamp(17px, 2vw, 25px);
   font-weight: 800;
   line-height: 1.1;
 }
@@ -20,7 +20,7 @@
   position: relative;
   inset: auto;
   transform: none;
-  padding: 8px 11px;
+  padding: 5px 9px;
 }
 
 .turn-pulse.is-thinking {
@@ -106,7 +106,7 @@
   }
 
   .game-status-badge.is-check strong,
-  .game-status-badge.is-checkmate strong { font-size: 15px; }
+  .game-status-badge.is-checkmate strong { font-size: 14px; }
 
   .app-shell.is-playing .review-controls {
   display: flex;
