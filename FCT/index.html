@@ -9,6 +9,7 @@
     <title>FCT: Fantasy Chess Tactics</title>
     <script type="module" crossorigin src="/FCT/assets/index-DaoP_iuM.js"></script>
     <link rel="stylesheet" crossorigin href="/FCT/assets/index-569ypkjZ.css">
+    <link rel="stylesheet" href="/FCT/status.css">
   </head>
   <body>
     <div class="app-shell">
@@ -108,5 +109,15 @@
       </div></form>
     </dialog>
 
+    <section class="checkmate-overlay" id="checkmate-overlay" role="dialog" aria-modal="true" aria-labelledby="checkmate-title" aria-describedby="checkmate-message" hidden>
+      <div class="checkmate-card">
+        <p class="checkmate-kicker">PARTIDA FINALIZADA</p>
+        <h2 id="checkmate-title">¡JAQUE MATE!</h2>
+        <p class="checkmate-winner" id="checkmate-message"></p>
+        <p class="checkmate-invitation">¿Jugamos otra partida?</p>
+        <button class="play-again-button" id="play-again" type="button">Jugar otra partida <span aria-hidden="true">↗</span></button>
+      </div>
+    </section>
+    <script src="/FCT/game-status.js"></script>
   </body>
 </html>

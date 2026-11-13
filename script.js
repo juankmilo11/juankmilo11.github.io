@@ -8,7 +8,7 @@ const reloj = document.querySelector("#reloj");
 const plantillaVentana = document.querySelector("#plantilla-ventana");
 const escenario = document.querySelector(".escenario");
 const enlaces = [...document.querySelectorAll(".enlace")];
-const enlacesVentana = enlaces.filter((enlace) => !enlace.hasAttribute("data-open-tab"));
+const enlacesVentana = enlaces.filter((enlace) => !enlace.hasAttribute("data-manual-open"));
 
 const fondosGif = [
   "img/fondos/gif1.gif",
@@ -27,6 +27,7 @@ const fondosGif = [
   "img/fondos/gif14.gif"
 ];
 const velocidades = ["7s", "2s", "0.5s", "30s"];
+const etiquetasVelocidad = ["4×", "15×", "60×", "↺"];
 let velocidadActual = 0;
 let indiceGif = -1;
 let zIndexVentana = 10;
@@ -41,15 +42,47 @@ function actualizarHora() {
   }).format(new Date());
 }
 
+const COLOR_RANGES = { hue: [0, 359], saturation: [70, 89], lightness: [15, 34] };
+let ultimoColorFondo = "";
+
+function numeroAleatorio([min, max]) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 function cambiarColorFondo() {
   document.body.classList.remove("fondo-gif");
-  const hue = Math.floor(Math.random() * 360);
-  const saturation = Math.floor(Math.random() * 20) + 70;
-  const lightness = Math.floor(Math.random() * 20) + 15;
-  document.documentElement.style.setProperty(
-    "--page-bg",
-    `hsl(${hue} ${saturation}% ${lightness}%)`
-  );
+  let color;
+  do {
+    color = `hsl(${numeroAleatorio(COLOR_RANGES.hue)} ${numeroAleatorio(COLOR_RANGES.saturation)}% ${numeroAleatorio(COLOR_RANGES.lightness)}%)`;
+  } while (color === ultimoColorFondo);
+  ultimoColorFondo = color;
+  document.documentElement.style.setProperty("--page-bg", color);
+}
+
+function luminanciaColor(hex) {
+  const rgb = hex.replace("#", "").match(/.{2}/g).map((channel) => parseInt(channel, 16) / 255);
+  const linear = rgb.map((channel) => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4);
+  return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
+}
+
+function actualizarColorYinYang(enlace) {
+  const acento = enlace.dataset.barColor || "#ffffff";
+  const luminancia = luminanciaColor(acento);
+  const acentoClaro = (luminancia + 0.05) / 0.05 >= 1.05 / (luminancia + 0.05);
+  document.documentElement.style.setProperty("--yin-color", acentoClaro ? acento : "#ffffff");
+  document.documentElement.style.setProperty("--yang-color", acentoClaro ? "#090909" : acento);
+  document.documentElement.style.setProperty("--outline-color", "#ffffff");
+}
+
+function restaurarColorYinYang() {
+  const activo = enlaces.find((enlace) => enlace.matches(":hover, :focus-visible"));
+  if (activo) {
+    actualizarColorYinYang(activo);
+    return;
+  }
+  document.documentElement.style.removeProperty("--yin-color");
+  document.documentElement.style.removeProperty("--yang-color");
+  document.documentElement.style.removeProperty("--outline-color");
 }
 
 function cambiarFondoGif() {
@@ -147,6 +180,10 @@ enlaces.forEach((enlace) => {
   enlace.addEventListener("pointerleave", restaurarColorYinYang);
   enlace.addEventListener("focus", () => actualizarColorYinYang(enlace));
   enlace.addEventListener("blur", restaurarColorYinYang);
+  enlace.addEventListener("click", (evento) => {
+    evento.preventDefault();
+    crearVentana(enlace);
+  });
 });
 
 botonTitulo.addEventListener("click", () => {
@@ -162,19 +199,16 @@ botonTitulo.addEventListener("click", () => {
 });
 
 botonAcc.addEventListener("click", () => {
-  const velocidad = velocidades[velocidadActual];
+  const indice = velocidadActual;
+  const velocidad = velocidades[indice];
+  const etiqueta = etiquetasVelocidad[indice];
   document.documentElement.style.setProperty("--rotation-speed", velocidad);
-  botonAcc.setAttribute("aria-label", `Velocidad de rotación: ${velocidad}`);
+  botonAcc.textContent = etiqueta;
+  botonAcc.title = `Velocidad de rotación: ${etiqueta}`;
+  botonAcc.setAttribute("aria-label", `Velocidad de rotación: ${etiqueta}`);
   velocidadActual = (velocidadActual + 1) % velocidades.length;
 });
 
-enlaces.forEach((enlace) => {
-  if (enlace.hasAttribute("data-open-tab")) return;
-  enlace.addEventListener("click", (evento) => {
-    evento.preventDefault();
-    crearVentana(enlace);
-  });
-});
 
 document.addEventListener("keydown", (evento) => {
   if (evento.key !== "Escape") return;

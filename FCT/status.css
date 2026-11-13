@@ -1,0 +1,89 @@
+.game-status-badge.is-check,
+.game-status-badge.is-checkmate {
+  position: relative;
+  z-index: 30;
+  border-color: #e2c580;
+  color: #fff2c4;
+  background: #252218f2;
+  box-shadow: 0 0 24px #d2ad534d;
+}
+
+.game-status-badge.is-check strong,
+.game-status-badge.is-checkmate strong {
+  font-size: clamp(18px, 2.2vw, 28px);
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.app-shell.is-playing .game-status-badge.is-check,
+.app-shell.is-playing .game-status-badge.is-checkmate {
+  position: fixed;
+  top: clamp(76px, 11vh, 118px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 20px;
+}
+
+.checkmate-overlay {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: #080c09d9;
+  backdrop-filter: blur(7px);
+}
+
+.checkmate-overlay[hidden] { display: none; }
+
+.checkmate-card {
+  width: min(460px, 100%);
+  padding: clamp(28px, 6vw, 48px);
+  text-align: center;
+  background: linear-gradient(150deg, #242a21, #121713);
+  border: 1px solid #d5b66b88;
+  box-shadow: 0 24px 80px #000b;
+}
+
+.checkmate-kicker {
+  color: #d9bd7b;
+  font: 700 10px/1.4 "DM Mono", monospace;
+  letter-spacing: .2em;
+}
+
+.checkmate-card h2 {
+  margin: 14px 0;
+  color: #f3dfaa;
+  font: 700 clamp(36px, 9vw, 58px)/1 Georgia, serif;
+  letter-spacing: -.04em;
+}
+
+.checkmate-winner {
+  color: #eee8d8;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.checkmate-invitation {
+  margin: 12px 0 22px;
+  color: #aeb1a4;
+  font-size: 13px;
+}
+
+.play-again-button {
+  padding: 13px 18px;
+  color: #171a14;
+  background: #dfc47f;
+  border: 1px solid #f0daa0;
+  cursor: pointer;
+  font: 700 12px/1.2 "DM Mono", monospace;
+  letter-spacing: .04em;
+}
+
+.play-again-button:hover,
+.play-again-button:focus-visible {
+  background: #f1d997;
+}
+
+.play-again-button span { margin-left: 12px; font-size: 16px; }

@@ -122,16 +122,16 @@ button { cursor: pointer; font: inherit; }
 }
 
 .yin-yang .yin {
-  fill: #fff;
+  fill: var(--yin-color, #fff);
 }
 
 .yin-yang .yang {
-  fill: #090909;
+  fill: var(--yang-color, #090909);
 }
 
 .yin-yang .yin-yang-outline {
   fill: none;
-  stroke: #fff;
+  stroke: var(--outline-color, #fff);
   stroke-width: 1.25;
   vector-effect: non-scaling-stroke;
   pointer-events: none;
