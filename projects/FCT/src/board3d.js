@@ -20,8 +20,8 @@ const palette = {
 
 export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => true) {
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x1d2925);
-  scene.fog = new THREE.Fog(0x1d2925, 11, 26);
+  scene.background = createSunsetSky();
+  scene.fog = new THREE.Fog(0x705442, 14, 34);
   const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
   camera.position.set(0, 7.8, 11.5);
 
@@ -55,7 +55,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
   const pieceMeshes = [];
   const capturedPieces = [];
   const capturedMeshes = [];
-  const capturedCounts = { w: 0, b: 0 };
+  const capturedSlots = { w: new Map(), b: new Map() };
   const tileHeights = new Map();
   const tileMaterials = new Map();
   const tileHighlights = new Map();
@@ -192,8 +192,6 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
     const result = hit(event);
     if (result?.object.userData.kind === 'piece' &&
       (result.object.userData.color !== 'w' || !canDragPiece(result.object.userData))) {
-      event.stopPropagation();
-      onSquare(result.object.userData.square);
       return;
     }
     if (result?.object.userData.kind === 'piece' && !result.object.userData.moveAnimation) {
@@ -265,18 +263,20 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
       capturedMeshes.length = 0;
       capturedPieces.forEach(({ mesh }) => world.remove(mesh));
       capturedPieces.length = 0;
-      capturedCounts.w = 0;
-      capturedCounts.b = 0;
+      capturedSlots.w.clear();
+      capturedSlots.b.clear();
     }
     if (state.animationMove?.reversed && state.animationMove.captured) {
       const undonePly = state.animationMove.plyIndex;
       for (let index = capturedPieces.length - 1; index >= 0; index -= 1) {
         if (capturedPieces[index].captureIndex !== undonePly) continue;
+        capturedSlots[capturedPieces[index].mesh.userData.color].delete(undonePly);
         world.remove(capturedPieces[index].mesh);
         capturedPieces.splice(index, 1);
       }
       for (let index = capturedMeshes.length - 1; index >= 0; index -= 1) {
         if (capturedMeshes[index].userData.captureIndex !== undonePly) continue;
+        capturedSlots[capturedMeshes[index].userData.color].delete(undonePly);
         world.remove(capturedMeshes[index]);
         capturedMeshes.splice(index, 1);
       }
@@ -359,19 +359,25 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
       if (retained.has(mesh)) continue;
       if (mesh === capturedMesh) {
         const origin = mesh.userData.basePosition?.clone() ?? mesh.position.clone();
-        const index = capturedCounts[mesh.userData.color]++ % 16;
+        const color = mesh.userData.color;
+        const occupiedSlots = new Set(capturedSlots[color].values());
+        const availableSlots = Array.from({ length: 16 }, (_, slot) => slot).filter((slot) => !occupiedSlots.has(slot));
+        const slot = availableSlots[Math.floor(Math.random() * availableSlots.length)] ?? 0;
+        capturedSlots[color].set(state.lastMoveIndex, slot);
         const side = mesh.userData.color === 'w' ? 1 : -1;
-        const tier = Math.floor(index / 8);
-        const slot = index % 8;
+        const tier = Math.floor(slot / 8);
+        const row = slot % 8;
+        const jitter = (range) => (Math.random() - 0.5) * range;
         const position = new THREE.Vector3(
-          side * (4.65 + tier + (Math.random() - 0.5) * 0.28),
+          side * (4.66 + tier * 0.98 + jitter(0.08)),
           0.12,
-          slot - 3.5 + (Math.random() - 0.5) * 0.24,
+          (row - 3.5) * 1.08 + jitter(0.08),
         );
         const facing = (Math.random() - 0.5) * Math.PI * 2;
         mesh.position.copy(origin);
         mesh.rotation.y = facing;
         mesh.userData.captureIndex = state.lastMoveIndex;
+        mesh.userData.rackSlot = slot;
         capturedPieces.push({
           mesh,
           captureIndex: state.lastMoveIndex,
@@ -692,6 +698,36 @@ function buildWindParticles(world, reducedMotion) {
   particles.frustumCulled = false;
   world.add(particles);
   return { geometry, positions, drift, phase, count };
+}
+
+function createSunsetSky() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1024;
+  canvas.height = 512;
+  const context = canvas.getContext('2d');
+  if (!context) return new THREE.Color(0x273632);
+  const horizon = context.createLinearGradient(0, 0, 0, canvas.height);
+  horizon.addColorStop(0, '#182724');
+  horizon.addColorStop(0.38, '#35443d');
+  horizon.addColorStop(0.53, '#765544');
+  horizon.addColorStop(0.62, '#d38a52');
+  horizon.addColorStop(0.68, '#e7ad68');
+  horizon.addColorStop(0.76, '#987050');
+  horizon.addColorStop(1, '#303d35');
+  context.fillStyle = horizon;
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  const glow = context.createRadialGradient(690, 304, 4, 690, 304, 150);
+  glow.addColorStop(0, '#ffdc9b');
+  glow.addColorStop(0.16, '#ffd08b99');
+  glow.addColorStop(1, '#f1a35a00');
+  context.fillStyle = glow;
+  context.fillRect(520, 134, 340, 340);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.mapping = THREE.EquirectangularReflectionMapping;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
 }
 
 function buildRuins(world) {

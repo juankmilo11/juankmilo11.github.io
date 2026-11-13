@@ -379,7 +379,7 @@ function commitMove(move) {
 function renderStatus() {
   const winner = game.turn() === 'w' ? 'El estratega' : 'Tú';
   if (game.isCheckmate()) {
-    statusEl.textContent = `Jaque mate · ${winner} gana`;
+    statusEl.textContent = `Checkmate · ${winner} gana`;
   } else if (game.isStalemate()) {
     statusEl.textContent = 'Tablas · rey ahogado';
   } else if (game.isDraw()) {
@@ -387,7 +387,7 @@ function renderStatus() {
   } else if (thinking) {
     statusEl.textContent = 'Un momento, por favor...';
   } else if (game.isCheck()) {
-    statusEl.textContent = game.turn() === 'w' ? 'Jaque · responde' : 'Jaque al rey blanco';
+    statusEl.textContent = 'Check';
   } else {
     statusEl.textContent = game.turn() === 'w' ? 'Tu turno' : 'Turno del estratega';
   }
@@ -486,7 +486,7 @@ async function startCombat() {
   window.requestAnimationFrame(() => {
     battleCurtain.classList.remove('is-covering');
     battleCurtain.classList.add('is-revealing');
-    window.setTimeout(() => battleCurtain.classList.remove('is-revealing'), 1900);
+    window.setTimeout(() => battleCurtain.classList.remove('is-revealing'), 2800);
   });
 }
 

@@ -43,7 +43,7 @@ function updateGameStatus() {
     resultTitle.textContent = "Tablas";
     winnerMessage.textContent = "Partida empatada";
   } else if (isCheckmate) {
-    resultTitle.textContent = "Jaque mate";
+    resultTitle.textContent = "Checkmate";
     winnerMessage.textContent = /(?:Tú ganas|Tú gana)/i.test(message) ? "Tú ganas" : "Tú pierdes";
   }
 
