@@ -59,24 +59,6 @@ function cambiarFondoGif() {
   botonGif.setAttribute("aria-label", `Fondo GIF ${indiceGif + 1} de ${fondosGif.length}`);
 }
 
-function actualizarColorYinYang(enlace) {
-  document.documentElement.style.setProperty(
-    "--yin-color",
-    `color-mix(in srgb, ${enlace.dataset.barColor || "#fff"} 62%, #000 38%)`
-  );
-  document.documentElement.style.setProperty("--yang-color", "#fff");
-}
-
-function restaurarColorYinYang() {
-  const enlaceActivo = enlaces.find((enlace) => enlace.matches(":hover, :focus-visible"));
-  if (enlaceActivo) {
-    actualizarColorYinYang(enlaceActivo);
-    return;
-  }
-  document.documentElement.style.removeProperty("--yin-color");
-  document.documentElement.style.removeProperty("--yang-color");
-}
-
 function enfocarVentana(ventana) {
   ventana.style.zIndex = String(++zIndexVentana);
 }
@@ -219,5 +201,3 @@ setInterval(actualizarHora, 1000);
 enlacesVentana.forEach((enlace, indice) => {
   setTimeout(() => crearVentana(enlace), 900 + indice * 1800);
 });
-
-
