@@ -62,8 +62,9 @@ function cambiarFondoGif() {
 function actualizarColorYinYang(enlace) {
   document.documentElement.style.setProperty(
     "--yin-color",
-    enlace.dataset.barColor || "#fff"
+    `color-mix(in srgb, ${enlace.dataset.barColor || "#fff"} 78%, #000 22%)`
   );
+  document.documentElement.style.setProperty("--yang-color", "#fff");
 }
 
 function restaurarColorYinYang() {
@@ -73,6 +74,7 @@ function restaurarColorYinYang() {
     return;
   }
   document.documentElement.style.removeProperty("--yin-color");
+  document.documentElement.style.removeProperty("--yang-color");
 }
 
 function enfocarVentana(ventana) {
@@ -209,6 +211,7 @@ window.addEventListener("resize", () => {
   });
 });
 
+cambiarColorFondo();
 actualizarHora();
 setInterval(actualizarHora, 1000);
 
