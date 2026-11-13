@@ -121,28 +121,19 @@ button { cursor: pointer; font: inherit; }
   animation: rotacion_continua var(--rotation-speed) linear infinite;
 }
 
-.yang, .yin {
-  background-color: var(--yang-color, #000);
-  -webkit-mask-position: center;
-  -webkit-mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-position: center;
-  mask-size: contain;
-  mask-repeat: no-repeat;
-  transition: background-color 180ms ease;
+.yin-yang .yin {
+  fill: var(--yin-color, #fff);
+  stroke: #f4f0e8;
+  stroke-width: 1.5;
+  transition: fill 180ms ease;
 }
 
-.yang {
-  -webkit-mask-image: url("img/black_yang.png");
-  mask-image: url("img/black_yang.png");
-}
-
-.yin {
-  background-color: var(--yin-color, #fff);
-  -webkit-mask-image: url("img/white_yin.png");
-  mask-image: url("img/white_yin.png");
-  -webkit-mask-size: 99.3% 99.3%;
-  mask-size: 99.3% 99.3%;
+.yin-yang .yang {
+  fill: var(--yang-color, #080909);
+  stroke: #080909;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  transition: fill 180ms ease;
 }
 
 .enlaces {
