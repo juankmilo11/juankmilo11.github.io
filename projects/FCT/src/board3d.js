@@ -267,13 +267,27 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
       capturedCounts.w = 0;
       capturedCounts.b = 0;
     }
+    if (state.animationMove?.reversed && state.animationMove.captured) {
+      const undonePly = state.animationMove.plyIndex;
+      for (let index = capturedPieces.length - 1; index >= 0; index -= 1) {
+        if (capturedPieces[index].captureIndex !== undonePly) continue;
+        world.remove(capturedPieces[index].mesh);
+        capturedPieces.splice(index, 1);
+      }
+      for (let index = capturedMeshes.length - 1; index >= 0; index -= 1) {
+        if (capturedMeshes[index].userData.captureIndex !== undonePly) continue;
+        world.remove(capturedMeshes[index]);
+        capturedMeshes.splice(index, 1);
+      }
+    }
     legalTargets = new Set(state.targets);
     const previousBySquare = new Map(pieceMeshes.map((mesh) => [mesh.userData.square, mesh]));
     const retained = new Set();
     const nextPieces = [];
     const movement = state.animationMove ?? state.lastMove;
     const movingMesh = movement ? previousBySquare.get(movement.from) : null;
-    const capturedMesh = !state.animationMove && state.lastMove?.captured ? previousBySquare.get(state.lastMove.to) : null;
+    const reversingCapture = state.animationMove?.reversed && state.animationMove.captured;
+    const capturedMesh = !reversingCapture && state.lastMove?.captured ? previousBySquare.get(state.lastMove.to) : null;
     const lastSquares = new Set(state.lastMove ? [state.lastMove.from, state.lastMove.to] : []);
     for (const tile of tileMeshes) {
       const square = tile.userData.square;
@@ -356,8 +370,10 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
         const facing = (Math.random() - 0.5) * Math.PI * 2;
         mesh.position.copy(origin);
         mesh.rotation.y = facing;
+        mesh.userData.captureIndex = state.lastMoveIndex;
         capturedPieces.push({
           mesh,
+          captureIndex: state.lastMoveIndex,
           position,
           from: origin,
           rotation: facing,
@@ -492,11 +508,13 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
       const progress = Math.min(1, (performance.now() - effect.startTime) / effect.duration);
       const eased = progress * progress * (3 - 2 * progress);
       effect.mesh.position.lerpVectors(effect.from, effect.position, eased);
-      effect.mesh.position.y += Math.sin(Math.PI * progress) * 0.22;
-      effect.mesh.rotation.y = effect.rotation + eased * (0.4 + Math.sin(effect.phase) * 0.1);
-      effect.mesh.scale.setScalar(1 - eased * 0.28);
+      effect.mesh.position.y += Math.sin(Math.PI * progress) * 0.38;
+      effect.mesh.rotation.y = effect.rotation + eased * (0.6 + Math.sin(effect.phase) * 0.2);
+      effect.mesh.rotation.z = Math.sin(Math.PI * progress) * 0.16;
+      effect.mesh.scale.setScalar(1 + Math.sin(Math.PI * progress) * 0.08);
       if (progress >= 1) {
         effect.mesh.position.copy(effect.position);
+        effect.mesh.rotation.z = 0;
         effect.mesh.scale.setScalar(1);
         capturedMeshes.push(effect.mesh);
         capturedPieces.splice(index, 1);
@@ -551,16 +569,6 @@ function buildHill(world) {
   path.position.y = 0.13;
   world.add(path);
 
-  const rockMaterial = new THREE.MeshStandardMaterial({ color: 0x5b6251, roughness: 1, flatShading: true });
-  for (let i = 0; i < 18; i += 1) {
-    const angle = (i / 18) * Math.PI * 2;
-    const radius = 7.0 + (i % 3) * 0.25;
-    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.32 + (i % 4) * 0.09, 0), rockMaterial);
-    rock.position.set(Math.cos(angle) * radius, 0.15, Math.sin(angle) * radius);
-    rock.rotation.set(i * 0.3, i * 0.57, i * 0.18);
-    rock.castShadow = true;
-    world.add(rock);
-  }
 }
 
 function buildBoard(world, tileMeshes, tileHeights, tileMaterials) {

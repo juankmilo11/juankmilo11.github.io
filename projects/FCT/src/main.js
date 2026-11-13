@@ -9,6 +9,7 @@ const turnPulse = document.querySelector('#turn-pulse');
 const inspectorIcon = document.querySelector('#inspector-icon');
 const inspectorName = document.querySelector('#inspector-name');
 const inspectorDescription = document.querySelector('#inspector-description');
+const pieceInspector = document.querySelector('.piece-inspector');
 const promotionDialog = document.querySelector('#promotion-dialog');
 const exitConfirmation = document.querySelector('#exit-confirmation');
 const aiWorker = new Worker(new URL('./ai-worker.js', import.meta.url), { type: 'module' });
@@ -82,6 +83,7 @@ function characterClassName(piece) {
 }
 
 function describePiece(piece) {
+  pieceInspector.hidden = !piece;
   if (!piece) {
     inspectorIcon.textContent = '✦';
     inspectorName.textContent = 'Elige una pieza';
@@ -95,11 +97,12 @@ function describePiece(piece) {
 
 function render2D() {
   const board = game.board();
+  const history = game.history({ verbose: true });
   const selectedPiece = selectedSquare ? game.get(selectedSquare) : null;
   const legalMoves = selectedPiece?.color === game.turn() && !thinking && !game.isGameOver()
     ? game.moves({ square: selectedSquare, verbose: true }) : [];
   const targets = new Set(legalMoves.map((move) => move.to));
-  const lastMove = game.history({ verbose: true }).at(-1);
+  const lastMove = history.at(-1);
   const checkedKing = game.isCheck() ? findKing(game.turn()) : null;
   board2d.innerHTML = '';
 
@@ -136,7 +139,14 @@ function render2D() {
 
   renderRemainingPieces(board);
   board2d.classList.toggle('board-locked', thinking || game.isGameOver());
-  threeBoard?.update(game.board(), { selectedSquare, targets, lastMove, checkedKing, animationMove: recentMoveAnimation });
+  threeBoard?.update(game.board(), {
+    selectedSquare,
+    targets,
+    lastMove,
+    lastMoveIndex: history.length - 1,
+    checkedKing,
+    animationMove: recentMoveAnimation,
+  });
 }
 
 function renderRemainingPieces(board) {
@@ -258,7 +268,14 @@ function applyMove(move, requestAiAfterMove) {
   selectedSquare = null;
   describePiece(null);
   const animationId = ++moveAnimationSequence;
-  recentMoveAnimation = { id: animationId, from: move.from, to: move.to, captured, applied: false };
+  recentMoveAnimation = {
+    id: animationId,
+    from: move.from,
+    to: move.to,
+    plyIndex: game.history().length - 1,
+    captured,
+    applied: false,
+  };
   thinking = requestAiAfterMove && !game.isGameOver();
   renderAll();
   window.setTimeout(() => {
@@ -288,6 +305,7 @@ function goToReviewPosition(requestedIndex) {
   describePiece(null);
   const backwards = targetIndex < reviewPosition;
   let movement;
+  const plyIndex = backwards ? reviewPosition - 1 : reviewPosition;
   if (backwards) {
     const move = game.undo();
     if (move) movement = { ...move, from: move.to, to: move.from, reversed: true };
@@ -300,7 +318,13 @@ function goToReviewPosition(requestedIndex) {
   }
   if (movement) {
     const animationId = ++moveAnimationSequence;
-    recentMoveAnimation = { id: animationId, ...movement, captured: Boolean(movement.captured), applied: false };
+    recentMoveAnimation = {
+      id: animationId,
+      ...movement,
+      plyIndex,
+      captured: Boolean(movement.captured),
+      applied: false,
+    };
     renderAll();
     window.setTimeout(() => {
       if (recentMoveAnimation?.id === animationId) recentMoveAnimation = null;
@@ -544,4 +568,5 @@ aiWorker.onerror = (error) => {
 };
 
 window.addEventListener('resize', () => threeBoard?.resize());
+describePiece(null);
 renderAll();

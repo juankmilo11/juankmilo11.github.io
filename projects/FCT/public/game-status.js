@@ -1,6 +1,7 @@
 const statusText = document.querySelector("#game-status");
 const statusBadge = document.querySelector(".game-status-badge");
 const checkmateOverlay = document.querySelector("#checkmate-overlay");
+const resultTitle = document.querySelector("#checkmate-title");
 const winnerMessage = document.querySelector("#checkmate-message");
 const newGameButton = document.querySelector("#play-again");
 const reviewMatchButton = document.querySelector("#review-match");
@@ -27,14 +28,20 @@ function updatePositionControls() {
 function updateGameStatus() {
   const message = statusText.textContent.trim();
   const isCheckmate = /^(Checkmate|Jaque mate)\b/i.test(message);
+  const isDraw = /^Tablas\b/i.test(message);
   const isCheck = /^(Check|Jaque)\b/i.test(message) && !isCheckmate;
+  const hasResult = isCheckmate || isDraw;
 
   statusBadge.classList.toggle("is-check", isCheck);
   statusBadge.classList.toggle("is-checkmate", isCheckmate);
-  checkmateOverlay.hidden = isReviewing || !isCheckmate;
-  reviewControls.hidden = !isReviewing && !isCheckmate;
+  checkmateOverlay.hidden = isReviewing || !hasResult;
+  reviewControls.hidden = !isReviewing && !hasResult;
 
-  if (isCheckmate) {
+  if (isDraw) {
+    resultTitle.textContent = "Tablas";
+    winnerMessage.textContent = "Partida empatada";
+  } else if (isCheckmate) {
+    resultTitle.textContent = "Jaque mate";
     winnerMessage.textContent = /(?:Tú ganas|Tú gana)/i.test(message) ? "Tú ganas" : "Tú pierdes";
   }
 
@@ -94,7 +101,7 @@ document.querySelector("#review-return").addEventListener("click", () => {
   window.fctReview.setReviewing(false);
   isReviewing = false;
   appShell.classList.remove("is-reviewing");
-  checkmateOverlay.hidden = !/^Checkmate\b/i.test(statusText.textContent.trim());
+  checkmateOverlay.hidden = !/^(?:Checkmate|Jaque mate|Tablas)\b/i.test(statusText.textContent.trim());
   updateGameStatus();
 });
 
