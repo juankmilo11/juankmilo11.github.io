@@ -48,6 +48,7 @@
 }
 
 .review-controls[hidden] { display: none; }
+.app-shell:not(.is-reviewing) #review-return { display: none; }
 
 .review-controls button {
   min-width: 28px;

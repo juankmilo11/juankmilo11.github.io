@@ -70,7 +70,7 @@ h1,h2,p { margin: 0; }
 .turn-card strong { color: #e5e1d4; font-size: 11px; font-weight: 600; }
 .turn-pulse { width: 6px; height: 6px; border-radius: 100%; background: #8bb27c; box-shadow: 0 0 10px #8bb27caa; }
 .turn-pulse.is-dark-turn { background: #a2a6a2; box-shadow: 0 0 8px #a2a6a277; }
-.turn-pulse.is-thinking { animation: pulse .8s ease-in-out infinite alternate; background: #d2ac62; }
+.turn-pulse.is-thinking { animation: pulse-red .8s ease-in-out infinite alternate; background: #ed4545; box-shadow: 0 0 10px #ed4545; }
 @keyframes pulse { to { opacity: .34; transform: scale(.7); } }
 .new-game-button { width: 100%; margin-top: 9px; padding: 11px; display: flex; justify-content: center; align-items: center; gap: 8px; border: 1px solid #bd9a5d55; background: linear-gradient(100deg, #76603b, #514a32); color: #f2e6c6; cursor: pointer; font-size: 10px; letter-spacing: .04em; transition: filter .2s, transform .2s; }
 .new-game-button:hover { filter: brightness(1.15); transform: translateY(-1px); }

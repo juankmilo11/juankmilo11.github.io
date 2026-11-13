@@ -299,7 +299,7 @@ function applyMove(move, requestAiAfterMove) {
     return false;
   }
   const captured = Boolean(playedMove.captured);
-  playUiSound(requestAiAfterMove ? 'user_piece_move' : 'AI_piece_move');
+  playUiSound(requestAiAfterMove ? 'AI_piece_move' : 'user_piece_move');
   const capturedSquare = playedMove.flags.includes('e') ? `${playedMove.to[0]}${playedMove.from[1]}` : playedMove.to;
   if (captured) animateCapturedPiece(capturedSquare);
   const animation = movementAnimation(playedMove);
@@ -315,7 +315,7 @@ function applyMove(move, requestAiAfterMove) {
     appliedSquares: new Set(),
   };
   thinking = requestAiAfterMove && !game.isGameOver();
-  if (game.isCheckmate()) playUiSound('checkmate');
+  if (playedMove.promotion || game.isCheckmate()) playUiSound('checkmate');
   else if (game.isCheck()) playUiSound('check');
   renderAll();
   window.setTimeout(() => {
@@ -478,10 +478,10 @@ async function ensure3DBoard() {
   return threeBoardPromise;
 }
 
-async function setView(view) {
+async function setView(view, { playSound = true } = {}) {
   const changed = requestedView !== view;
   requestedView = view;
-  if (changed && appShell.classList.contains('is-playing')) playUiSound('sound1');
+  if (changed && playSound && appShell.classList.contains('is-playing')) playUiSound('sound1');
   if (view === '3d' && !await ensure3DBoard()) return;
   if (requestedView !== view) return;
   board2d.classList.toggle('hidden', view !== '2d');
@@ -515,7 +515,7 @@ async function startCombat() {
   describePiece(null);
   renderAll();
   appShell.classList.add('is-playing');
-  await setView('3d');
+  await setView('3d', { playSound: false });
   threeBoard?.playIntro();
   window.requestAnimationFrame(() => {
     battleCurtain.classList.remove('is-covering');
