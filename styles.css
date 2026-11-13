@@ -123,10 +123,12 @@ button { cursor: pointer; font: inherit; }
 
 .yin-yang .yin {
   fill: var(--yin-color, #fff);
+  transition: fill 180ms ease;
 }
 
 .yin-yang .yang {
   fill: var(--yang-color, #090909);
+  transition: fill 180ms ease;
 }
 
 .yin-yang .yin-yang-outline {

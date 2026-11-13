@@ -17,73 +17,107 @@
 
 .app-shell.is-playing .game-status-badge.is-check,
 .app-shell.is-playing .game-status-badge.is-checkmate {
-  position: fixed;
-  top: clamp(76px, 11vh, 118px);
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 12px 20px;
+  position: relative;
+  inset: auto;
+  transform: none;
+  padding: 8px 11px;
 }
 
-.checkmate-overlay {
-  position: fixed;
-  z-index: 1000;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 22px;
-  background: #080c09d9;
-  backdrop-filter: blur(7px);
+.turn-pulse.is-thinking {
+  background: #ed4545;
+  box-shadow: 0 0 10px #ed4545;
+  animation: .8s ease-in-out infinite alternate pulse-red;
 }
 
-.checkmate-overlay[hidden] { display: none; }
-
-.checkmate-card {
-  width: min(460px, 100%);
-  padding: clamp(28px, 6vw, 48px);
-  text-align: center;
-  background: linear-gradient(150deg, #242a21, #121713);
-  border: 1px solid #d5b66b88;
-  box-shadow: 0 24px 80px #000b;
+@keyframes pulse-red {
+  from { opacity: .55; box-shadow: 0 0 5px #ed4545; }
+  to { opacity: 1; box-shadow: 0 0 14px #ed4545; }
 }
 
-.checkmate-kicker {
-  color: #d9bd7b;
-  font: 700 10px/1.4 "DM Mono", monospace;
-  letter-spacing: .2em;
+.piece-inspector[hidden] { display: none; }
+
+.review-controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 8px;
+  color: #e7dfca;
+  background: #111713e8;
+  border: 1px solid #d9cfaa3d;
+  box-shadow: 0 4px 18px #0006;
 }
 
-.checkmate-card h2 {
-  margin: 14px 0;
-  color: #f3dfaa;
-  font: 700 clamp(36px, 9vw, 58px)/1 Georgia, serif;
-  letter-spacing: -.04em;
+.review-controls[hidden] { display: none; }
+
+.review-controls button {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 7px;
+  color: #ead8a9;
+  background: #252b25;
+  border: 1px solid #d9cfaa42;
+  cursor: pointer;
+  font: 700 11px/1 "DM Mono", monospace;
 }
 
-.checkmate-winner {
-  color: #eee8d8;
-  font-size: 17px;
-  font-weight: 700;
-}
-
-.checkmate-invitation {
-  margin: 12px 0 22px;
-  color: #aeb1a4;
-  font-size: 13px;
-}
-
-.play-again-button {
-  padding: 13px 18px;
+.review-controls button:hover:not(:disabled),
+.review-controls button:focus-visible {
   color: #171a14;
   background: #dfc47f;
-  border: 1px solid #f0daa0;
+}
+
+.review-controls button:disabled { opacity: .38; cursor: not-allowed; }
+
+.review-controls output {
+  min-width: 150px;
+  text-align: center;
+  color: #c7c2b4;
+  font: 9px/1.2 "DM Mono", monospace;
+}
+
+.app-shell.is-reviewing .game-status-badge { display: none; }
+.app-shell.is-reviewing .board-2d,
+.app-shell.is-reviewing .board-3d { pointer-events: none; }
+
+.review-match-button {
+  margin: 8px 0 14px;
+  padding: 11px 16px;
+  color: #e8d39a;
+  background: #252b25;
+  border: 1px solid #d9cfaa55;
   cursor: pointer;
-  font: 700 12px/1.2 "DM Mono", monospace;
-  letter-spacing: .04em;
+  font: 700 11px/1.2 "DM Mono", monospace;
 }
 
-.play-again-button:hover,
-.play-again-button:focus-visible {
-  background: #f1d997;
-}
+.review-match-button:hover,
+.review-match-button:focus-visible { background: #353b30; }
 
-.play-again-button span { margin-left: 12px; font-size: 16px; }
+.checkmate-card h2 { text-transform: none; }
+
+@media (max-width: 640px) {
+  .app-shell.is-playing .game-status-badge.is-check,
+  .app-shell.is-playing .game-status-badge.is-checkmate {
+    position: absolute;
+    top: 52px;
+    left: 8px;
+    right: auto;
+    padding: 4px 7px;
+    transform: none;
+  }
+
+  .game-status-badge.is-check strong,
+  .game-status-badge.is-checkmate strong { font-size: 15px; }
+
+  .app-shell.is-playing .review-controls {
+  display: flex;
+    position: absolute;
+    top: 50px;
+    left: 8px;
+    max-width: calc(100vw - 16px);
+    gap: 3px;
+    padding: 4px;
+  }
+
+  .review-controls button { min-width: 24px; height: 25px; padding-inline: 4px; }
+  .review-controls output { min-width: 105px; font-size: 8px; }
+}
