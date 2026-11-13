@@ -14,17 +14,35 @@ let totalMoves = 0;
 
 if (backgroundMusic) backgroundMusic.volume = 0.5;
 
+function updatePositionControls() {
+  reviewPosition.textContent = currentMove === 0
+    ? `Inicio · 0/${totalMoves}`
+    : `Jugada ${currentMove} de ${totalMoves}`;
+  document.querySelector("#review-first").disabled = currentMove === 0;
+  document.querySelector("#review-previous").disabled = currentMove === 0;
+  document.querySelector("#review-next").disabled = currentMove === totalMoves;
+  document.querySelector("#review-last").disabled = currentMove === totalMoves;
+}
+
 function updateGameStatus() {
   const message = statusText.textContent.trim();
-  const isCheckmate = /^Jaque mate/i.test(message);
-  const isCheck = /^Jaque\b/i.test(message) && !isCheckmate;
+  const isCheckmate = /^Checkmate\b/i.test(message);
+  const isCheck = /^Check\b/i.test(message) && !isCheckmate;
 
   statusBadge.classList.toggle("is-check", isCheck);
   statusBadge.classList.toggle("is-checkmate", isCheckmate);
   checkmateOverlay.hidden = isReviewing || !isCheckmate;
+  reviewControls.hidden = !isReviewing && !appShell.classList.contains("is-playing");
 
   if (isCheckmate) {
-    winnerMessage.textContent = /Tú gana/i.test(message) ? "Tú ganas" : "Tú pierdes";
+    winnerMessage.textContent = /Checkmate · Tú ganas/i.test(message) ? "Tú ganas" : "Tú pierdes";
+  }
+
+  if (!isReviewing && window.fctReview) {
+    const state = window.fctReview.refresh();
+    currentMove = state.total;
+    totalMoves = state.total;
+    updatePositionControls();
   }
 }
 
@@ -32,40 +50,51 @@ function goToMove(index) {
   const state = window.fctReview.goTo(index);
   currentMove = state.index;
   totalMoves = state.total;
-  reviewPosition.textContent = currentMove === 0
-    ? `Posición inicial · 0/${totalMoves}`
-    : `Movimiento ${currentMove} de ${totalMoves}`;
-  document.querySelector("#review-first").disabled = currentMove === 0;
-  document.querySelector("#review-previous").disabled = currentMove === 0;
-  document.querySelector("#review-next").disabled = currentMove === totalMoves;
-  document.querySelector("#review-last").disabled = currentMove === totalMoves;
-  statusText.textContent = currentMove === 0
-    ? "Revisión · posición inicial"
-    : `Revisión · movimiento ${currentMove} de ${totalMoves}`;
+  updatePositionControls();
 }
 
-reviewMatchButton.addEventListener("click", () => {
-  if (!window.fctReview) return;
+function startReview() {
+  if (isReviewing || !window.fctReview) return;
   totalMoves = window.fctReview.begin();
   currentMove = totalMoves;
   isReviewing = true;
+  window.fctReview.setReviewing(true);
   appShell.classList.add("is-reviewing");
   checkmateOverlay.hidden = true;
   reviewControls.hidden = false;
+  updatePositionControls();
+}
+
+reviewMatchButton.addEventListener("click", () => {
+  startReview();
   goToMove(totalMoves);
   document.querySelector("#review-previous").focus({ preventScroll: true });
 });
 
-document.querySelector("#review-first").addEventListener("click", () => goToMove(0));
-document.querySelector("#review-previous").addEventListener("click", () => goToMove(currentMove - 1));
-document.querySelector("#review-next").addEventListener("click", () => goToMove(currentMove + 1));
-document.querySelector("#review-last").addEventListener("click", () => goToMove(totalMoves));
+document.querySelector("#review-first").addEventListener("click", () => {
+  startReview();
+  goToMove(0);
+});
+document.querySelector("#review-previous").addEventListener("click", () => {
+  startReview();
+  goToMove(currentMove - 1);
+});
+document.querySelector("#review-next").addEventListener("click", () => {
+  startReview();
+  goToMove(currentMove + 1);
+});
+document.querySelector("#review-last").addEventListener("click", () => {
+  startReview();
+  goToMove(totalMoves);
+});
 
 document.querySelector("#review-return").addEventListener("click", () => {
+  if (!window.fctReview) return;
+  goToMove(totalMoves);
+  window.fctReview.setReviewing(false);
   isReviewing = false;
   appShell.classList.remove("is-reviewing");
-  reviewControls.hidden = true;
-  window.fctReview.goTo(totalMoves);
+  checkmateOverlay.hidden = !/^Checkmate\b/i.test(statusText.textContent.trim());
   updateGameStatus();
 });
 
@@ -74,8 +103,11 @@ newGameButton.addEventListener("click", () => {
   appShell.classList.remove("is-reviewing");
   reviewControls.hidden = true;
   checkmateOverlay.hidden = true;
+  window.fctReview?.reset();
   document.querySelector("#new-game").click();
 });
+
+new MutationObserver(updateGameStatus).observe(appShell, { attributes: true, attributeFilter: ["class"] });
 
 new MutationObserver(updateGameStatus).observe(statusText, {
   childList: true,

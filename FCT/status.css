@@ -76,6 +76,7 @@
 }
 
 .app-shell.is-reviewing .game-status-badge { display: none; }
+.app-shell.is-reviewing .board-frame { pointer-events: none; }
 .app-shell.is-reviewing .board-2d,
 .app-shell.is-reviewing .board-3d { pointer-events: none; }
 
@@ -92,7 +93,75 @@
 .review-match-button:hover,
 .review-match-button:focus-visible { background: #353b30; }
 
-.checkmate-card h2 { text-transform: none; }
+.checkmate-overlay {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  color: #ede6d4;
+  background: #080c0be0;
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+}
+
+.checkmate-overlay[hidden] { display: none; }
+
+.checkmate-card {
+  width: min(460px, 100%);
+  padding: clamp(26px, 6vw, 54px) 24px;
+  text-align: center;
+  background: linear-gradient(145deg, #202820, #141a16);
+  border: 1px solid #d2c9aa55;
+  box-shadow: 0 24px 80px #000b;
+}
+
+.checkmate-kicker {
+  margin-bottom: 14px;
+  color: #cbb06d;
+  letter-spacing: .18em;
+  font: 700 9px/1.4 "DM Mono", monospace;
+}
+
+.checkmate-card h2 {
+  color: #f0dfae;
+  font: 700 clamp(42px, 10vw, 68px)/.98 Georgia, serif;
+}
+
+.checkmate-winner {
+  margin-top: 16px;
+  color: #f0ede3;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.review-match-button,
+.play-again-button {
+  width: min(260px, 100%);
+  min-height: 44px;
+  padding: 11px 16px;
+  cursor: pointer;
+  font: 700 11px/1.2 "DM Mono", monospace;
+}
+
+.review-match-button {
+  margin: 22px 0 8px;
+  color: #e8d39a;
+  background: #252b25;
+  border: 1px solid #d9cfaa66;
+}
+
+.play-again-button {
+  color: #171a14;
+  background: #dfc47f;
+  border: 1px solid #f0dfa8;
+}
+
+.review-match-button:hover,
+.review-match-button:focus-visible,
+.play-again-button:hover,
+.play-again-button:focus-visible { filter: brightness(1.12); }
 
 @media (max-width: 640px) {
   .app-shell.is-playing .game-status-badge.is-check,
