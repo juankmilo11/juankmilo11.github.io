@@ -98,6 +98,7 @@ document.querySelector("#review-last").addEventListener("click", () => {
 });
 
 document.querySelector("#review-return").addEventListener("click", () => {
+  window.playFctSound?.("sound1");
   if (!window.fctReview) return;
   goToMove(totalMoves);
   window.fctReview.setReviewing(false);

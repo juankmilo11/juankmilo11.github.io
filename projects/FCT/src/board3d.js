@@ -258,7 +258,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
   });
 
   function update(board, state) {
-    if (board.flat().filter(Boolean).length === 32 && (capturedMeshes.length || capturedPieces.length)) {
+    if (board.flat().filter(Boolean).length === 32 && !(state.animationMove?.reversed && state.animationMove.captured) && (capturedMeshes.length || capturedPieces.length)) {
       capturedMeshes.forEach((mesh) => world.remove(mesh));
       capturedMeshes.length = 0;
       capturedPieces.forEach(({ mesh }) => world.remove(mesh));
@@ -266,27 +266,32 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
       capturedSlots.w.clear();
       capturedSlots.b.clear();
     }
-    if (state.animationMove?.reversed && state.animationMove.captured) {
-      const undonePly = state.animationMove.plyIndex;
-      for (let index = capturedPieces.length - 1; index >= 0; index -= 1) {
-        if (capturedPieces[index].captureIndex !== undonePly) continue;
-        capturedSlots[capturedPieces[index].mesh.userData.color].delete(undonePly);
-        world.remove(capturedPieces[index].mesh);
-        capturedPieces.splice(index, 1);
-      }
-      for (let index = capturedMeshes.length - 1; index >= 0; index -= 1) {
-        if (capturedMeshes[index].userData.captureIndex !== undonePly) continue;
-        capturedSlots[capturedMeshes[index].userData.color].delete(undonePly);
-        world.remove(capturedMeshes[index]);
-        capturedMeshes.splice(index, 1);
-      }
-    }
     legalTargets = new Set(state.targets);
     const previousBySquare = new Map(pieceMeshes.map((mesh) => [mesh.userData.square, mesh]));
     const retained = new Set();
     const nextPieces = [];
     const movement = state.animationMove ?? state.lastMove;
     const movingMesh = movement ? previousBySquare.get(movement.from) : null;
+    let recoveredCapture = null;
+    let recoveredFrom = null;
+    if (state.animationMove?.reversed && state.animationMove.captured) {
+      const undonePly = state.animationMove.plyIndex;
+      for (let index = capturedPieces.length - 1; index >= 0; index -= 1) {
+        if (capturedPieces[index].captureIndex !== undonePly) continue;
+        recoveredCapture = capturedPieces[index].mesh;
+        recoveredFrom = recoveredCapture.position.clone();
+        capturedSlots[recoveredCapture.userData.color].delete(undonePly);
+        capturedPieces.splice(index, 1);
+      }
+      for (let index = capturedMeshes.length - 1; index >= 0; index -= 1) {
+        if (capturedMeshes[index].userData.captureIndex !== undonePly) continue;
+        recoveredCapture = capturedMeshes[index];
+        recoveredFrom = recoveredCapture.position.clone();
+        capturedSlots[recoveredCapture.userData.color].delete(undonePly);
+        capturedMeshes.splice(index, 1);
+      }
+    }
+    const rookMesh = movement?.rookFrom ? previousBySquare.get(movement.rookFrom) : null;
     const reversingCapture = state.animationMove?.reversed && state.animationMove.captured;
     const capturedMesh = !reversingCapture && state.lastMove?.captured ? previousBySquare.get(state.lastMove.to) : null;
     const lastSquares = new Set(state.lastMove ? [state.lastMove.from, state.lastMove.to] : []);
@@ -327,23 +332,31 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
       const square = `${FILES[file]}${8 - row}`;
       let mesh = previousBySquare.get(square);
       if (mesh && (mesh.userData.type !== piece.type || mesh.userData.color !== piece.color)) mesh = null;
-      if (!mesh && square === movement?.to && movingMesh &&
-        movingMesh.userData.type === piece.type && movingMesh.userData.color === piece.color) mesh = movingMesh;
+      const isRestoredCapture = recoveredCapture && square === movement?.returnCapturedTo;
+      if (!mesh && isRestoredCapture) mesh = recoveredCapture;
+      if (!mesh && (square === movement?.to || square === movement?.rookTo) &&
+        (square === movement?.to ? movingMesh : rookMesh) &&
+        (square === movement?.to ? movingMesh : rookMesh).userData.type === piece.type &&
+        (square === movement?.to ? movingMesh : rookMesh).userData.color === piece.color) {
+        mesh = square === movement?.to ? movingMesh : rookMesh;
+      }
       if (mesh && retained.has(mesh)) mesh = null;
       if (!mesh) mesh = createPiece(piece.type, piece.color);
       const previousSquare = mesh.userData.square;
       const previousPosition = mesh.userData.basePosition?.clone() ?? mesh.position.clone();
       const isMovingPiece = mesh === movingMesh && previousSquare === movement?.from && square === movement?.to;
+      const isMovingRook = mesh === rookMesh && square === movement?.rookTo;
       const targetPosition = new THREE.Vector3(file - 3.5, tileHeights.get(square) + 0.008, row - 3.5);
       retained.add(mesh);
       Object.assign(mesh.userData, { kind: 'piece', square, color: piece.color, type: piece.type });
       mesh.userData.selected = square === state.selectedSquare;
       if (mesh.userData.basePosition) mesh.userData.basePosition.copy(targetPosition);
       else mesh.userData.basePosition = targetPosition.clone();
-      if (isMovingPiece) {
-        mesh.position.copy(previousPosition);
+      if (isMovingPiece || isMovingRook || isRestoredCapture) {
+        const moveFrom = isRestoredCapture ? recoveredFrom : previousPosition;
+        mesh.position.copy(moveFrom);
         mesh.userData.moveAnimation = {
-          from: previousPosition,
+          from: moveFrom.clone(),
           to: targetPosition.clone(),
           startTime: performance.now(),
           duration: reducedMotion ? 160 : 380 + Math.random() * 180,
@@ -408,7 +421,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
           camera.position.z - controls.target.z
         );
         cameraProfile = portrait
-          ? { radius: 13.8, height: 9.3, fov: 46, targetY: 0.12 }
+          ? { radius: 17.2, height: 11.8, fov: 48, targetY: 0.25 }
           : window.matchMedia('(max-width: 640px)').matches
             ? { radius: 10, height: 6.6, fov: 36, targetY: 0.35 }
             : { radius: 11.5, height: 7.8, fov: 36, targetY: 0.35 };

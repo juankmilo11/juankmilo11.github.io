@@ -14,6 +14,18 @@ const promotionDialog = document.querySelector('#promotion-dialog');
 const exitConfirmation = document.querySelector('#exit-confirmation');
 const aiWorker = new Worker(new URL('./ai-worker.js', import.meta.url), { type: 'module' });
 const backgroundMusic = document.querySelector('#background-music');
+const uiSounds = Object.fromEntries(['sound1', 'user_piece_move', 'AI_piece_move', 'check', 'checkmate'].map((name) => {
+  const audio = new Audio(`${import.meta.env.BASE_URL}audio/${name}.wav`);
+  audio.preload = 'auto';
+  return [name, audio];
+}));
+function playUiSound(name) {
+  const audio = uiSounds[name];
+  if (!audio) return;
+  audio.currentTime = 0;
+  audio.play().catch(() => {});
+}
+window.playFctSound = playUiSound;
 const audioToggle = document.querySelector('#audio-toggle');
 const audioHide = document.querySelector('#audio-hide');
 const audioReopen = document.querySelector('#audio-reopen');
@@ -129,10 +141,12 @@ function render2D() {
       token.dataset.from = square;
       token.title = `${pieceNames[piece.type]} · ${characterClassName(piece)}`;
       token.style.setProperty('--idle-delay', `${idleDelayForSquare(square)}s`);
-      if (requestedView === '2d' && recentMoveAnimation?.to === square && !recentMoveAnimation.applied) {
+      if (requestedView === '2d' && recentMoveAnimation && !recentMoveAnimation.appliedSquares?.has(square) &&
+          [recentMoveAnimation.to, recentMoveAnimation.rookTo, recentMoveAnimation.returnCapturedTo].includes(square)) {
         token.classList.add(recentMoveAnimation.reversed ? 'piece-rewind-arrival' : recentMoveAnimation.captured ? 'piece-capture-arrival' : 'piece-move-arrival');
         token.style.setProperty('--move-tilt', `${(Math.random() * 6 - 3).toFixed(1)}deg`);
-        recentMoveAnimation.applied = true;
+        recentMoveAnimation.appliedSquares ??= new Set();
+        recentMoveAnimation.appliedSquares.add(square);
         if (recentMoveAnimation.captured) cell.classList.add('capture-impact');
       }
       cell.append(token);
@@ -265,31 +279,48 @@ function animateCapturedPiece(square) {
   window.setTimeout(() => ghost.remove(), 460);
 }
 
+function movementAnimation(move, reversed = false) {
+  const forward = reversed ? { from: move.to, to: move.from } : move;
+  const kingSide = move.flags?.includes('k');
+  const queenSide = move.flags?.includes('q');
+  if (!kingSide && !queenSide) return { ...move, ...(reversed ? { from: move.to, to: move.from } : {}) };
+  const rank = move.color === 'w' ? '1' : '8';
+  const rookFrom = `${kingSide ? 'h' : 'a'}${rank}`;
+  const rookTo = `${kingSide ? 'f' : 'd'}${rank}`;
+  return { ...move, ...forward, rookFrom: reversed ? rookTo : rookFrom, rookTo: reversed ? rookFrom : rookTo };
+}
+
 function applyMove(move, requestAiAfterMove) {
   if (isReviewing) return false;
-  const captured = Boolean(game.get(move.to));
-  if (captured) animateCapturedPiece(move.to);
+  let playedMove;
   try {
-    game.move(move);
+    playedMove = game.move(move);
   } catch {
     return false;
   }
+  const captured = Boolean(playedMove.captured);
+  playUiSound(requestAiAfterMove ? 'user_piece_move' : 'AI_piece_move');
+  const capturedSquare = playedMove.flags.includes('e') ? `${playedMove.to[0]}${playedMove.from[1]}` : playedMove.to;
+  if (captured) animateCapturedPiece(capturedSquare);
+  const animation = movementAnimation(playedMove);
   selectedSquare = null;
   describePiece(null);
   const animationId = ++moveAnimationSequence;
   recentMoveAnimation = {
     id: animationId,
-    from: move.from,
-    to: move.to,
+    ...animation,
     plyIndex: game.history().length - 1,
     captured,
-    applied: false,
+    returnCapturedTo: captured ? capturedSquare : null,
+    appliedSquares: new Set(),
   };
   thinking = requestAiAfterMove && !game.isGameOver();
+  if (game.isCheckmate()) playUiSound('checkmate');
+  else if (game.isCheck()) playUiSound('check');
   renderAll();
   window.setTimeout(() => {
     if (recentMoveAnimation?.id === animationId) recentMoveAnimation = null;
-    board2d.querySelector(`[data-square="${move.to}"]`)?.classList.remove('capture-impact');
+    board2d.querySelector(`[data-square="${playedMove.to}"]`)?.classList.remove('capture-impact');
   }, 620);
   if (thinking) requestAiMove();
   return true;
@@ -300,7 +331,7 @@ function reviewState() {
 }
 
 function beginReview() {
-  reviewMoves = game.history({ verbose: true }).map(({ from, to, promotion, san }) => ({ from, to, promotion, san }));
+  reviewMoves = game.history({ verbose: true }).map((move) => ({ ...move }));
   reviewPosition = reviewMoves.length;
   return reviewMoves.length;
 }
@@ -317,12 +348,13 @@ function goToReviewPosition(requestedIndex) {
   const plyIndex = backwards ? reviewPosition - 1 : reviewPosition;
   if (backwards) {
     const move = game.undo();
-    if (move) movement = { ...move, from: move.to, to: move.from, reversed: true };
+    if (move) movement = { ...movementAnimation(move, true), reversed: true, returnCapturedTo: move.captured ? (move.flags.includes('e') ? `${move.to[0]}${move.from[1]}` : move.to) : null };
     reviewPosition -= 1;
   } else {
     const move = reviewMoves[reviewPosition];
     const applied = game.move(move.san);
-    movement = applied;
+    movement = movementAnimation(applied);
+    if (applied.captured) movement.returnCapturedTo = applied.flags.includes('e') ? `${applied.to[0]}${applied.from[1]}` : applied.to;
     reviewPosition += 1;
   }
   if (movement) {
@@ -332,7 +364,7 @@ function goToReviewPosition(requestedIndex) {
       ...movement,
       plyIndex,
       captured: Boolean(movement.captured),
-      applied: false,
+      appliedSquares: new Set(),
     };
     renderAll();
     window.setTimeout(() => {
@@ -348,7 +380,7 @@ window.fctReview = {
   begin: beginReview,
   goTo: goToReviewPosition,
   refresh() {
-    if (!isReviewing) reviewMoves = game.history({ verbose: true }).map(({ from, to, promotion, san }) => ({ from, to, promotion, san }));
+    if (!isReviewing) reviewMoves = game.history({ verbose: true }).map((move) => ({ ...move }));
     return { total: reviewMoves.length };
   },
   setReviewing(value) {
@@ -447,7 +479,9 @@ async function ensure3DBoard() {
 }
 
 async function setView(view) {
+  const changed = requestedView !== view;
   requestedView = view;
+  if (changed && appShell.classList.contains('is-playing')) playUiSound('sound1');
   if (view === '3d' && !await ensure3DBoard()) return;
   if (requestedView !== view) return;
   board2d.classList.toggle('hidden', view !== '2d');
@@ -491,7 +525,9 @@ async function startCombat() {
 }
 
 document.querySelector('#new-game').addEventListener('click', startCombat);
-document.querySelector('#return-to-menu').addEventListener('click', () => exitConfirmation.showModal());
+document.querySelector('#new-game').addEventListener('click', () => playUiSound('sound1'));
+document.querySelector('#return-to-menu').addEventListener('click', () => { playUiSound('sound1'); exitConfirmation.showModal(); });
+exitConfirmation.querySelector('[value="exit"]').addEventListener('click', () => playUiSound('sound1'));
 exitConfirmation.addEventListener('close', () => {
   if (exitConfirmation.returnValue !== 'exit') return;
   aiRequestId += 1;
