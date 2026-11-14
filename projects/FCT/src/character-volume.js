@@ -8,6 +8,7 @@ function rowBounds(image, y) {
   for (let x = 0; x < 32; x++) if (alpha(image, x, y)) xs.push(x);
   return xs.length ? [xs[0], xs.at(-1)] : null;
 }
+function median(values) { const sorted=values.filter(value=>value!==null).sort((a,b)=>a-b);return sorted[Math.floor(sorted.length/2)]; }
 function pixelColor(image, x, y) {
   if (!rowBounds(image,y)) {
     for (let d = 1; d < 40; d++) {
@@ -45,11 +46,22 @@ export function sculptCharacter(front, back, side) {
     for (let d = 1; !profile && d < 4; d++) profile = rowBounds(side, Math.min(39, y + d)) ?? rowBounds(side, Math.max(top, y - d));
     if (!profile) continue;
     const cx = (bounds[0] + bounds[1]) / 2, halfX = (bounds[1] - bounds[0] + 1) / 2;
-    const cz = (profile[0] + profile[1]) / 2, halfZ = (profile[1] - profile[0] + 1) / 2;
+    const verticalRatio=(39-y)/(40-top);
+    const neighboringDepths=[-2,-1,0,1,2].map(offset=>{
+      const range=rowBounds(side,Math.max(0,Math.min(39,y+offset)));
+      return range?(range[1]-range[0]+1)/2:null;
+    });
+    // A side sprite may contain a hand or weapon in front of the face. Those
+    // pixels must not extend the whole head into a snout. Keep a centered skull,
+    // slimmer neck/limbs and rounded cross-sections, with room for mage hats.
+    const head=verticalRatio>.68, hat=head&&halfX>10;
+    const limit=head?(hat?7:verticalRatio>.88?5.2:4.2):verticalRatio>.59?3.5:verticalRatio<.24?3.4:5.5;
+    const minimum=head?(hat?5:3.6):verticalRatio>.59?2.8:verticalRatio<.24?2.7:3.8;
+    const cz=15.5, halfZ=Math.max(minimum,Math.min(limit,median(neighboringDepths)??4.5));
     for (let x = 0; x < 32; x++) {
       if (!alpha(front, x, y) && !alpha(back, 31 - x, y)) continue;
       const nx = (x - cx) / Math.max(1, halfX);
-      const depth = halfZ * Math.sqrt(Math.max(0.12, 1 - nx * nx * 0.72));
+      const depth = halfZ * Math.sqrt(Math.max(0.30, 1 - nx * nx * 0.80)) * (!head&&Math.abs(nx)>.65?.85:1);
       for (let z = Math.ceil(cz - depth); z <= Math.floor(cz + depth); z++) {
         if (z < 0 || z > 31) continue;
         const vertical = (39 - y) * PIXEL;

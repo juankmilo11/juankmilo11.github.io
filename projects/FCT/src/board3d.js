@@ -6,6 +6,7 @@ import { createMountainGeometry, createTileGeometry } from './mountain.js';
 import { createCharacter, animateCharacter, releaseCharacter } from './character-model.js';
 import { appearanceFor, appearanceKey, thumbnailUrl } from './appearance.js';
 import { addFieldLife } from './field-life.js';
+import { createCosmos } from './cosmos.js';
 
 const spriteTextures = new Map();
 
@@ -67,6 +68,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const cosmos = createCosmos(scene,reducedMotion);
   const controls = new OrbitControls(camera, renderer.domElement);
   let cameraProfile = { radius: 11.5, height: 7.8, fov: 36, targetY: 0.35 };
   let lastPortrait = null;
@@ -600,6 +602,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
       }
     }
     controls.update();
+    cosmos.update(time,camera);
     renderer.render(scene, camera);
   }
   animate();
@@ -704,7 +707,7 @@ function createSunsetSky() {
 function createPiece(type, color) {
   const look = appearanceFor(type,color);
   const piece = new THREE.Group();
-  const figure = createCharacter(look,color === 'w' ? Math.PI : 0);
+  const figure = createCharacter(look,color === 'w' ? Math.PI : 0,type);
   piece.add(figure);
   piece.userData.visual = figure;
   piece.userData.appearance = appearanceKey(look);

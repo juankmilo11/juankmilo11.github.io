@@ -14,7 +14,12 @@ const server = http.createServer((req, res) => {
   if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, 'index.html');
   if (!fs.existsSync(file)) { res.writeHead(404).end(); return; }
   res.setHeader('Content-Type', types[path.extname(file)] || 'application/octet-stream');
-  fs.createReadStream(file).pipe(res);
+  const size=fs.statSync(file).size,range=/bytes=(\d*)-(\d*)/.exec(req.headers.range||'');
+  res.setHeader('Accept-Ranges','bytes');
+  if(range){const start=range[1]?Number(range[1]):Math.max(0,size-Number(range[2]));const end=range[1]?(range[2]?Math.min(size-1,Number(range[2])):size-1):size-1;
+    if(start>=size){res.writeHead(416,{'Content-Range':`bytes */${size}`}).end();return;}
+    res.writeHead(206,{'Content-Range':`bytes ${start}-${end}/${size}`,'Content-Length':end-start+1});fs.createReadStream(file,{start,end}).pipe(res);
+  }else{res.setHeader('Content-Length',size);fs.createReadStream(file).pipe(res);}
 });
 function overlaps(a, b) {
   return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
@@ -31,6 +36,32 @@ async function inspectViewer(browser) {
   await page.goto(`http://127.0.0.1:${server.address().port}/FCT/`);
   await page.locator('#select-pieces').waitFor();
   await page.evaluate(()=>document.fonts.ready);
+  assert.ok(await page.evaluate(()=>window.qaAudio.some(src=>src.includes('/assets/music/'))),'music starts attempting on page load');
+  const card=await page.locator('.match-card').boundingBox();
+  assert.ok(Math.abs(card.x+card.width/2-720)<3,'menu card centered');
+  await page.locator('#audio-reopen').click();
+  const seen=[await page.locator('#background-music').getAttribute('data-track')];
+  for(let i=0;i<7;i++){await page.locator('#music-next').click();seen.push(await page.locator('#background-music').getAttribute('data-track'));}
+  assert.equal(new Set(seen).size,8,'all themes play before a repeat');
+  await page.locator('#music-next').click();const ninth=await page.locator('#background-music').getAttribute('data-track');
+  assert.notEqual(ninth,seen.at(-1));
+  await page.locator('#music-previous').click();assert.equal(await page.locator('#background-music').getAttribute('data-track'),seen.at(-1));
+  await page.locator('#music-next').click();assert.equal(await page.locator('#background-music').getAttribute('data-track'),ninth);
+  await page.locator('#music-volume').evaluate(el=>{el.value='17';el.dispatchEvent(new Event('input',{bubbles:true}));});
+  assert.ok(Math.abs(await page.locator('#background-music').evaluate(el=>el.volume)-.17)<.001);
+  if(await page.locator('#background-music').evaluate(el=>el.paused))await page.locator('#audio-toggle').click();
+  await page.waitForFunction(()=>!document.querySelector('#background-music').paused);
+  await page.locator('#audio-toggle').click();
+  await page.mouse.move(20,20);
+  assert.equal(await page.locator('#background-music').evaluate(el=>el.paused),true,'intentional pause survives mouse movement');
+  await page.locator('#audio-hide').click();
+  await page.locator('#effects-open').click();await page.locator('#effects-toggle').click();await page.locator('#effects-hide').click();
+  const soundCount=await page.evaluate(()=>window.qaAudio.filter(src=>/menu[1-4]\.wav/.test(src)).length);
+  await page.locator('#select-pieces').click();await page.locator('#appearance-close').click();
+  assert.equal(await page.evaluate(()=>window.qaAudio.filter(src=>/menu[1-4]\.wav/.test(src)).length),soundCount,'FX mute is independent');
+  await page.locator('#effects-open').click();await page.locator('#effects-toggle').click();
+  await page.locator('#effects-volume').evaluate(el=>{el.value='22';el.dispatchEvent(new Event('input',{bubbles:true}));});
+  await page.locator('#effects-hide').click();
   await page.screenshot({path:path.join(output,'menu-main.png')});
   await page.locator('#select-pieces').click();
   await page.locator('[data-role="r"]').click();
@@ -48,6 +79,13 @@ async function inspectViewer(browser) {
   await page.mouse.up();
   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   await page.screenshot({path:path.join(output,'models-back.png')});
+  await page.locator('[data-role="k"]').click();
+  await page.locator('[data-character="ramza"]').click();
+  await page.locator('[data-palette="0"]').click();
+  await page.waitForFunction(()=>document.querySelector('#appearance-status').dataset.state==='ready');
+  await page.mouse.move(canvas.x+40,canvas.y+canvas.height*.6);
+  await page.mouse.down();await page.mouse.move(canvas.x+40+canvas.height*.25,canvas.y+canvas.height*.6,{steps:20});await page.mouse.up();
+  await page.screenshot({path:path.join(output,'ramza-blue-profile.png')});
   assert.ok(await page.evaluate(()=>['menu1','menu2','menu3','menu4'].every(name=>window.qaAudio.some(src=>src.includes(`${name}.wav`)))),'selector uses its own four menu sounds');
   assert.equal(await page.evaluate(()=>window.qaAudio.some(src=>src.includes('sound1.wav'))),false,'old UI cue must not play in selector');
   assert.deepEqual(errors,[]);
@@ -142,7 +180,7 @@ async function specialMoves(browser, width, height) {
       assert.equal(await selector.evaluate(el => el.scrollWidth > el.clientWidth),false,'selector horizontal overflow');
       if (width === 1440) {
         let variants = 0;
-        for(const [role,count] of [['p',2],['r',2],['n',2],['b',6],['q',1],['k',1]]) {
+        for(const [role,count] of [['p',2],['r',2],['n',2],['b',6],['q',2],['k',2]]) {
           await page.locator(`[data-role="${role}"]`).click();
           const characters = await page.locator('[data-character]').evaluateAll(items => items.map(item => item.dataset.character));
           assert.equal(characters.length,count,'role must only expose allowed character families');
@@ -158,8 +196,8 @@ async function specialMoves(browser, width, height) {
             }
           }
         }
-        assert.equal(variants,64);
-        console.log('OK: all 64 player palettes, restricted roles, single preview and icon-only color controls');
+        assert.equal(variants,70);
+        console.log('OK: all 70 player palettes, including Delita/Teta, restricted roles and single preview');
       }
       await page.locator('[data-role="r"]').click();
       await page.locator('[data-character="knight-male"]').click();
@@ -181,11 +219,17 @@ async function specialMoves(browser, width, height) {
       assert.equal(await page.locator('[data-character="knight-female"]').getAttribute('aria-pressed'),'true','reload resets session appearance');
       await page.locator('[data-character="knight-male"]').click();
       await page.locator('#appearance-save').click();
+      await page.locator('#select-pieces').click();
+      await page.locator('[data-role="k"]').click();await page.locator('[data-character="delita"]').click();await page.locator('[data-palette="1"]').click();
+      await page.locator('[data-role="q"]').click();await page.locator('[data-character="teta"]').click();await page.locator('[data-palette="2"]').click();
+      await page.locator('#appearance-save').click();
       await page.locator('#new-game').click();
       await page.locator('#board-3d canvas').waitFor();
       await page.waitForFunction(() => !document.querySelector('#battle-curtain').classList.contains('is-revealing') && document.querySelector('.app-shell').classList.contains('is-playing'));
       await page.locator('[data-view="2d"]').click();
       assert.ok((await page.locator('[data-square="a1"]').getAttribute('aria-label')).includes('Caballero'));
+      assert.ok((await page.locator('[data-square="e1"]').getAttribute('aria-label')).includes('Delita'));
+      assert.ok((await page.locator('[data-square="d1"]').getAttribute('aria-label')).includes('Teta'));
       for(const square of ['a1','a8','e2','e7']) {
         const cell=await page.locator(`[data-square="${square}"]`).boundingBox();
         const art=await page.locator(`[data-square="${square}"] .piece-art`).boundingBox();
@@ -222,6 +266,17 @@ async function specialMoves(browser, width, height) {
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'horizontal overflow');
       assert.deepEqual(errors, []);
       await page.screenshot({ path: path.join(output, `fct-${width}x${height}.png`) });
+      await page.locator('#audio-reopen').click();
+      const audioBox=await page.locator('#audio-control').boundingBox();
+      assert.ok(audioBox.x>=0&&audioBox.x+audioBox.width<=width&&audioBox.y+audioBox.height<=height,'music panel fits viewport');
+      await page.screenshot({path:path.join(output,`audio-${width}x${height}.png`)});
+      await page.locator('#audio-hide').click();
+      if(width===1440){
+        const canvas=await page.locator('#board-3d canvas').boundingBox();
+        await page.mouse.move(canvas.x+80,canvas.y+canvas.height*.24);await page.mouse.down();
+        await page.mouse.move(canvas.x+80+canvas.height*.32,canvas.y+canvas.height*.24,{steps:30});await page.mouse.up();
+        await page.screenshot({path:path.join(output,'cosmos-orbit.png')});
+      }
       await page.locator('#review-return').click();
       await page.locator('#review-pause-note').waitFor({ state: 'hidden' });
       console.log(`OK ${width}x${height}: actual move/review/resume, no HUD overlap or runtime errors`);

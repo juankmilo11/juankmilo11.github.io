@@ -11,7 +11,8 @@ export const defaultLoadout = {
   n: { character: 'dragoon-female', palette: 0 }, b: { character: 'white-mage-female', palette: 0 },
   q: { character: 'agrias', palette: 0 }, k: { character: 'ramza', palette: 0 },
 };
-const families = { p: ['squire'], r: ['knight'], n: ['dragoon'], b: ['white-mage','black-mage','summoner'], q: ['agrias'], k: ['ramza'] };
+const families = { p: ['squire'], r: ['knight'], n: ['dragoon'], b: ['white-mage','black-mage','summoner'], q: ['agrias','teta'], k: ['ramza','delita'] };
+export function characterHeight(role) { return role==='k'?1.14:role==='q'?1.03:0.92; }
 export function availableCharacters(role) {
   return catalog.filter(character => families[role]?.some(family => character.id === family || character.id.startsWith(`${family}-`)));
 }
@@ -36,7 +37,8 @@ export function contrastingAppearance(look,role) {
   const variant = character.variants.find(v => v.id === look.palette);
   const rgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
   const source = rgb(variant.swatch);
-  const candidates = role === 'k' ? catalog.find(c => c.id === 'delita').variants.map(v => ({ character: 'delita', palette: v.id }))
+  const royal = role==='k'?(look.character==='delita'?'ramza':'delita'):role==='q'?(look.character==='teta'?'agrias':'teta'):null;
+  const candidates = royal ? catalog.find(c => c.id===royal).variants.map(v => ({ character: royal, palette: v.id }))
     : character.variants.length > 1 ? character.variants.filter(v => v.id !== look.palette).map(v => ({ ...look, palette: v.id }))
     : catalog.find(c => c.id === 'teta').variants.map(v => ({ character: 'teta', palette: v.id }));
   return candidates.reduce((best, candidate) => {

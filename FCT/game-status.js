@@ -15,12 +15,12 @@ const gameToolbar = document.querySelector(".game-toolbar");
 new ResizeObserver(([entry]) => {
   appShell.style.setProperty("--hud-height", `${entry.target.getBoundingClientRect().height}px`);
 }).observe(gameToolbar);
-const backgroundMusic = document.querySelector("#background-music");
+
 let isReviewing = false;
 let currentMove = 0;
 let totalMoves = 0;
 
-if (backgroundMusic) backgroundMusic.volume = 0.5;
+
 
 function updatePositionControls() {
   reviewPauseNote.hidden = !isReviewing;

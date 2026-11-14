@@ -37,7 +37,8 @@ locales. `pages/fct/index.html` preserva la ruta antigua con una redirección.
 - `src/character-volume.js`: volumen de vóxeles contiguos a partir de frente,
   espalda y perfil, separado en seis partes articuladas.
 - `src/character-model.js` y `character-motion.js`: modelos compartidos con
-  referencias y caché limitada; respiración, brazos y piernas.
+  referencias y caché limitada; marcha en el sitio y respiración. Alturas
+  normalizadas por rol; reyes mayores que reinas y estas mayores que las demás.
 - `src/piece-preview.js`: visor Three.js del personaje del jugador; carga diferida,
   rotación y pausa del render al cerrar el selector.
 - `src/style.css`: presentación principal del juego.
@@ -45,10 +46,17 @@ locales. `pages/fct/index.html` preserva la ruta antigua con una redirección.
   y centrado/arrastre de sprites en 2D.
 - `src/field-life.js`: detalles de casillas oscuras y aves ocasionales; respeta
   movimiento reducido y no interviene en la selección de casillas.
+- `src/cosmos.js`: cielo con paralaje aparente, planetas, galaxia, ilusión de
+  agujero negro y meteoros; materiales y texturas procedurales, sin recursos externos.
+- `src/audio-system.js` y `audio-system.css`: controles independientes de música
+  y efectos, volumen, selección suave, intento de autoplay y desbloqueo por interacción.
+- `src/shuffle-queue.js` y `music-tracks.json`: cola aleatoria sin repetición por
+  ciclo y navegación por el historial real de música.
 - `public/game-status.js` y `public/status.css`: comportamiento y estilos
   complementarios de estado, controles y revisión de partida.
-- `public/audio/`: efectos de interacción. `audio/Incarnam.mp3`: música que
-  Vite procesa desde el HTML.
+- `public/audio/`: efectos de interacción. `public/assets/music/`: ocho temas
+  originales conservados desde la carpeta de publicación aportada por el usuario.
+  Se publican sin cambiar sus bytes en `/FCT/assets/music/`.
 - `public/fct-potion.png`: fuente del icono del juego y de su enlace en la portada.
 - `sprites/`: hojas originales y recortes utilizados por las piezas.
   `scripts/build-characters.py` extrae las 70 paletas y tres vistas por personaje

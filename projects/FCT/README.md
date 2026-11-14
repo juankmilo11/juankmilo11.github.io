@@ -11,10 +11,10 @@ move/capture audio for both sides (including en passant).
 
 The menu's **Seleccionar piezas** dialog replaces the old player/rival card.
 The resource catalog has 16 characters and 70 original variants. The player
-chooses from 64 variants within role restrictions: Squire for pawns, Knight for
+chooses from all 70 variants within role restrictions: Squire for pawns, Knight for
 rooks, Dragoon for knights, and White Mage / Black Mage / Summoner for bishops.
-The queen is Agrias and the king is Ramza. Their opposing royal characters are
-Teta and Delita. Choices are cosmetic and kept only in page memory: **Guardar**
+The queen can be Agrias or Teta; the king can be Ramza or Delita, each with their
+original palettes. The opponent uses the other royal character. Choices are cosmetic and kept only in page memory: **Guardar**
 applies the draft, **Salir**/Escape discards it, and reloading resets defaults.
 
 The rival chooses the most contrasting available palette for each role.
@@ -29,10 +29,14 @@ front, back and profile silhouettes. Shared voxel faces are removed; neighboring
 voxels touch without the old lateral gaps. Each view supplies its own colors,
 including the actual back. This is a stylized voxel reconstruction, not an
 imported rigged character mesh. Head, torso, arms and legs are articulated for
-subtle idle breathing and walking; idle feet remain planted. Reduced-motion
+subtle independent marching in place, alternating feet, arms and breathing. Reduced-motion
 preferences stop those animations and default preview rotation.
 The left-facing profile is mapped anteriorly on both sides; rear head surfaces
 always sample the back projection so facial colors do not appear on the nape.
+Depth profiles are smoothed and anatomically bounded so a hand/weapon in a side
+sprite cannot extrude the face into a snout. Minimum torso/limb depth avoids
+paper-thin side views. Rendered heights are normalized: ordinary pieces 0.92,
+queens 1.03 and kings 1.14 world units; 2D royals also get a small size increase.
 
 Model geometries are shared by appearance, with reference counts and a bounded
 cache of inactive variants. The preview renders only while its dialog is open;
@@ -43,7 +47,7 @@ the hidden board does not keep rendering behind the menu. Mobile provides a
 one another instead of overlapping. The source WAV files live in `public/audio/`
 and are copied to `FCT/audio/` by Vite. Other game controls keep their prior cues.
 
-The menu uses a locally served parchment illustration and the OFL-licensed
+The centered dark menu and dark banner use a locally served parchment illustration and the OFL-licensed
 Cinzel/Crimson Pro fonts. See [asset provenance and image prompt](../../docs/art-assets.md).
 
 ### Rebuilding character resources
@@ -70,6 +74,32 @@ and flat piece positions are preserved. Seams also accept clicks and drops.
 `src/field-life.js` scatters tiny stones, mud and moss on selected dark squares.
 A small flock crosses occasionally behind the field; reduced-motion mode
 disables it. These decorations do not participate in raycasting or chess rules.
+`src/cosmos.js` adds an infinite-distance star field, two planets (one ringed),
+a spiral galaxy, an accretion-disk/black-hole illusion and occasional meteors.
+Their directions change with camera orbit; they stay behind the playing field.
+Reduced-motion mode retains a static sky without twinkling or meteors.
+
+## Music and effect levels
+
+`src/audio-system.js` owns the two independent panels: music and sound effects.
+The music player has a level slider, play/pause, previous/next and current title;
+the effects panel has its own level and mute. Piece selection/dragging uses the
+normal movement cue at 34% of the chosen FX level; actual moves keep that level.
+
+Eight user-provided MP3 files are preserved in `public/assets/music/` and copied
+verbatim to `/FCT/assets/music/`. `src/music-tracks.json` lists their display names.
+Add new music to that source folder and update the manifest before building.
+`audio/Incarnam.mp3` is a legacy source, no longer bundled by the HTML.
+
+`ShuffleQueue` plays a randomized bag of all tracks without repeats and avoids
+an immediate repeat across cycle boundaries. Previous/next can revisit the real
+history without changing the remaining shuffle bag. End-of-track advances the queue.
+Only the current track is requested, using normal browser streaming/byte ranges.
+
+Playback is attempted immediately on page load and retried on pointer movement
+or interaction while blocked. Explicitly pausing does not get undone by mouse
+movement, selecting a piece or starting combat. Browsers may require a click or
+tap before audible playback; see the [MDN autoplay guide](https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Autoplay).
 
 During move review a small pause notice appears inside the review controls.
 It stays visible even at the latest position until the player presses **Volver**.
@@ -87,9 +117,11 @@ module search path, set `PLAYWRIGHT_MODULE_PATH` to its package directory.
 `FCT_QA_OUTPUT` sets the screenshot directory (default: OS temp directory).
 The script tests actual moves, review/resume and HUD overlap at desktop, tablet,
 320/390 px mobile, and landscape sizes, with touch emulation for mobile.
-It also builds all 64 allowed player previews, checks role restrictions,
+It also builds all 70 allowed player previews, checks role restrictions,
 save/cancel and reload reset, PNG drag previews, keyboard focus, the four exclusive
-selector sounds and camera orbit. Real AI games cover the normal
+selector sounds and camera orbit. It checks all eight playlist entries, previous/
+next history, independent effect mute, music level, intentional pause and mobile
+panel bounds. Real AI games cover the normal
 flow. Scripted opponent replies exercise the app's castling, en passant,
 promotion, captures, mate, review/replay and new-game flows in both mobile
 orientations. These browser tests emulate mobile; they do not replace testing

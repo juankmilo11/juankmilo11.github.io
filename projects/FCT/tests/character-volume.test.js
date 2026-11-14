@@ -38,3 +38,12 @@ test('front facial colors never leak onto rear head surfaces',()=>{
   assert.ok(checked>20);
   result.parts.forEach(part=>part.geometry.dispose());
 });
+test('a protruding hand in the side sprite cannot extrude a long facial snout',()=>{
+  const side=projection([20,230,20],6);
+  for(let y=9;y<16;y++)for(let x=0;x<32;x++)side.data.set([20,230,20,255],(y*32+x)*4);
+  const result=sculptCharacter(projection([230,20,20],8),projection([20,20,230],8),side);
+  const head=result.parts.find(part=>part.name==='head');
+  const p=head.geometry.attributes.position;
+  for(let i=0;i<p.count;i++)assert.ok(Math.abs(p.getZ(i)+head.pivot[2])<.16,'skull depth must remain anatomically bounded');
+  result.parts.forEach(part=>part.geometry.dispose());
+});

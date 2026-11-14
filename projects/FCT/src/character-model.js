@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { sculptCharacter } from './character-volume.js';
-import { appearanceKey } from './appearance.js';
+import { appearanceKey, characterHeight } from './appearance.js';
 
 const urls = import.meta.glob('../sprites/characters/*.png', { eager: true, query: '?url', import: 'default' });
 const cache = new Map();
@@ -47,7 +47,7 @@ export function releaseCharacter(character) {
   character.userData.ready.finally(trimCache).catch(() => {});
   character.clear();
 }
-export function createCharacter(look, facing = 0) {
+export function createCharacter(look, facing = 0, role = 'p') {
   const character = new THREE.Group();
   character.rotation.y = facing;
   character.userData.rig = {};
@@ -56,6 +56,7 @@ export function createCharacter(look, facing = 0) {
   cache.get(appearanceKey(look)).references++;
   character.userData.ready = loading.then(data => {
     if (character.userData.released) return character;
+    character.scale.setScalar(characterHeight(role)/Math.max(data.height,0.1));
     for (const part of data.parts) {
       const joint = new THREE.Mesh(part.geometry, material);
       joint.position.fromArray(part.pivot);

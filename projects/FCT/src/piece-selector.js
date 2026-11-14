@@ -27,7 +27,7 @@ export function initPieceSelector({ playSound, onApply }) {
         preview = createPiecePreview(dialog.querySelector('#piece-preview')); return preview;
       });
       const viewer = await previewPromise;
-      await viewer.setLooks(human);
+      await viewer.setLooks(human,role);
       if (current !== request || !dialog.open) return;
       viewer.setActive(true);
       dialog.querySelector('.preview-fallbacks').hidden = true;

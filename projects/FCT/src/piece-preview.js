@@ -46,9 +46,9 @@ export function createPiecePreview(host) {
     controls.update(); renderer.render(scene,camera); frame = requestAnimationFrame(render);
   }
   return {
-    async setLooks(human) {
+    async setLooks(human,role) {
       const request = ++token;
-      const next = [createCharacter(human)];
+      const next = [createCharacter(human,0,role)];
       await Promise.all(next.map(model => model.userData.ready));
       if (request !== token) { next.forEach(releaseCharacter); return; }
       models.forEach(model => { scene.remove(model); releaseCharacter(model); });

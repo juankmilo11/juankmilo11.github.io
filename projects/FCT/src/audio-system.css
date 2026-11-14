@@ -1,0 +1,21 @@
+.audio-dock { position:fixed;z-index:35;right:16px;bottom:16px;display:flex;gap:7px; }
+.audio-dock > button { position:static!important;inset:auto!important;display:grid;place-items:center;width:40px;height:40px;border:1px solid #b8ad7a55;border-radius:5px;color:#dfc990;background:#152019ed;box-shadow:0 4px 18px #0004;cursor:pointer;font:20px var(--font-ui); }
+.audio-dock > button[aria-expanded=true] { border-color:#e4c783;background:#39432b; }
+.audio-dock > button.is-muted { opacity:.55; }
+.audio-dock > button svg { width:20px;height:20px; }
+.audio-dock .audio-control,.audio-dock .effects-control { position:absolute!important;inset:auto 0 48px auto!important;display:grid;gap:12px;width:min(300px,calc(100vw - 24px));padding:16px;color:#e6dcc0;background:#18221af5;border:1px solid #d3be8266;border-radius:7px;box-shadow:0 12px 36px #0007;backdrop-filter:blur(10px); }
+.audio-dock [hidden] { display:none!important; }
+.audio-panel-header { display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:18px; }
+.audio-panel-header button { width:28px!important;height:28px!important;border:0!important;font-size:22px!important;background:transparent!important;color:#c6bd9c;cursor:pointer; }
+.music-title { min-height:40px;font-size:16px;line-height:1.3;color:#c6ccb9; }
+.music-transport { display:flex;justify-content:center;gap:14px; }
+.audio-dock .music-transport button { width:44px;height:40px;border:1px solid #a6a37b66;border-radius:4px;background:#2e392a;color:#eddbab;font-size:21px;cursor:pointer; }
+.audio-dock button:disabled { opacity:.3;cursor:default; }
+.audio-level { display:grid;grid-template-columns:1fr auto;align-items:center;gap:6px 10px;font-size:16px; }
+.audio-level input { grid-column:1/-1;width:100%;height:28px;accent-color:#c6ad70;cursor:pointer; }
+.audio-status { margin:0;font-size:13px;color:#b9bfac; }
+.audio-status:empty { display:none; }
+#effects-toggle { min-height:40px;border:1px solid #b7a36b55;border-radius:4px;background:#2b3627;color:#e9d6a2;font:16px var(--font-ui);cursor:pointer; }
+.app-shell.is-playing .audio-dock { top:calc(var(--hud-height,54px) + 48px);right:12px;bottom:auto; }
+.app-shell.is-playing .audio-dock .audio-control,.app-shell.is-playing .audio-dock .effects-control { inset:48px 0 auto auto!important;max-height:calc(100dvh - var(--hud-height,54px) - 115px);overflow:auto; }
+@media(max-width:640px){.audio-dock{right:8px;bottom:10px;}.app-shell.is-playing .audio-dock{right:8px;}.audio-dock > button{width:34px;height:34px;}.app-shell.is-playing .audio-dock .audio-control,.app-shell.is-playing .audio-dock .effects-control{top:40px!important;}}

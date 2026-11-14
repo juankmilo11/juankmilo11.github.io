@@ -5,6 +5,7 @@ import { appearanceFor, characterInfo, thumbnailUrl } from './appearance.js';
 import { initPieceSelector } from './piece-selector.js';
 import { tileDetail } from './terrain.js';
 import './menu-theme.css';
+import { createAudioSystem } from './audio-system.js';
 
 const game = new Chess();
 const board2d = document.querySelector('#board-2d');
@@ -17,27 +18,9 @@ const pieceInspector = document.querySelector('.piece-inspector');
 const promotionDialog = document.querySelector('#promotion-dialog');
 const exitConfirmation = document.querySelector('#exit-confirmation');
 const aiWorker = new Worker(new URL('./ai-worker.js', import.meta.url), { type: 'module' });
-const backgroundMusic = document.querySelector('#background-music');
-const uiSounds = Object.fromEntries(['sound1', 'menu1', 'menu2', 'menu3', 'menu4', 'user_piece_move', 'AI_piece_move', 'check', 'checkmate'].map((name) => {
-  const audio = new Audio(`${import.meta.env.BASE_URL}audio/${name}.wav`);
-  audio.preload = 'auto';
-  return [name, audio];
-}));
-function playUiSound(name) {
-  const audio = uiSounds[name];
-  if (!audio) return;
-  if (/^menu[1-4]$/.test(name)) {
-    for (const [key, cue] of Object.entries(uiSounds)) if (/^menu[1-4]$/.test(key) && cue !== audio) cue.pause();
-  }
-  audio.currentTime = 0;
-  audio.play().catch(() => {});
-}
+const audioSystem = createAudioSystem();
+function playUiSound(name,gain=1) { audioSystem.playSound(name,gain); }
 window.playFctSound = playUiSound;
-const audioToggle = document.querySelector('#audio-toggle');
-const audioHide = document.querySelector('#audio-hide');
-const audioReopen = document.querySelector('#audio-reopen');
-const audioControl = document.querySelector('.audio-control');
-let musicEnabledByCombat = false;
 
 const pieceNames = { p: 'Peón', r: 'Torre', n: 'Caballo', b: 'Alfil', q: 'Reina', k: 'Rey' };
 const pieceValues = { p: 1, r: 5, n: 3, b: 3, q: 9, k: 0 };
@@ -69,24 +52,6 @@ function requestAiMove() {
   aiRequestId += 1;
   aiWorker.postMessage({ type: 'choose-move', requestId: aiRequestId, fen: game.fen(), depth: difficulty });
 }
-
-function syncAudioControl() {
-  const muted = backgroundMusic.muted;
-  audioToggle.textContent = muted ? '♪̸' : '♫';
-  audioToggle.setAttribute('aria-pressed', String(muted));
-  audioToggle.setAttribute('aria-label', muted ? 'Activar música' : 'Silenciar música');
-  audioToggle.title = muted ? 'Activar música' : 'Silenciar música';
-}
-function startBackgroundMusic() {
-  if (!musicEnabledByCombat) return;
-  backgroundMusic.play().then(syncAudioControl).catch(() => {});
-}
-audioToggle.addEventListener('click', () => {
-  backgroundMusic.muted = !backgroundMusic.muted;
-  if (!backgroundMusic.muted) startBackgroundMusic();
-  syncAudioControl();
-});
-syncAudioControl();
 
 function squareName(row, file) {
   return `${String.fromCharCode(97 + file)}${8 - row}`;
@@ -139,6 +104,7 @@ function render2D() {
     if (piece) {
       const token = document.createElement('span');
       token.className = `piece-token ${piece.color === 'w' ? 'piece-white' : 'piece-black'}`;
+      token.style.setProperty('--role-size',piece.type==='k'?'1.12':piece.type==='q'?'1.06':'1');
       const art = document.createElement('img');
       art.className = 'piece-art'; art.alt = ''; art.draggable = false;
       art.src = thumbnailUrl(appearanceFor(piece.type,piece.color));
@@ -223,7 +189,6 @@ function findKing(color) {
 function handleSquare(square) {
   if (!square) return;
   const piece = game.get(square);
-  if (piece && selectedSquare !== square && !isReviewing) playUiSound('sound1');
   const canMove = !thinking && !isReviewing && !game.isGameOver() && game.turn() === 'w';
   if (selectedSquare && canMove) {
     const moves = game.moves({ square: selectedSquare, verbose: true }).filter((move) => move.to === square);
@@ -238,6 +203,7 @@ function handleSquare(square) {
     }
   }
   if (piece?.color === 'w' && canMove) {
+    if(selectedSquare!==square)playUiSound(moveSound(false),0.34);
     selectedSquare = square;
     describePiece(piece);
   } else if (piece) {
@@ -510,8 +476,6 @@ async function startCombat() {
   battleCurtain.classList.remove('is-revealing');
   battleCurtain.classList.add('is-covering');
   await new Promise((resolve) => window.setTimeout(resolve, 190));
-  musicEnabledByCombat = true;
-  startBackgroundMusic();
   aiRequestId += 1;
   game.reset();
   selectedSquare = null;
@@ -543,17 +507,6 @@ exitConfirmation.addEventListener('close', () => {
   threeBoard?.cancelIntro();
   appShell.classList.remove('is-playing');
 });
-audioHide.addEventListener('click', () => {
-  playUiSound('sound1');
-  audioControl.hidden = true;
-  audioReopen.hidden = false;
-});
-audioReopen.addEventListener('click', () => {
-  playUiSound('sound1');
-  audioControl.hidden = false;
-  audioReopen.hidden = true;
-});
-
 let boardPointerDrag = null;
 let swallowBoardClick = false;
 board2d.addEventListener('click', (event) => {
@@ -572,6 +525,7 @@ board2d.addEventListener('pointerdown', (event) => {
   const from = token.dataset.from;
   const piece = game.get(from);
   if (!piece || piece.color !== 'w') return;
+  playUiSound(moveSound(false),0.34);
 
   event.preventDefault();
   boardPointerDrag = {
@@ -663,7 +617,7 @@ aiWorker.onerror = (error) => {
 
 window.addEventListener('resize', () => threeBoard?.resize());
 initPieceSelector({ playSound: playUiSound, onApply: () => { describePiece(null); renderAll(); } });
-document.querySelectorAll('#audio-toggle, #promotion-dialog button, #exit-confirmation [value="cancel"]').forEach(button => {
+document.querySelectorAll('#promotion-dialog button, #exit-confirmation [value="cancel"]').forEach(button => {
   button.addEventListener('click', () => playUiSound('sound1'));
 });
 describePiece(null);
