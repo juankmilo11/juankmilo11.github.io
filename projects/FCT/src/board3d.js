@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { buildLandscape, stoneMaterial } from './environment.js';
-import { tileElevation } from './terrain.js';
+import { buildLandscape, earthMaterial } from './environment.js';
+import { tileElevation, terrainPalette } from './terrain.js';
+import { createMountainGeometry } from './mountain.js';
 
 const spriteUrls = import.meta.glob('../sprites/cropped/*.png', { eager: true, query: '?url', import: 'default' });
 const spriteTextures = new Map();
@@ -12,8 +13,8 @@ const voxelMaterials = new Map();
 const BOARD_SIZE = 8;
 const FILES = 'abcdefgh';
 const palette = {
-  light: 0xc5a47b,
-  dark: 0x455d50,
+  light: terrainPalette.light,
+  dark: terrainPalette.dark,
   selected: 0xffc83f,
   target: 0x32d18a,
   capture: 0xe94f43,
@@ -82,7 +83,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
   controls.saveState();
 
   buildLandscape(world);
-  buildBoard(world, tileMeshes, tileHeights, tileMaterials);
+  const terrainMesh = buildBoard(world, tileMeshes, tileHeights, tileMaterials);
   for (const tile of tileMeshes) {
     const square = tile.userData.square;
     const highlightMaterial = new THREE.MeshBasicMaterial({
@@ -94,7 +95,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
       polygonOffset: true,
       polygonOffsetFactor: -2,
     });
-    const highlight = new THREE.Mesh(new THREE.PlaneGeometry(0.94, 0.94), highlightMaterial);
+    const highlight = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.86), highlightMaterial);
     highlight.rotation.x = -Math.PI / 2;
     highlight.position.set(tile.position.x, tileHeights.get(square) + 0.003, tile.position.z);
     highlight.visible = false;
@@ -113,7 +114,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
     polygonOffset: true,
     polygonOffsetFactor: -2,
   });
-  const dropIndicator = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.9), dropIndicatorMaterial);
+  const dropIndicator = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.86), dropIndicatorMaterial);
   dropIndicator.rotation.x = -Math.PI / 2;
   dropIndicator.visible = false;
   dropIndicator.renderOrder = 3;
@@ -150,10 +151,14 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
 
   function hit(event) {
     setPointer(event);
-    const intersections = raycaster.intersectObjects([...pieceMeshes, ...tileMeshes], true);
+    const intersections = raycaster.intersectObjects([...pieceMeshes, ...tileMeshes, terrainMesh], true);
     for (const intersection of intersections) {
       let object = intersection.object;
       while (object && !object.userData.kind) object = object.parent;
+      if (object?.userData.kind === 'terrain') {
+        const square = worldToSquare(intersection.point.x, intersection.point.z);
+        if (square) return { object: { userData: { kind: 'tile', square } }, intersection };
+      }
       if (object?.userData.kind === 'piece' || object?.userData.kind === 'tile') return { object, intersection };
     }
     return null;
@@ -161,8 +166,8 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
 
   function squareAtPointer(event) {
     setPointer(event);
-    const intersections = raycaster.intersectObjects(tileMeshes, false);
-    if (intersections[0]) return intersections[0].object.userData.square;
+    const intersections = raycaster.intersectObjects([...tileMeshes, terrainMesh], false);
+    if (intersections[0]) return intersections[0].object.userData.square ?? worldToSquare(intersections[0].point.x, intersections[0].point.z);
     const ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.25);
     const point = new THREE.Vector3();
     if (!raycaster.ray.intersectPlane(ground, point)) return null;
@@ -600,32 +605,25 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
 }
 
 function buildBoard(world, tileMeshes, tileHeights, tileMaterials) {
-  const frameMaterial = new THREE.MeshStandardMaterial({ color: 0x514936, roughness: 0.72, metalness: 0.28 });
-  const frame = new THREE.Mesh(new THREE.BoxGeometry(8.42, 0.18, 8.42), frameMaterial);
-  frame.position.y = -0.14;
-  frame.castShadow = true;
-  frame.receiveShadow = true;
-  world.add(frame);
-
-  const rimMaterial = new THREE.MeshStandardMaterial({ color: 0xb08a50, roughness: 0.46, metalness: 0.55 });
-  const rim = new THREE.Mesh(new THREE.BoxGeometry(8.52, 0.07, 8.52), rimMaterial);
-  rim.position.y = -0.08;
-  world.add(rim);
+  const mountain = new THREE.Mesh(createMountainGeometry(), earthMaterial({ vertexColors: true }));
+  mountain.userData.kind = 'terrain';
+  mountain.castShadow = mountain.receiveShadow = true;
+  world.add(mountain);
 
   for (let row = 0; row < BOARD_SIZE; row += 1) {
     for (let file = 0; file < BOARD_SIZE; file += 1) {
       const square = `${FILES[file]}${8 - row}`;
       const light = (row + file) % 2 === 0;
-      const material = stoneMaterial({
+      const material = earthMaterial({
         color: light ? palette.light : palette.dark,
-        roughness: 0.82,
-        metalness: 0.03,
+        roughness: 0.98,
+        metalness: 0,
         emissive: 0x000000,
         emissiveIntensity: 0,
       });
       const top = tileElevation(row, file);
-      const height = top + 0.08;
-      const tile = new THREE.Mesh(new RoundedBoxGeometry(0.976, height, 0.976, 2, 0.018), material);
+      const height = 0.07;
+      const tile = new THREE.Mesh(new RoundedBoxGeometry(0.9, height, 0.9, 2, 0.012), material);
       tile.position.set(file - 3.5, top - height / 2, row - 3.5);
       tile.castShadow = true;
       tile.receiveShadow = true;
@@ -643,6 +641,7 @@ function buildBoard(world, tileMeshes, tileHeights, tileMaterials) {
     marker.position.set(file - 3.5, 0.16, 4.24);
     world.add(marker);
   }
+  return mountain;
 }
 
 function buildWindParticles(world, reducedMotion) {

@@ -8,6 +8,7 @@ const reviewMatchButton = document.querySelector("#review-match");
 const reviewControls = document.querySelector("#review-controls");
 const reviewPosition = document.querySelector("#review-position");
 const reviewReturnButton = document.querySelector("#review-return");
+const reviewPauseNote = document.querySelector("#review-pause-note");
 const appShell = document.querySelector(".app-shell");
 const backgroundMusic = document.querySelector("#background-music");
 let isReviewing = false;
@@ -17,6 +18,7 @@ let totalMoves = 0;
 if (backgroundMusic) backgroundMusic.volume = 0.5;
 
 function updatePositionControls() {
+  reviewPauseNote.hidden = !isReviewing;
   reviewPosition.textContent = currentMove === 0
     ? `Inicio · 0/${totalMoves}`
     : `Jugada ${currentMove} de ${totalMoves}`;
@@ -27,6 +29,7 @@ function updatePositionControls() {
 }
 
 function updateGameStatus() {
+  reviewPauseNote.hidden = !isReviewing;
   const message = statusText.textContent.trim();
   const isCheckmate = /^(Checkmate|Jaque mate)\b/i.test(message);
   const isDraw = /^Tablas\b/i.test(message);
@@ -110,6 +113,7 @@ document.querySelector("#review-return").addEventListener("click", () => {
 
 newGameButton.addEventListener("click", () => {
   isReviewing = false;
+  reviewPauseNote.hidden = true;
   appShell.classList.remove("is-reviewing");
   reviewControls.hidden = true;
   checkmateOverlay.hidden = true;

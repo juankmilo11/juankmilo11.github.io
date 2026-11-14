@@ -13,6 +13,14 @@ use light brown in both views. `src/environment.js` builds the textured earth,
 grass, weathered stone, ruined arch and vegetation procedurally; there are no
 external texture requests. Capture galleries remain clear of decorations.
 
+The board and surrounding soil share an earth/olive palette. Thin playable
+patches sit on triangulated, irregular earth seams and sloping outer shoulders,
+instead of a metal frame or individual stone columns. The four summit squares
+and flat piece positions are preserved. Seams also accept clicks and drops.
+
+During move review a small pause notice appears beside the review controls.
+It stays visible even at the latest position until the player presses **Volver**.
+
 `src/audio-cues.js` preserves the actual previous sound assignments: the human
 move used the historical `AI_piece_move.wav` file and the AI used
 `user_piece_move.wav`. Normal moves now share the former; all captures use

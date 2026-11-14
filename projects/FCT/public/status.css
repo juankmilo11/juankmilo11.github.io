@@ -37,6 +37,7 @@
 .piece-inspector[hidden] { display: none; }
 
 .review-controls {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 5px;
@@ -48,6 +49,21 @@
 }
 
 .review-controls[hidden] { display: none; }
+.review-pause-note {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  width: max-content;
+  max-width: min(340px, calc(100vw - 24px));
+  padding: 6px 8px;
+  border: 1px solid #d9bd7755;
+  border-radius: 3px;
+  color: #f1d99f;
+  background: #242219ef;
+  font: 10px/1.5 "DM Mono", monospace;
+  pointer-events: none;
+}
+.review-pause-note[hidden] { display: none; }
 .app-shell:not(.is-reviewing) #review-return { display: none; }
 
 .review-controls button {

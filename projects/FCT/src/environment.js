@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { terrainPalette } from './terrain.js';
 
 // Seeded variation keeps the landscape stable between games and screenshots.
 function randomSource(seed) {
@@ -22,7 +23,7 @@ function surfaceTexture(kind) {
       const grain = (random() - 0.5) * 36;
       const cloud = Math.sin(x * 0.047 + Math.sin(y * 0.035) * 2) * 9 + Math.cos(y * 0.061) * 6;
       const shade = 174 + grain + cloud;
-      const tint = kind === 'grass' ? [0.65, 0.77, 0.48] : kind === 'earth' ? [0.8, 0.66, 0.49] : [1, 0.96, 0.87];
+      const tint = kind === 'grass' ? [0.84, 0.81, 0.60] : kind === 'earth' ? [1, 0.94, 0.81] : [1, 0.96, 0.87];
       for (let c = 0; c < 3; c++) image.data[i + c] = shade * tint[c];
       image.data[i + 3] = 255;
     }
@@ -55,6 +56,13 @@ export function stoneMaterial(options = {}) {
   });
 }
 
+export function earthMaterial(options = {}) {
+  return new THREE.MeshStandardMaterial({
+    color: terrainPalette.earth, map: surfaceTexture('earth'),
+    bumpMap: surfaceTexture('earth'), bumpScale: 0.035, roughness: 1, ...options,
+  });
+}
+
 function mesh(world, geometry, material, x, y, z) {
   const object = new THREE.Mesh(geometry, material);
   object.position.set(x, y, z);
@@ -73,10 +81,7 @@ function groundHeight(x, z) {
 
 export function buildLandscape(world) {
   const random = randomSource(124);
-  const earth = new THREE.MeshStandardMaterial({
-    color: 0x88785d, map: surfaceTexture('earth'),
-    bumpMap: surfaceTexture('earth'), bumpScale: 0.085, roughness: 1,
-  });
+  const earth = earthMaterial({ bumpScale: 0.085 });
   // Rounded, irregular cliff bands replace the ten-sided display pedestal.
   for (let layer = 0; layer < 3; layer++) {
     const geometry = new THREE.CylinderGeometry(8.2 - layer * 0.14, 8.0 - layer * 0.24, 0.53, 96, 4);
@@ -123,7 +128,7 @@ export function buildLandscape(world) {
   surface.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   surface.computeVertexNormals();
   mesh(world, surface, new THREE.MeshStandardMaterial({
-    color: 0x9aab77, map: surfaceTexture('grass'), vertexColors: true,
+    color: 0xb4ac87, map: surfaceTexture('grass'), vertexColors: true,
     bumpMap: surfaceTexture('grass'), bumpScale: 0.045, roughness: 1,
   }), 0, 0, 0);
 

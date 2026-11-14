@@ -7,7 +7,7 @@
     <meta name="description" content="FCT: Fantasy Chess Tactics, ajedrez clásico con ambientación de fantasía táctica." />
     <link rel="icon" type="image/png" href="./fct-potion.png?v=20261113-6" />
     <link rel="apple-touch-icon" href="./fct-potion.png?v=20261113-6" />
-    <link rel="stylesheet" href="./status.css?v=20261113-11" />
+    <link rel="stylesheet" href="./status.css?v=20261113-12" />
     <title>FCT: Fantasy Chess Tactics</title>
   </head>
   <body>
@@ -55,7 +55,7 @@
           <div class="game-toolbar">
             <div class="map-title"><span class="map-icon">⌖</span><div><small>RUINAS</small><strong>La colina del juramento</strong></div></div>
             <div class="game-status-badge" aria-live="polite"><span class="turn-pulse" id="turn-pulse"></span><strong id="game-status">Tu turno</strong></div>
-            <div class="review-controls" id="review-controls" role="group" aria-label="Revisión cronológica de la partida" hidden><button id="review-first" type="button" title="Ir a la posición inicial" aria-label="Ir a la posición inicial">|‹</button><button id="review-previous" type="button" title="Movimiento anterior" aria-label="Movimiento anterior">‹</button><output id="review-position" aria-live="polite">Inicio · 0/0</output><button id="review-next" type="button" title="Movimiento siguiente" aria-label="Movimiento siguiente">›</button><button id="review-last" type="button" title="Ir a la posición actual" aria-label="Ir a la posición actual">›|</button><button id="review-return" type="button" title="Volver a la posición actual">Volver</button></div>
+            <div class="review-controls" id="review-controls" role="group" aria-label="Revisión cronológica de la partida" hidden><button id="review-first" type="button" title="Ir a la posición inicial" aria-label="Ir a la posición inicial">|‹</button><button id="review-previous" type="button" title="Movimiento anterior" aria-label="Movimiento anterior">‹</button><output id="review-position" aria-live="polite">Inicio · 0/0</output><button id="review-next" type="button" title="Movimiento siguiente" aria-label="Movimiento siguiente">›</button><button id="review-last" type="button" title="Ir a la posición actual" aria-label="Ir a la posición actual">›|</button><button id="review-return" type="button" title="Volver a la posición actual">Volver</button><small id="review-pause-note" class="review-pause-note" role="status" hidden>Partida pausada · Pulsa «Volver» para continuar.</small></div>
             <div class="toolbar-actions">
               <div class="view-switch" role="group" aria-label="Vista del tablero">
                 <button type="button" class="view-button active" data-view="2d" aria-pressed="true"><span>▦</span> 2D</button>
@@ -121,7 +121,7 @@
 
     <div id="battle-curtain" class="battle-curtain" aria-hidden="true"></div>
 
-    <script src="./game-status.js?v=20261113-11"></script>
+    <script src="./game-status.js?v=20261113-12"></script>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
