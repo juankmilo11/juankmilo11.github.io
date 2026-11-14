@@ -110,8 +110,8 @@ h1,h2,p { margin: 0; }
 .board-2d { display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); box-shadow: 0 4px 20px #05080575; background: #595a49; }
 .board-2d.hidden,.board-3d.hidden { display: none; }
 .square { position: relative; display: grid; place-items: center; min-width: 0; min-height: 0; padding: 0; border: 0; cursor: pointer; overflow: hidden; touch-action: none; }
-.square.light { background: linear-gradient(145deg, #c5aa82, #b49770); }
-.square.dark { background: linear-gradient(145deg, #958663, #807353); }
+.square.light { background: linear-gradient(145deg, #819d68, #7c9763); }
+.square.dark { background: linear-gradient(145deg, #77935f, #728e5a); }
 .square.light::after,.square.dark::after { content: ''; position: absolute; inset: 0; opacity: .16; pointer-events: none; background-image: repeating-linear-gradient(32deg, transparent 0 7px, #ffffff16 8px 9px); }
 .square:hover { filter: brightness(1.09); }
 .square.last-move::before,.square.selected::before { content: ''; position: absolute; inset: 0; z-index: 1; background: #d3ae5f44; pointer-events: none; }
@@ -430,4 +430,30 @@ body { min-height: 100dvh; overflow: hidden; }
   .piece-token.piece-rewind-arrival,
   .piece-captured-ghost,
   .square.capture-impact { animation-duration: .18s; }
+}
+
+/* The HUD owns space in the layout; no floating review text over the scene. */
+.app-shell.is-playing .game-area { flex-direction: column; }
+.app-shell.is-playing .game-toolbar {
+  position: relative;
+  inset: auto;
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) auto auto;
+  gap: 8px 12px;
+  min-height: 54px;
+  background: #151e17;
+}
+.app-shell.is-playing .game-status-badge { position: static; inset: auto; }
+.app-shell.is-playing .board-stage { height: auto; min-height: 0; }
+.app-shell.is-playing .board-frame.is-3d { height: 100%; min-height: 0; }
+.app-shell.is-playing .board-frame.is-3d .remaining-black { top: 6px; }
+.app-shell.is-playing .audio-control,
+.app-shell.is-playing .audio-reopen { top: calc(var(--hud-height, 54px) + 48px); }
+.app-shell.is-playing .drag-help { top: 52px; }
+@media (max-width: 1000px) {
+  .app-shell.is-playing .game-toolbar { grid-template-columns: minmax(0, 1fr) auto; }
+  .app-shell.is-playing .toolbar-actions { grid-column: 2; grid-row: 1; }
+  .app-shell.is-playing .review-controls { grid-column: 1 / -1; grid-row: 2; justify-self: center; }
+  .app-shell.is-playing .game-status-badge { grid-column: 1 / -1; grid-row: 2; justify-self: start; }
 }

@@ -25,6 +25,7 @@ test('review pauses show a notice until returning to the live position or starti
   runInNewContext(readFileSync(new URL('../public/game-status.js', import.meta.url), 'utf8'), {
     document: { querySelector: element }, window,
     MutationObserver: class { observe() {} },
+    ResizeObserver: class { observe() {} },
   });
   const notice = element('#review-pause-note');
   assert.equal(notice.hidden, true);

@@ -1,9 +1,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { buildLandscape, earthMaterial } from './environment.js';
 import { tileElevation, terrainPalette } from './terrain.js';
-import { createMountainGeometry } from './mountain.js';
+import { createMountainGeometry, createTileGeometry } from './mountain.js';
 
 const spriteUrls = import.meta.glob('../sprites/cropped/*.png', { eager: true, query: '?url', import: 'default' });
 const spriteTextures = new Map();
@@ -40,7 +39,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
   host.append(renderer.domElement);
 
   scene.add(new THREE.HemisphereLight(0xe0e9d2, 0x394339, 2.1));
-  const sun = new THREE.DirectionalLight(0xffd79a, 3.2);
+  const sun = new THREE.DirectionalLight(0xffefd9, 3.0);
   sun.position.set(-5, 11, 6);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
@@ -622,9 +621,8 @@ function buildBoard(world, tileMeshes, tileHeights, tileMaterials) {
         emissiveIntensity: 0,
       });
       const top = tileElevation(row, file);
-      const height = 0.07;
-      const tile = new THREE.Mesh(new RoundedBoxGeometry(0.9, height, 0.9, 2, 0.012), material);
-      tile.position.set(file - 3.5, top - height / 2, row - 3.5);
+      const tile = new THREE.Mesh(createTileGeometry(row, file), material);
+      tile.position.set(file - 3.5, top, row - 3.5);
       tile.castShadow = true;
       tile.receiveShadow = true;
       tile.userData = { kind: 'tile', square };
@@ -635,12 +633,6 @@ function buildBoard(world, tileMeshes, tileHeights, tileMaterials) {
     }
   }
 
-  const edgeMaterial = new THREE.MeshStandardMaterial({ color: 0x9c885f, roughness: 0.72 });
-  for (let file = 0; file < 8; file += 1) {
-    const marker = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.055, 0.16), edgeMaterial);
-    marker.position.set(file - 3.5, 0.16, 4.24);
-    world.add(marker);
-  }
   return mountain;
 }
 

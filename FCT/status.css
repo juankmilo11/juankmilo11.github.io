@@ -38,7 +38,10 @@
 
 .review-controls {
   position: relative;
-  display: flex;
+  display: grid;
+  grid-template-columns: 28px 28px minmax(90px, 1fr) 28px 28px auto;
+  min-width: 0;
+  max-width: 100%;
   align-items: center;
   gap: 5px;
   padding: 6px 8px;
@@ -50,16 +53,11 @@
 
 .review-controls[hidden] { display: none; }
 .review-pause-note {
-  position: absolute;
-  top: calc(100% + 5px);
-  left: 0;
-  width: max-content;
-  max-width: min(340px, calc(100vw - 24px));
-  padding: 6px 8px;
-  border: 1px solid #d9bd7755;
-  border-radius: 3px;
+  grid-column: 1 / -1;
+  min-width: 0;
+  padding: 3px 0 0;
+  border-top: 1px solid #d9bd7730;
   color: #f1d99f;
-  background: #242219ef;
   font: 10px/1.5 "DM Mono", monospace;
   pointer-events: none;
 }
@@ -193,16 +191,13 @@
   .game-status-badge.is-check strong,
   .game-status-badge.is-checkmate strong { font-size: 14px; }
 
-.app-shell.is-playing .review-controls:not([hidden]) {
-  display: flex;
-    position: absolute;
-    top: 84px;
-    left: 8px;
-    max-width: calc(100vw - 16px);
+  .review-controls {
+    grid-template-columns: 24px 24px minmax(70px, 1fr) 24px 24px auto;
     gap: 3px;
     padding: 4px;
   }
 
   .review-controls button { min-width: 24px; height: 25px; padding-inline: 4px; }
-  .review-controls output { min-width: 105px; font-size: 8px; }
+  .review-controls output { min-width: 0; font-size: 8px; }
+  .review-pause-note { font-size: 9px; }
 }

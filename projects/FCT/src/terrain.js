@@ -1,6 +1,15 @@
-// Four concentric terraces: the rim stays low and d4/e4/d5/e5 form the summit.
+// A rounded rise with irregular intermediate heights; four central summits.
 export function tileElevation(row, file) {
-  return 0.115 + Math.min(row, file, 7 - row, 7 - file) * 0.16;
+  const ring = Math.min(row, file, 7 - row, 7 - file);
+  if (ring === 0) return 0.115;
+  if (ring === 3) return 0.595;
+  const distance = Math.hypot(row - 3.5, file - 3.5);
+  return 0.115 + 0.48 * (1 - (distance - Math.SQRT1_2) / 3.6)
+    + Math.sin(row * 4.1 + file * 7.3) * 0.018;
 }
 
-export const terrainPalette = { light: 0xc5aa82, dark: 0x8e815e, earth: 0xaa9876 };
+export const terrainPalette = { light: 0x819d68, dark: 0x77935f, earth: 0x7d9964 };
+
+export function islandRadius(angle) {
+  return 8.3 + Math.sin(angle * 3 + 0.4) * 0.36 + Math.sin(angle * 7) * 0.16;
+}

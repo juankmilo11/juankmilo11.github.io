@@ -21,11 +21,12 @@ locales. `pages/fct/index.html` preserva la ruta antigua con una redirección.
   piezas, animaciones y entrada del tablero. Se carga de forma diferida.
 - `src/environment.js`: materiales procedurales y paisaje de piedra, césped,
   ruinas y vegetación. Usa instancias para piedras pequeñas y hierba.
-- `src/terrain.js`: alturas concéntricas del tablero; las cuatro casillas
+- `src/terrain.js`: alturas de una loma irregular; las cuatro casillas
   centrales son la cima. Las alturas se comparten con piezas y marcadores;
   también define la paleta compartida de tierra y casillas.
-- `src/mountain.js`: superficie triangulada entre casillas y laderas exteriores,
-  con vértices compartidos para evitar grietas. Las casillas permanecen planas.
+- `src/mountain.js`: parches de césped planos con bordes irregulares, uniones
+  trianguladas y laderas amplias que deshacen el contorno cuadrado. Las casillas
+  conservan superficies planas para las piezas.
 - `src/audio-cues.js`: selección del sonido de movimiento o captura,
   independiente del bando; pruebas en `projects/FCT/tests/`.
 - `src/style.css`: presentación principal del juego.

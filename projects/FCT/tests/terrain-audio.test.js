@@ -4,14 +4,12 @@ import { Chess } from 'chess.js';
 import { tileElevation } from '../src/terrain.js';
 import { moveSound } from '../src/audio-cues.js';
 
-test('all 64 squares form symmetric terraces with only four summit squares', () => {
+test('all 64 squares retain low borders and four summit squares on an irregular dome', () => {
   const summit = [];
   for (let row = 0; row < 8; row++) {
     for (let file = 0; file < 8; file++) {
       const height = tileElevation(row, file);
-      assert.equal(height, tileElevation(7 - row, file));
-      assert.equal(height, tileElevation(row, 7 - file));
-      assert.equal(height, tileElevation(file, row));
+      assert.ok(height >= 0.115 && height <= 0.595);
       if (row === 0 || row === 7 || file === 0 || file === 7) assert.equal(height, 0.115);
       if (height === tileElevation(3, 3)) summit.push(`${file},${row}`);
     }

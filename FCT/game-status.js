@@ -10,6 +10,11 @@ const reviewPosition = document.querySelector("#review-position");
 const reviewReturnButton = document.querySelector("#review-return");
 const reviewPauseNote = document.querySelector("#review-pause-note");
 const appShell = document.querySelector(".app-shell");
+const gameToolbar = document.querySelector(".game-toolbar");
+// Audio controls follow the actual HUD height, including wrapped mobile text.
+new ResizeObserver(([entry]) => {
+  appShell.style.setProperty("--hud-height", `${entry.target.getBoundingClientRect().height}px`);
+}).observe(gameToolbar);
 const backgroundMusic = document.querySelector("#background-music");
 let isReviewing = false;
 let currentMove = 0;
