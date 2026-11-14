@@ -7,7 +7,7 @@
     <meta name="description" content="FCT: Fantasy Chess Tactics, ajedrez clásico con ambientación de fantasía táctica." />
     <link rel="icon" type="image/png" href="./fct-potion.png?v=20261113-6" />
     <link rel="apple-touch-icon" href="./fct-potion.png?v=20261113-6" />
-    <link rel="stylesheet" href="./status.css?v=20261113-14" />
+    <link rel="stylesheet" href="./status.css?v=20261113-15" />
     <title>FCT: Fantasy Chess Tactics</title>
   </head>
   <body>
@@ -30,10 +30,10 @@
         <aside class="sidebar">
           <section class="match-card">
             <div class="eyebrow">PREPARAR COMBATE</div>
-            <h1>La colina del<br />juramento</h1>
+            <h1>Fantasy Chess:<br />Tactics</h1>
             <p class="muted">Partida clásica</p>
 
-            <button class="select-pieces-button" id="select-pieces" type="button" aria-haspopup="dialog" aria-controls="piece-selector"><span aria-hidden="true">♞</span><span><strong>Seleccionar piezas</strong><small id="appearance-summary"></small></span><span aria-hidden="true">›</span></button>
+            <button class="select-pieces-button" id="select-pieces" type="button" aria-haspopup="dialog" aria-controls="piece-selector"><img src="/fct-potion.png" alt="" /><strong>Seleccionar piezas</strong></button>
 
             <button class="new-game-button" id="new-game" type="button"><span>⚔</span> Iniciar combate</button>
           </section>
@@ -41,7 +41,7 @@
 
         <section class="game-area" aria-label="Tablero de ajedrez">
           <div class="game-toolbar">
-            <div class="map-title"><span class="map-icon">⌖</span><div><small>RUINAS</small><strong>La colina del juramento</strong></div></div>
+            <div class="map-title"><img class="map-icon" src="/fct-potion.png" alt="" /><div><small>RUINAS</small><strong>Fantasy Chess: Tactics</strong></div></div>
             <div class="game-status-badge" aria-live="polite"><span class="turn-pulse" id="turn-pulse"></span><strong id="game-status">Tu turno</strong></div>
             <div class="review-controls" id="review-controls" role="group" aria-label="Revisión cronológica de la partida" hidden><button id="review-first" type="button" title="Ir a la posición inicial" aria-label="Ir a la posición inicial">|‹</button><button id="review-previous" type="button" title="Movimiento anterior" aria-label="Movimiento anterior">‹</button><output id="review-position" aria-live="polite">Inicio · 0/0</output><button id="review-next" type="button" title="Movimiento siguiente" aria-label="Movimiento siguiente">›</button><button id="review-last" type="button" title="Ir a la posición actual" aria-label="Ir a la posición actual">›|</button><button id="review-return" type="button" title="Volver a la posición actual">Volver</button><small id="review-pause-note" class="review-pause-note" role="status" hidden>Partida pausada · Pulsa «Volver» para continuar.</small></div>
             <div class="toolbar-actions">
@@ -77,7 +77,7 @@
           <div class="lower-panel">
             <section class="piece-inspector" aria-live="polite">
               <div class="inspector-icon" id="inspector-icon">✦</div>
-              <div><small>CLASE EN FOCO</small><strong id="inspector-name">Elige una pieza</strong><span id="inspector-description">Selecciona una pieza para ver su clase en el campo.</span></div>
+              <div><small>CLASE EN FOCO</small><strong id="inspector-name">Elige una pieza</strong></div>
             </section>
           </div>
         </section>
@@ -86,13 +86,13 @@
     </div>
 
     <dialog id="piece-selector" class="piece-selector" aria-labelledby="selector-title" aria-describedby="selector-description">
-      <header class="selector-header"><div><small class="eyebrow">TU COMPAÑÍA</small><h2 id="selector-title">Seleccionar piezas</h2><p id="selector-description">Elige personaje y color. Solo cambia su aspecto: las reglas son las mismas.<br>El rival usará una paleta distinta para que puedas reconocer ambos bandos.</p></div><button class="selector-close" id="appearance-close" type="button" aria-label="Cerrar sin guardar">×</button></header>
+      <header class="selector-header"><div><h2 id="selector-title">Seleccionar piezas</h2><p id="selector-description">Elige personaje y color.</p></div></header>
       <nav class="appearance-roles" id="appearance-roles" aria-label="Tipo de pieza"></nav>
       <div class="selector-content">
-        <section class="selector-options" aria-labelledby="appearance-role-title"><h3 id="appearance-role-title">Aspecto de torres</h3><div class="appearance-characters" id="appearance-characters" role="group" aria-label="Personajes"></div><p class="palette-label">Paletas originales</p><div class="appearance-colors" id="appearance-colors" role="group" aria-label="Color del personaje"></div></section>
-        <section class="selector-preview" aria-label="Vista previa de ambos bandos"><div class="piece-preview" id="piece-preview" role="img" aria-label="Modelos 3D giratorios de tu personaje y el rival"></div><div class="preview-fallbacks"><img id="preview-human-fallback" alt="Tu personaje"><img id="preview-rival-fallback" alt="Personaje rival"></div><div class="preview-labels"><div><strong>TÚ</strong><span id="preview-human-name"></span></div><div><strong>RIVAL · IA</strong><span id="preview-rival-name"></span></div></div><p class="appearance-status" id="appearance-status" role="status"></p><button class="preview-rotate" id="preview-rotate" type="button" aria-pressed="true">Giro automático</button></section>
+        <section class="selector-options" aria-labelledby="appearance-role-title"><h3 id="appearance-role-title">Aspecto</h3><div class="appearance-characters" id="appearance-characters" role="group" aria-label="Personajes"></div><p class="palette-label">Color</p><div class="appearance-colors" id="appearance-colors" role="group" aria-label="Color del personaje"></div></section>
+        <section class="selector-preview" aria-label="Vista previa del personaje"><div class="piece-preview" id="piece-preview" role="img" aria-label="Modelo 3D giratorio del personaje elegido"></div><div class="preview-fallbacks"><img id="preview-human-fallback" alt="Personaje elegido"></div><p id="preview-human-name" class="preview-name"></p><p class="appearance-status" id="appearance-status" role="status"></p><button class="preview-rotate" id="preview-rotate" type="button" aria-pressed="true" aria-label="Alternar giro automático" title="Giro automático">⟳</button></section>
       </div>
-      <footer class="selector-footer"><button id="appearance-reset" type="button">Restablecer</button><button id="appearance-preview" type="button">Ver 3D</button><button class="selector-save" id="appearance-save" type="button">Guardar apariencias</button></footer>
+      <footer class="selector-footer"><button id="appearance-close" type="button">Salir</button><button id="appearance-preview" type="button">Ver 3D</button><button class="selector-save" id="appearance-save" type="button">Guardar</button></footer>
     </dialog>
 
     <dialog id="promotion-dialog" class="promotion-dialog">
@@ -119,7 +119,7 @@
 
     <div id="battle-curtain" class="battle-curtain" aria-hidden="true"></div>
 
-    <script src="./game-status.js?v=20261113-14"></script>
+    <script src="./game-status.js?v=20261113-15"></script>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

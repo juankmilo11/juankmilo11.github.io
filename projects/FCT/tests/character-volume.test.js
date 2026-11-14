@@ -26,3 +26,15 @@ test('three projections produce a solid body with distinct front, back and side 
   assert.ok(maxZ-minZ > 0.2,'the figure has actual body depth');
   assert.equal(colors.size,3,'back and profile retain their own colors');
 });
+
+test('front facial colors never leak onto rear head surfaces',()=>{
+  const result=sculptCharacter(projection([230,20,20],8),projection([20,20,230],8),projection([20,230,20],5));
+  const head=result.parts.find(part=>part.name==='head');
+  const p=head.geometry.attributes.position,c=head.geometry.attributes.color;
+  let checked=0;
+  for(let i=0;i<p.count;i++)if(p.getZ(i)+head.pivot[2]<-0.04){
+    assert.ok(c.getZ(i)>c.getX(i),'rear head must use back colors, never a frontal eye/face');checked++;
+  }
+  assert.ok(checked>20);
+  result.parts.forEach(part=>part.geometry.dispose());
+});

@@ -7,7 +7,7 @@ const assert = require('node:assert/strict');
 const root = path.resolve(__dirname, '..');
 const output = process.env.FCT_QA_OUTPUT || path.join(require('node:os').tmpdir(), 'fct-qa');
 fs.mkdirSync(output, { recursive: true });
-const types = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.png': 'image/png', '.mp3': 'audio/mpeg', '.wav': 'audio/wav' };
+const types = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.png': 'image/png', '.webp':'image/webp', '.ttf':'font/ttf', '.mp3': 'audio/mpeg', '.wav': 'audio/wav' };
 const server = http.createServer((req, res) => {
   let file = path.resolve(root, '.' + decodeURIComponent(req.url.split('?')[0]));
   if (!file.startsWith(root + path.sep)) { res.writeHead(403).end(); return; }
@@ -30,10 +30,16 @@ async function inspectViewer(browser) {
   });
   await page.goto(`http://127.0.0.1:${server.address().port}/FCT/`);
   await page.locator('#select-pieces').waitFor();
+  await page.evaluate(()=>document.fonts.ready);
   await page.screenshot({path:path.join(output,'menu-main.png')});
   await page.locator('#select-pieces').click();
+  await page.locator('[data-role="r"]').click();
   await page.waitForFunction(()=>document.querySelector('#appearance-status').dataset.state==='ready');
   await page.locator('#preview-rotate').click();
+  await page.locator('[data-palette="1"]').click();
+  await page.locator('#appearance-save').click();
+  await page.locator('#select-pieces').click();
+  await page.waitForFunction(()=>document.querySelector('#appearance-status').dataset.state==='ready');
   await page.screenshot({path:path.join(output,'models-front.png')});
   const canvas=await page.locator('#piece-preview canvas').boundingBox();
   await page.mouse.move(canvas.x+40,canvas.y+canvas.height*.6);
@@ -42,7 +48,8 @@ async function inspectViewer(browser) {
   await page.mouse.up();
   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   await page.screenshot({path:path.join(output,'models-back.png')});
-  assert.ok(await page.evaluate(()=>window.qaAudio.some(src=>src.includes('sound1.wav'))),'selector interactions must play menu audio');
+  assert.ok(await page.evaluate(()=>['menu1','menu2','menu3','menu4'].every(name=>window.qaAudio.some(src=>src.includes(`${name}.wav`)))),'selector uses its own four menu sounds');
+  assert.equal(await page.evaluate(()=>window.qaAudio.some(src=>src.includes('sound1.wav'))),false,'old UI cue must not play in selector');
   assert.deepEqual(errors,[]);
   await page.locator('#appearance-close').click();
   await page.locator('#select-pieces').click();
@@ -134,44 +141,70 @@ async function specialMoves(browser, width, height) {
       const selector = page.locator('#piece-selector');
       assert.equal(await selector.evaluate(el => el.scrollWidth > el.clientWidth),false,'selector horizontal overflow');
       if (width === 1440) {
-        const characters = await page.locator('[data-character]').evaluateAll(items => items.map(item => item.dataset.character));
         let variants = 0;
-        for (const character of characters) {
-          await page.locator(`[data-character="${character}"]`).click();
-          const palettes = await page.locator('[data-palette]').evaluateAll(items => items.map(item => item.dataset.palette));
-          for (const palette of palettes) {
-            await page.locator(`[data-palette="${palette}"]`).click();
-            await page.waitForFunction(() => document.querySelector('#appearance-status').dataset.state === 'ready');
-            assert.equal(await page.locator('#preview-human-name').textContent() === await page.locator('#preview-rival-name').textContent(),false,'rival must contrast');
-            variants++;
+        for(const [role,count] of [['p',2],['r',2],['n',2],['b',6],['q',1],['k',1]]) {
+          await page.locator(`[data-role="${role}"]`).click();
+          const characters = await page.locator('[data-character]').evaluateAll(items => items.map(item => item.dataset.character));
+          assert.equal(characters.length,count,'role must only expose allowed character families');
+          for (const character of characters) {
+            await page.locator(`[data-character="${character}"]`).click();
+            const palettes = await page.locator('[data-palette]').evaluateAll(items => items.map(item => item.dataset.palette));
+            for (const palette of palettes) {
+              await page.locator(`[data-palette="${palette}"]`).click();
+              await page.waitForFunction(() => document.querySelector('#appearance-status').dataset.state === 'ready');
+              assert.equal(await page.locator('#preview-rival-name').count(),0,'rival preview is not shown');
+              assert.equal((await page.locator(`[data-palette="${palette}"]`).textContent()).trim(),'');
+              variants++;
+            }
           }
         }
-        assert.equal(variants,70);
-        console.log('OK: all 70 original character palettes build front/back/profile previews');
+        assert.equal(variants,64);
+        console.log('OK: all 64 player palettes, restricted roles, single preview and icon-only color controls');
       }
       await page.locator('[data-role="r"]').click();
-      await page.locator('[data-character="summoner-female"]').click();
+      await page.locator('[data-character="knight-male"]').click();
       await page.locator('[data-palette="2"]').click();
       await page.waitForFunction(() => document.querySelector('#appearance-status').dataset.state === 'ready');
       await page.locator('#piece-preview').scrollIntoViewIfNeeded();
       await page.screenshot({path:path.join(output,`selector-${width}x${height}.png`)});
       await page.locator('#appearance-save').click();
-      const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('fct.appearance.v1')));
-      assert.equal(saved.r.character,'summoner-female'); assert.equal(saved.r.palette,2);
+      await page.locator('#select-pieces').click();
+      assert.equal(await page.locator('[data-character="knight-male"]').getAttribute('aria-pressed'),'true');
+      await page.locator('[data-character="knight-female"]').click();
+      await page.locator('#appearance-close').click();
+      await page.locator('#select-pieces').click();
+      assert.equal(await page.locator('[data-character="knight-male"]').getAttribute('aria-pressed'),'true','exit must discard draft');
+      await page.locator('#appearance-close').click();
       await page.reload();
       await page.waitForFunction(() => window.fctReview);
       await page.locator('#select-pieces').click();
-      assert.equal(await page.locator('[data-character="summoner-female"]').getAttribute('aria-pressed'),'true');
+      assert.equal(await page.locator('[data-character="knight-female"]').getAttribute('aria-pressed'),'true','reload resets session appearance');
       await page.locator('[data-character="knight-male"]').click();
-      await page.locator('#appearance-close').click();
-      assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('fct.appearance.v1')).r.character),'summoner-female','cancel must not save');
+      await page.locator('#appearance-save').click();
       await page.locator('#new-game').click();
       await page.locator('#board-3d canvas').waitFor();
       await page.waitForFunction(() => !document.querySelector('#battle-curtain').classList.contains('is-revealing') && document.querySelector('.app-shell').classList.contains('is-playing'));
       await page.locator('[data-view="2d"]').click();
-      assert.ok((await page.locator('[data-square="a1"]').getAttribute('aria-label')).includes('Invocador'));
-      await page.locator('[data-square="e2"]').click();
-      await page.locator('[data-square="e4"]').click();
+      assert.ok((await page.locator('[data-square="a1"]').getAttribute('aria-label')).includes('Caballero'));
+      for(const square of ['a1','a8','e2','e7']) {
+        const cell=await page.locator(`[data-square="${square}"]`).boundingBox();
+        const art=await page.locator(`[data-square="${square}"] .piece-art`).boundingBox();
+        assert.ok(art.x>=cell.x&&art.y>=cell.y&&art.x+art.width<=cell.x+cell.width+0.5&&art.y+art.height<=cell.y+cell.height+0.5,'PNG fits inside square');
+      }
+      assert.equal(await page.locator('.piece-role').count(),0,'no role badges below pieces');
+      await page.screenshot({path:path.join(output,`board2d-${width}x${height}.png`)});
+      if(width===1440) {
+        const image=await page.locator('[data-square="e2"] .piece-art').getAttribute('src');
+        const from=await page.locator('[data-square="e2"]').boundingBox(),to=await page.locator('[data-square="e4"]').boundingBox();
+        await page.mouse.move(from.x+from.width/2,from.y+from.height/2);await page.mouse.down();
+        await page.mouse.move(to.x+to.width/2,to.y+to.height/2,{steps:12});
+        assert.equal(await page.locator('.piece-drag-image').getAttribute('src'),image);
+        assert.ok((await page.locator('[data-square="e4"]').getAttribute('style')).includes('--drag-shadow-image'));
+        await page.screenshot({path:path.join(output,'board2d-drag.png')});
+        await page.mouse.up();
+      }else{
+        await page.locator('[data-square="e2"]').tap(); await page.locator('[data-square="e4"]').tap();
+      }
       await page.waitForFunction(() => /2 de 2/.test(document.querySelector('#review-position').textContent));
       await page.locator('[data-view="3d"]').click();
       await page.locator('#review-previous').click();

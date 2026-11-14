@@ -10,6 +10,11 @@ export function tileElevation(row, file) {
 
 export const terrainPalette = { light: 0x819d68, dark: 0x728e5a, earth: 0x7d9964 };
 
+export function tileDetail(row,file) {
+  if ((row+file)%2 === 0) return 'grass';
+  return ['stones','mud','grass','grass','moss'][((row+1)*73+(file+3)*29)%5];
+}
+
 export function islandRadius(angle) {
   return 8.3 + Math.sin(angle * 3 + 0.4) * 0.36 + Math.sin(angle * 7) * 0.16;
 }

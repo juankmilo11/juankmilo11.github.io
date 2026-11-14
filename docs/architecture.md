@@ -30,16 +30,21 @@ locales. `pages/fct/index.html` preserva la ruta antigua con una redirección.
 - `src/audio-cues.js`: selección del sonido de movimiento o captura,
   independiente del bando; pruebas en `projects/FCT/tests/`.
 - `src/appearance-core.js`: catálogo, validación y persistencia de elecciones,
-  y paletas contrastantes para la IA. `appearance.js` añade las miniaturas Vite.
+  solo durante la página abierta, restricciones por rol y paletas contrastantes
+  para la IA. `appearance.js` añade las miniaturas Vite.
 - `src/piece-selector.js` y `piece-selector.css`: selección por rol, borrador,
   guardado/cancelación y vista previa accesible desde el menú.
 - `src/character-volume.js`: volumen de vóxeles contiguos a partir de frente,
   espalda y perfil, separado en seis partes articuladas.
 - `src/character-model.js` y `character-motion.js`: modelos compartidos con
   referencias y caché limitada; respiración, brazos y piernas.
-- `src/piece-preview.js`: visor Three.js de ambos bandos; carga diferida,
+- `src/piece-preview.js`: visor Three.js del personaje del jugador; carga diferida,
   rotación y pausa del render al cerrar el selector.
 - `src/style.css`: presentación principal del juego.
+- `src/menu-theme.css`: tipografía local, portada ilustrada, acabado del selector
+  y centrado/arrastre de sprites en 2D.
+- `src/field-life.js`: detalles de casillas oscuras y aves ocasionales; respeta
+  movimiento reducido y no interviene en la selección de casillas.
 - `public/game-status.js` y `public/status.css`: comportamiento y estilos
   complementarios de estado, controles y revisión de partida.
 - `public/audio/`: efectos de interacción. `audio/Incarnam.mp3`: música que

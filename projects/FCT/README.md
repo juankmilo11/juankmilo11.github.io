@@ -10,16 +10,18 @@ move/capture audio for both sides (including en passant).
 ## Character appearances
 
 The menu's **Seleccionar piezas** dialog replaces the old player/rival card.
-It offers 16 local characters and all 70 original color variants. Each of the
-six chess roles can use any appearance. Choices are cosmetic and are stored in
-`localStorage` under `fct.appearance.v1`; invalid or unavailable storage falls
-back safely. **Guardar apariencias** applies the draft, closing with ×/Escape
-discards it, and **Restablecer** resets the draft before saving.
+The resource catalog has 16 characters and 70 original variants. The player
+chooses from 64 variants within role restrictions: Squire for pawns, Knight for
+rooks, Dragoon for knights, and White Mage / Black Mage / Summoner for bishops.
+The queen is Agrias and the king is Ramza. Their opposing royal characters are
+Teta and Delita. Choices are cosmetic and kept only in page memory: **Guardar**
+applies the draft, **Salir**/Escape discards it, and reloading resets defaults.
 
 The rival chooses the most contrasting available palette for each role.
-Agrias has one palette, so her opposing appearance uses Teta. The selector
-shows both sides together. Role emblems and team colors remain visible on the
-3D board, and the 2D view combines the chosen sprite with its chess symbol.
+Only the player's character appears in the preview. Color choices use accessible
+swatches without visible labels. Piece identities remain available through the
+focus inspector and square descriptions, without badges below the figures.
+The centered 2D sprite, drag follower and drop preview all use the selected PNG.
 Promotion uses the selected appearance of the promoted role.
 
 `src/character-volume.js` reconstructs a solid voxel hull from the original
@@ -29,12 +31,20 @@ including the actual back. This is a stylized voxel reconstruction, not an
 imported rigged character mesh. Head, torso, arms and legs are articulated for
 subtle idle breathing and walking; idle feet remain planted. Reduced-motion
 preferences stop those animations and default preview rotation.
+The left-facing profile is mapped anteriorly on both sides; rear head surfaces
+always sample the back projection so facial colors do not appear on the nape.
 
 Model geometries are shared by appearance, with reference counts and a bounded
 cache of inactive variants. The preview renders only while its dialog is open;
 the hidden board does not keep rendering behind the menu. Mobile provides a
-**Ver 3D** shortcut after scrolling the catalog. Menu selections, color changes,
-review controls and other buttons play the existing UI sound.
+**Ver 3D** shortcut after scrolling the catalog. The selector exclusively uses
+`menu1.wav` for opening/exiting, `menu2.wav` for role/character/preview navigation,
+`menu3.wav` for color/rotation, and `menu4.wav` for saving. These cues interrupt
+one another instead of overlapping. The source WAV files live in `public/audio/`
+and are copied to `FCT/audio/` by Vite. Other game controls keep their prior cues.
+
+The menu uses a locally served parchment illustration and the OFL-licensed
+Cinzel/Crimson Pro fonts. See [asset provenance and image prompt](../../docs/art-assets.md).
 
 ### Rebuilding character resources
 
@@ -57,6 +67,9 @@ palette. Flat turf patches have irregular edges, joined by triangulated seams
 and broad, asymmetric shoulders. The island has one continuous cliff wall that
 meets its irregular perimeter, replacing stacked cylinders. The four summit squares
 and flat piece positions are preserved. Seams also accept clicks and drops.
+`src/field-life.js` scatters tiny stones, mud and moss on selected dark squares.
+A small flock crosses occasionally behind the field; reduced-motion mode
+disables it. These decorations do not participate in raycasting or chess rules.
 
 During move review a small pause notice appears inside the review controls.
 It stays visible even at the latest position until the player presses **Volver**.
@@ -74,8 +87,9 @@ module search path, set `PLAYWRIGHT_MODULE_PATH` to its package directory.
 `FCT_QA_OUTPUT` sets the screenshot directory (default: OS temp directory).
 The script tests actual moves, review/resume and HUD overlap at desktop, tablet,
 320/390 px mobile, and landscape sizes, with touch emulation for mobile.
-It also builds all 70 appearance previews, checks save/cancel/persistence,
-keyboard focus, menu sound and camera orbit. Real AI games cover the normal
+It also builds all 64 allowed player previews, checks role restrictions,
+save/cancel and reload reset, PNG drag previews, keyboard focus, the four exclusive
+selector sounds and camera orbit. Real AI games cover the normal
 flow. Scripted opponent replies exercise the app's castling, en passant,
 promotion, captures, mate, review/replay and new-game flows in both mobile
 orientations. These browser tests emulate mobile; they do not replace testing

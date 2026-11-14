@@ -3,6 +3,8 @@ import './style.css';
 import { moveSound } from './audio-cues.js';
 import { appearanceFor, characterInfo, thumbnailUrl } from './appearance.js';
 import { initPieceSelector } from './piece-selector.js';
+import { tileDetail } from './terrain.js';
+import './menu-theme.css';
 
 const game = new Chess();
 const board2d = document.querySelector('#board-2d');
@@ -11,13 +13,12 @@ const statusEl = document.querySelector('#game-status');
 const turnPulse = document.querySelector('#turn-pulse');
 const inspectorIcon = document.querySelector('#inspector-icon');
 const inspectorName = document.querySelector('#inspector-name');
-const inspectorDescription = document.querySelector('#inspector-description');
 const pieceInspector = document.querySelector('.piece-inspector');
 const promotionDialog = document.querySelector('#promotion-dialog');
 const exitConfirmation = document.querySelector('#exit-confirmation');
 const aiWorker = new Worker(new URL('./ai-worker.js', import.meta.url), { type: 'module' });
 const backgroundMusic = document.querySelector('#background-music');
-const uiSounds = Object.fromEntries(['sound1', 'user_piece_move', 'AI_piece_move', 'check', 'checkmate'].map((name) => {
+const uiSounds = Object.fromEntries(['sound1', 'menu1', 'menu2', 'menu3', 'menu4', 'user_piece_move', 'AI_piece_move', 'check', 'checkmate'].map((name) => {
   const audio = new Audio(`${import.meta.env.BASE_URL}audio/${name}.wav`);
   audio.preload = 'auto';
   return [name, audio];
@@ -25,6 +26,9 @@ const uiSounds = Object.fromEntries(['sound1', 'user_piece_move', 'AI_piece_move
 function playUiSound(name) {
   const audio = uiSounds[name];
   if (!audio) return;
+  if (/^menu[1-4]$/.test(name)) {
+    for (const [key, cue] of Object.entries(uiSounds)) if (/^menu[1-4]$/.test(key) && cue !== audio) cue.pause();
+  }
   audio.currentTime = 0;
   audio.play().catch(() => {});
 }
@@ -94,7 +98,7 @@ function idleDelayForSquare(square) {
 }
 
 function characterClassName(piece) {
-  return characterInfo(appearanceFor(piece.type,piece.color)).name;
+  return characterInfo(appearanceFor(piece.type,piece.color)).name.replace(/ · [FM]$/,'');
 }
 
 function describePiece(piece) {
@@ -102,12 +106,10 @@ function describePiece(piece) {
   if (!piece) {
     inspectorIcon.textContent = '✦';
     inspectorName.textContent = 'Elige una pieza';
-    inspectorDescription.textContent = 'Selecciona una pieza para ver su clase en el campo.';
     return;
   }
   inspectorIcon.textContent = pieceGlyphs[piece.color][piece.type];
   inspectorName.textContent = `${pieceNames[piece.type]} · ${characterClassName(piece)}`;
-  inspectorDescription.textContent = piece.color === 'w' ? 'Vanguardia · jugador' : 'Legión · estratega';
 }
 
 function render2D() {
@@ -126,6 +128,7 @@ function render2D() {
     const cell = document.createElement('button');
     cell.type = 'button';
     cell.className = `square ${(row + file) % 2 ? 'dark' : 'light'}`;
+    cell.classList.add(`terrain-${tileDetail(row,file)}`);
     cell.dataset.square = square;
     cell.setAttribute('role', 'gridcell');
     cell.setAttribute('aria-label', `${square}${piece ? `, ${pieceNames[piece.type]} ${piece.color === 'w' ? 'blanca' : 'negra'}, clase ${characterClassName(piece)}` : ''}`);
@@ -139,9 +142,7 @@ function render2D() {
       const art = document.createElement('img');
       art.className = 'piece-art'; art.alt = ''; art.draggable = false;
       art.src = thumbnailUrl(appearanceFor(piece.type,piece.color));
-      const role = document.createElement('span'); role.className = 'piece-role';
-      role.textContent = pieceGlyphs[piece.color][piece.type];
-      token.append(art,role);
+      token.append(art);
       token.draggable = false;
       token.dataset.from = square;
       token.title = `${pieceNames[piece.type]} · ${characterClassName(piece)}`;
@@ -451,7 +452,7 @@ function paintDragTargets() {
 function highlightDropSquare(square) {
   board2d.querySelectorAll('.drag-over-valid, .drag-over-invalid, .drag-shadow-target').forEach((cell) => {
     cell.classList.remove('drag-over-valid', 'drag-over-invalid', 'drag-shadow-target');
-    cell.style.removeProperty('--drag-shadow-glyph');
+    cell.style.removeProperty('--drag-shadow-image');
   });
   if (!square) return;
   const cell = board2d.querySelector(`[data-square="${square}"]`);
@@ -460,7 +461,7 @@ function highlightDropSquare(square) {
     const piece = selectedSquare && game.get(selectedSquare);
     if (piece) {
       cell.classList.add('drag-shadow-target');
-      cell.style.setProperty('--drag-shadow-glyph', JSON.stringify(pieceGlyphs[piece.color][piece.type]));
+      cell.style.setProperty('--drag-shadow-image', `url("${thumbnailUrl(appearanceFor(piece.type,piece.color))}")`);
     }
   }
 }
@@ -591,12 +592,25 @@ board2d.addEventListener('pointermove', (event) => {
   if (!drag || event.pointerId !== drag.pointerId) return;
   if (Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 7) return;
   drag.moved = true;
+  if (!drag.ghost) {
+    drag.ghost = document.createElement('img');
+    drag.ghost.className = 'piece-drag-image'; drag.ghost.alt = '';
+    const piece = game.get(drag.from);
+    drag.ghost.src = thumbnailUrl(appearanceFor(piece.type,piece.color));
+    const cell = board2d.querySelector(`[data-square="${drag.from}"]`);
+    drag.ghost.style.width = `${cell.clientWidth * 0.86}px`;
+    drag.ghost.style.height = `${cell.clientHeight * 0.86}px`;
+    document.body.append(drag.ghost);
+  }
+  drag.ghost.style.left = `${event.clientX}px`;
+  drag.ghost.style.top = `${event.clientY}px`;
   const cell = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-square]');
   highlightDropSquare(cell && board2d.contains(cell) ? cell.dataset.square : null);
 });
 board2d.addEventListener('pointerup', (event) => {
   const drag = boardPointerDrag;
   if (!drag || event.pointerId !== drag.pointerId) return;
+  drag.ghost?.remove();
   boardPointerDrag = null;
   const cell = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-square]');
   const destination = cell && board2d.contains(cell) ? cell.dataset.square : null;
@@ -610,6 +624,7 @@ board2d.addEventListener('pointerup', (event) => {
 });
 board2d.addEventListener('pointercancel', () => {
   if (!boardPointerDrag) return;
+  boardPointerDrag.ghost?.remove();
   boardPointerDrag = null;
   highlightDropSquare(null);
   dragTargets.clear();

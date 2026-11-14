@@ -56,7 +56,7 @@ export function sculptCharacter(front, back, side) {
         const part = vertical > height * 0.69 ? 'head' : vertical < height * 0.23
           ? (x < cx ? 'leftLeg' : 'rightLeg') : vertical > height * 0.30 && Math.abs(nx) > 0.62
             ? (x < cx ? 'leftArm' : 'rightArm') : 'body';
-        cells.set(`${x},${y},${z}`, { x, y, z, part });
+        cells.set(`${x},${y},${z}`, { x, y, z, part, centerZ: cz });
       }
     }
   }
@@ -69,14 +69,16 @@ export function sculptCharacter(front, back, side) {
     { d: [0,0,1], n: [0,0,1], corners: [[0,0,1],[1,0,1],[1,1,1],[0,1,1]] },
     { d: [0,0,-1], n: [0,0,-1], corners: [[1,0,0],[0,0,0],[0,1,0],[1,1,0]] },
   ];
-  for (const { x, y, z, part } of cells.values()) {
+  for (const { x, y, z, part, centerZ } of cells.values()) {
     const data = parts[part], pivot = pivots[part];
     for (const face of faces) {
       const adjacent = cells.get(`${x + face.d[0]},${y + face.d[1]},${z + face.d[2]}`);
       if (adjacent?.part === part) continue;
-      const color = face.n[2] < 0 ? pixelColor(back, 31 - x, y)
-        : face.n[0] ? pixelColor(side, face.n[0] > 0 ? z : 31 - z, y)
-          : pixelColor(front, x, y);
+      // The profile sprite faces LEFT: anterior colors belong at +Z on BOTH
+      // sides. Never paint front eyes on rear-facing stairs or the back of a head.
+      const color = z < centerZ || face.n[2] < 0 ? pixelColor(back, 31 - x, y)
+        : face.n[2] > 0 ? pixelColor(front, x, y)
+          : pixelColor(side, 31 - z, y);
       for (const index of [0,1,2,0,2,3]) {
         const p = face.corners[index];
         data.positions.push((x - 16 + p[0]) * PIXEL - pivot[0],

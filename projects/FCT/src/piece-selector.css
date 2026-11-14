@@ -1,13 +1,13 @@
 .select-pieces-button { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; width: 100%; margin: 28px 0 20px; padding: 18px 16px; border: 1px solid #bba16a55; border-radius: 4px; color: #ecdfba; text-align: left; background: linear-gradient(120deg,#343e2e,#222b23); cursor: pointer; }
 .select-pieces-button > span:first-child { font-size: 32px; }
-.select-pieces-button strong { display: block; font: 600 16px Georgia,serif; }
+.select-pieces-button strong { display: block; font: 600 16px var(--font-title); }
 .select-pieces-button small { display: block; margin-top: 7px; font-size: 10px; line-height: 1.6; color: #abb69d; }
 .select-pieces-button:hover { border-color: #d7bb7c; background: #35412f; }
 .piece-selector { width: min(1020px,calc(100vw - 32px)); max-height: calc(100dvh - 32px); margin: auto; padding: 0; color: #e8e3d4; background: #182019; border: 1px solid #a78f575e; border-radius: 10px; overflow: auto; box-shadow: 0 24px 100px #0009; }
 .piece-selector::backdrop { background: #070e0ce8; backdrop-filter: blur(7px); }
 .piece-selector[open] { display: flex; flex-direction: column; }
 .selector-header { display: flex; align-items: start; justify-content: space-between; gap: 18px; padding: 23px 26px 15px; }
-.selector-header h2 { margin: 4px 0 7px; font: 500 28px Georgia,serif; color: #ead9aa; }
+.selector-header h2 { margin: 4px 0 7px; font: 500 28px var(--font-title); color: #ead9aa; }
 .selector-header p { margin: 0; color: #a9b19f; font-size: 12px; line-height: 1.6; }
 .selector-close { flex: none; width: 40px; height: 40px; border: 1px solid #a78f5740; border-radius: 4px; background: #273126; cursor: pointer; font-size: 23px; }
 .appearance-roles { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 26px 18px; }
@@ -15,7 +15,7 @@
 .appearance-role[aria-pressed=true],.palette-choice[aria-pressed=true],.character-choice[aria-pressed=true] { color: #f1dfaa; border-color: #ddbf7d; background: #3c432d; box-shadow: inset 0 0 0 1px #ddbf7d33; }
 .selector-content { display: grid; grid-template-columns: minmax(0,1fr) minmax(260px,.82fr); gap: 22px; padding: 0 26px 22px; }
 .selector-options { min-width: 0; }
-.selector-options h3 { margin: 0 0 12px; font: 500 16px Georgia,serif; }
+.selector-options h3 { margin: 0 0 12px; font: 500 16px var(--font-title); }
 .appearance-characters { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 7px; }
 .character-choice { display: flex; min-width: 0; min-height: 100px; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 7px 3px; border: 1px solid #a4ac8133; border-radius: 5px; background: #222c22; color: #bcc5ad; font-size: 10px; cursor: pointer; }
 .character-choice img { image-rendering: pixelated; object-fit: contain; }
@@ -40,7 +40,6 @@
 .selector-footer .selector-save { color: #1c231b; background: #d9c082; font-weight: 700; }
 #appearance-preview { display: none; }
 .piece-token .piece-art { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; pointer-events: none; }
-.piece-token .piece-role { position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%; color: #fff0c7; background: #172219ed; font: 15px/1 'Segoe UI Symbol',serif; }
 @media (max-width: 700px) {
   .piece-selector { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); border-radius: 8px; }
   .selector-header { padding: 16px 14px 12px; }
@@ -58,7 +57,6 @@
   .selector-footer { padding: 12px 14px; gap: 8px; }
   .selector-footer button { min-height: 44px; padding-inline: 10px; font-size: 11px; }
   #appearance-preview { display: block; }
-  .piece-token .piece-role { width: 14px; height: 14px; font-size: 12px; }
 }
 @media (max-height: 480px) and (orientation: landscape) {
   .selector-content { grid-template-columns: 1fr 1fr; }

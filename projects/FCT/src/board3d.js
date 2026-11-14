@@ -5,6 +5,7 @@ import { tileElevation, terrainPalette } from './terrain.js';
 import { createMountainGeometry, createTileGeometry } from './mountain.js';
 import { createCharacter, animateCharacter, releaseCharacter } from './character-model.js';
 import { appearanceFor, appearanceKey, thumbnailUrl } from './appearance.js';
+import { addFieldLife } from './field-life.js';
 
 const spriteTextures = new Map();
 
@@ -82,6 +83,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
 
   buildLandscape(world);
   const terrainMesh = buildBoard(world, tileMeshes, tileHeights, tileMaterials);
+  const fieldLife = addFieldLife(world,reducedMotion);
   for (const tile of tileMeshes) {
     const square = tile.userData.square;
     const highlightMaterial = new THREE.MeshBasicMaterial({
@@ -505,6 +507,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
     if (document.hidden || !host.clientWidth || !host.clientHeight) { previousFrameTime = 0; return; }
     const now = performance.now();
     const time = now * 0.001;
+    fieldLife.update(time);
     const delta = previousFrameTime ? Math.min((now - previousFrameTime) / 1000, 0.05) : 0;
     previousFrameTime = now;
     for (const piece of pieceMeshes) {
@@ -698,30 +701,11 @@ function createSunsetSky() {
   return texture;
 }
 
-const badgeMaterials = new Map();
-function pieceBadge(type,color) {
-  const key = `${type}-${color}`;
-  if (!badgeMaterials.has(key)) {
-    const canvas = document.createElement('canvas'); canvas.width = canvas.height = 64;
-    const context = canvas.getContext('2d');
-    context.beginPath(); context.arc(32,32,29,0,Math.PI*2);
-    context.fillStyle = '#172219'; context.fill();
-    context.strokeStyle = color === 'w' ? '#eedda6' : '#89cce1'; context.lineWidth = 3; context.stroke();
-    context.fillStyle = context.strokeStyle; context.textAlign = 'center'; context.textBaseline = 'middle';
-    context.font = '43px "Segoe UI Symbol", serif';
-    context.fillText({ p:'♙', r:'♖', n:'♘', b:'♗', q:'♕', k:'♔' }[type],32,33);
-    const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
-    badgeMaterials.set(key,new THREE.SpriteMaterial({ map: texture, depthWrite: false }));
-  }
-  const badge = new THREE.Sprite(badgeMaterials.get(key));
-  badge.position.set(0.22,0.13,0.22); badge.scale.set(0.18,0.18,1); return badge;
-}
-
 function createPiece(type, color) {
   const look = appearanceFor(type,color);
   const piece = new THREE.Group();
   const figure = createCharacter(look,color === 'w' ? Math.PI : 0);
-  piece.add(figure,pieceBadge(type,color));
+  piece.add(figure);
   piece.userData.visual = figure;
   piece.userData.appearance = appearanceKey(look);
   piece.userData.idleAnimation = { phase: Math.random()*Math.PI*2 };

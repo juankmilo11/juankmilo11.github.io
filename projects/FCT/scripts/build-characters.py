@@ -107,7 +107,10 @@ for key, label, filename, count in characters:
             atlas.alpha_composite(normalized, (direction*32,0))
         atlas.save(OUT / f'{key}-{index}.png', optimize=True)
         front = atlas.crop((0,0,32,40))
-        front.save(OUT / f'{key}-{index}-thumb.png', optimize=True)
+        tight = front.crop(front.getbbox())
+        thumb = Image.new('RGBA',(32,40))
+        thumb.alpha_composite(tight,((32-tight.width)//2,(40-tight.height)//2))
+        thumb.save(OUT / f'{key}-{index}-thumb.png', optimize=True)
         name,color = PALETTES[key][index]
         variants.append({'id': index, 'label': name, 'swatch': color})
     catalog.append({'id':key, 'name':label, 'variants':variants, 'source':filename, 'origins':offsets})
