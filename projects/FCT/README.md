@@ -21,6 +21,9 @@ The rival chooses the most contrasting available palette for each role.
 Only the player's character appears in the preview. Color choices use accessible
 swatches without visible labels. Piece identities remain available through the
 focus inspector and square descriptions, without badges below the figures.
+The selector keeps a fixed viewport-bounded height while browsing roles/colors;
+only its content scrolls, with Salir/Guardar always visible. Character cards and
+the viewer omit visible name captions, while preserving accessible names.
 The centered 2D sprite, drag follower and drop preview all use the selected PNG.
 Promotion uses the selected appearance of the promoted role.
 
@@ -78,8 +81,11 @@ and broad, asymmetric shoulders. The island has one continuous cliff wall that
 meets its irregular perimeter, replacing stacked cylinders. The four summit squares
 and flat piece positions are preserved. Seams also accept clicks and drops.
 `src/field-life.js` scatters tiny stones, mud and moss on selected dark squares.
-A small flock crosses occasionally behind the field; reduced-motion mode
-disables it. These decorations do not participate in raycasting or chess rules.
+Four large flocks (12/16/10/14 birds, 52 total) cross behind the field at different
+heights, directions and wing phases. Instanced wings/bodies keep this to eight
+draw calls. Departures are staggered from the first second, flights last 18–24
+seconds and pauses last 2–6 seconds. Reduced-motion mode disables the flocks.
+These decorations do not participate in raycasting or chess rules.
 `src/cosmos.js` adds an infinite-distance star field, a red planet, a ringed
 planet, Earth and occasional meteors. The ring is a tilted 3D annulus; the globe
 writes depth so it hides the rear arc. The spiral galaxy rotates inside a fixed
@@ -87,8 +93,8 @@ elliptical projection, making one turn in about nine minutes.
 Their directions change with camera orbit; they stay behind the playing field.
 Reduced-motion mode retains a static sky without twinkling or meteors.
 Earth uses NASA's Blue Marble map (credits in `docs/art-assets.md`), uploaded at
-1024 × 512 to keep GPU memory small. Bird flocks first appear after eight seconds,
-cross for thirteen seconds, then return after a randomized 14–26 second gap.
+1024 × 512 to keep GPU memory small. A cratered Moon slowly orbits Earth at a
+fixed distance; reduced-motion mode preserves its initial position.
 
 Pawns are slightly smaller: 0.84 world units versus 0.92 for ordinary pieces,
 with the same reduction in 2D. Queens and kings keep their larger sizes.

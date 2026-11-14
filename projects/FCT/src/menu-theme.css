@@ -33,8 +33,6 @@ body,button { font-family: var(--font-ui); }
 .palette-choice { padding: 0; width: 44px; height: 44px; justify-content: center; border-radius: 50%; }
 .palette-choice::before { width: 25px; height: 25px; }
 .palette-choice[aria-pressed=true] { outline: 1px solid #e2ca8f; outline-offset: 2px; }
-.preview-name { text-align: center; margin: 4px 12px 14px; color: #d3c9a9; font-size: 15px; }
-.appearance-status:empty { display: none; }
 .preview-rotate { width: 44px; min-height: 44px; font-size: 26px; padding: 2px; }
 .selector-footer button { font: 600 16px var(--font-ui); min-height: 44px; }
 .piece-token { display: block; width: calc(88% * var(--role-size,1)); height: calc(88% * var(--role-size,1)); min-width: 0; min-height: 0; align-self: center; justify-self: center; }

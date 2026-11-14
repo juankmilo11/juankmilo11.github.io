@@ -186,6 +186,20 @@ async function specialMoves(browser, width, height) {
       await page.waitForFunction(() => document.querySelector('#appearance-status').dataset.state === 'ready');
       const selector = page.locator('#piece-selector');
       assert.equal(await selector.evaluate(el => el.scrollWidth > el.clientWidth),false,'selector horizontal overflow');
+      const fixedBox=await selector.boundingBox();
+      for(const role of ['p','r','n','b','q','k']){
+        await page.locator(`[data-role="${role}"]`).click();
+        const box=await selector.boundingBox();
+        for(const key of ['x','y','width','height'])assert.ok(Math.abs(box[key]-fixedBox[key])<1,`selector ${key} stays fixed across roles`);
+        assert.ok(await page.locator('[data-character]').evaluateAll(items=>items.every(item=>item.textContent.trim()===''&&item.getAttribute('aria-label'))),'aspects show only images, with accessible names');
+        if(width<=700&&height>width){
+          const preview=await page.locator('.selector-preview').boundingBox(),options=await page.locator('.selector-options').boundingBox();
+          assert.ok(options.y>=preview.y+preview.height,'mobile preview cannot overlap the character choices');
+        }
+      }
+      assert.equal(await page.locator('#preview-human-name').count(),0,'no visible preview caption');
+      const footer=await page.locator('.selector-footer').boundingBox();
+      assert.ok(footer.y>=fixedBox.y&&footer.y+footer.height<=fixedBox.y+fixedBox.height,'footer stays inside fixed dialog');
       if (width === 1440) {
         let variants = 0;
         for(const [role,count] of [['p',2],['r',2],['n',2],['b',6],['q',2],['k',2]]) {
@@ -198,6 +212,8 @@ async function specialMoves(browser, width, height) {
             for (const palette of palettes) {
               await page.locator(`[data-palette="${palette}"]`).click();
               await page.waitForFunction(() => document.querySelector('#appearance-status').dataset.state === 'ready');
+              const box=await selector.boundingBox();
+              assert.ok(Math.abs(box.height-fixedBox.height)<1&&Math.abs(box.width-fixedBox.width)<1,'palette/model changes do not resize dialog');
               assert.equal(await page.locator('#preview-rival-name').count(),0,'rival preview is not shown');
               assert.equal((await page.locator(`[data-palette="${palette}"]`).textContent()).trim(),'');
               variants++;

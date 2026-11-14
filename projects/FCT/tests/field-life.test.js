@@ -12,14 +12,20 @@ test('only dark squares receive scattered stones, mud or moss',()=>{
   }
   assert.ok(kinds.has('stones')&&kinds.has('mud')&&kinds.has('grass'));
 });
-test('birds cross occasionally and stay disabled for reduced-motion preferences',()=>{
+test('four large flocks cross frequently with independent wing phases and bounded instances',()=>{
   const world=new THREE.Group(),life=addFieldLife(world,false);
-  const flock=world.children.at(-1);
-  assert.equal(flock.visible,false);
-  life.update(7);assert.equal(flock.visible,false);
-  life.update(8);assert.equal(flock.visible,true);
-  life.update(21);assert.equal(flock.visible,false);
-  life.update(47);assert.equal(flock.visible,true,'another flock returns within 26 seconds of the previous crossing');
+  const flocks=world.getObjectByName('bird-flocks').children;
+  assert.equal(flocks.length,4);assert.ok(flocks.every(flock=>!flock.visible));
+  life.update(100);assert.ok(flocks.every(flock=>!flock.visible),'late game entry still starts the staggered schedule');
+  for(let time=101;time<=114;time++)life.update(time);
+  assert.equal(flocks.filter(flock=>flock.visible).reduce((sum,flock)=>sum+flock.userData.birdCount,0),52);
+  const first=flocks[0].children[0].instanceMatrix.array.slice();
+  life.update(114.2);assert.notDeepEqual(flocks[0].children[0].instanceMatrix.array,first);
+  for(let time=115;time<220;time++)life.update(time);
+  assert.equal(flocks.reduce((sum,flock)=>sum+flock.children[1].count,0),52,'bird count stays bounded across repeated crossings');
+  assert.ok(flocks.every(flock=>flock.children.every(mesh=>Array.from(mesh.instanceMatrix.array).every(Number.isFinite))));
+});
+test('bird flocks stay disabled for reduced-motion preferences',()=>{
   const quiet=new THREE.Group();const staticLife=addFieldLife(quiet,true);
   assert.equal(quiet.children.filter(child=>child.isGroup).length,0);
   assert.doesNotThrow(()=>staticLife.update(1000));

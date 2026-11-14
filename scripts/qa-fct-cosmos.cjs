@@ -60,18 +60,23 @@ const output = process.env.FCT_QA_OUTPUT || path.join(require('node:os').tmpdir(
       sky.children.forEach((child,i)=>child.visible=visibility[i]);
       camera.aspect=1.5;camera.updateProjectionMatrix();
       const galaxy=scene.getObjectByName('spiral-galaxy');cosmos.update(0,camera);
+      const satellite=scene.getObjectByName('earth-moon'),earth=scene.getObjectByName('earth');
+      const start=satellite.getWorldPosition(new THREE.Vector3());
+      const orbitRadius=start.distanceTo(earth.getWorldPosition(new THREE.Vector3()));
       const angle0=galaxy.material.map.rotation;cosmos.update(60,camera);
       const angle60=galaxy.material.map.rotation;
+      const moonTravel=start.distanceTo(satellite.getWorldPosition(new THREE.Vector3()));
       const quietScene=new THREE.Scene(),quiet=createCosmos(quietScene,true);
       quiet.update(0,camera);quiet.update(60,camera);
       const staticAngle=quietScene.getObjectByName('spiral-galaxy').material.map.rotation;
-      return {behind,front,badBehind,visibleFront,angle0,angle60,staticAngle};
+      return {behind,front,badBehind,visibleFront,angle0,angle60,staticAngle,orbitRadius,moonTravel};
     });
     assert.ok(result.behind>20&&result.front>20,'both halves cross the globe in projection');
     assert.equal(result.badBehind,0,'the globe must occlude every sampled point of the back ring');
     assert.ok(result.visibleFront>result.front*.9,'the front half of the ring remains visible');
     assert.ok(Math.abs(result.angle60-result.angle0-.72)<.001,'spiral rotates slowly inside the fixed ellipse');
     assert.equal(result.staticAngle,0,'reduced motion keeps the galaxy still');
+    assert.ok(Math.abs(result.orbitRadius-3.9)<.001&&result.moonTravel>1,'the Moon orbits Earth at a fixed distance');
     console.log('OK: GPU ring occlusion, visible front ring, slow spiral rotation and reduced motion',result);
     for(const [name,filename] of [['ringed-planet','rings'],['earth','earth'],['red-planet','red-planet'],['spiral-galaxy','galaxy']]){
       await page.evaluate(name=>{

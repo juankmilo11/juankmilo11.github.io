@@ -23,7 +23,7 @@ const output=process.env.FCT_QA_OUTPUT||path.join(require('node:os').tmpdir(),'f
         const response=await route.fetch(),body=await response.text();
         const marker='return { update, resize, resetCamera, playIntro, cancelIntro };';
         assert.ok(body.includes(marker));
-        await route.fulfill({response,body:body.replace(marker,`window.qaMotion={pieceMeshes,capturedMeshes,capturedPieces};${marker}`)});
+        await route.fulfill({response,body:body.replace(marker,`window.qaMotion={pieceMeshes,capturedMeshes,capturedPieces,scene,camera};${marker}`)});
       });
       await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/FCT/__motion-qa`);
       await page.evaluate(async()=>{
@@ -62,10 +62,22 @@ const output=process.env.FCT_QA_OUTPUT||path.join(require('node:os').tmpdir(),'f
             if(performance.now()-start>=7500)resolve();else requestAnimationFrame(sample);
           }requestAnimationFrame(sample);
         });
-        return {active,captured,phases:pieceMeshes.map(mesh=>mesh.userData.idleAnimation.phase)};
+        const {scene,camera}=window.qaMotion;
+        let visibleBirds=0;
+        for(const flock of scene.getObjectByName('bird-flocks')?.children||[]){
+          if(!flock.visible)continue;
+          const bodies=flock.children[1],matrix=bodies.matrixWorld.clone();
+          for(let i=0;i<bodies.count;i++){
+            bodies.getMatrixAt(i,matrix);
+            const point=bodies.position.clone().setFromMatrixPosition(matrix).applyMatrix4(bodies.matrixWorld).project(camera);
+            if(Math.abs(point.x)<.95&&Math.abs(point.y)<.95&&point.z<1)visibleBirds++;
+          }
+        }
+        return {active,captured,phases:pieceMeshes.map(mesh=>mesh.userData.idleAnimation.phase),visibleBirds};
       });
       assert.equal(result.active.length,30);assert.equal(result.captured.length,2);
       assert.equal(new Set(result.phases).size,30,'each piece has an independent phase');
+      if(!reduced)assert.ok(result.visibleBirds>=8,'many birds must actually enter the default camera view');
       for(const stat of result.active){
         assert.equal(stat.drift,0,'floating cannot move the piece out of its square');
         if(reduced)assert.equal(stat.max,0);else assert.ok(stat.min>=.0079&&stat.max<=.0481&&stat.max-stat.min>.015);

@@ -33,6 +33,8 @@ locales. `pages/fct/index.html` preserva la ruta antigua con una redirección.
   solo durante la página abierta, restricciones por rol y paletas contrastantes
   para la IA. `appearance.js` añade las miniaturas Vite.
 - `src/piece-selector.js` y `piece-selector.css`: selección por rol, borrador,
+  diálogo de tamaño estable con desplazamiento interno y tarjetas sin nombres
+  visibles (conservados como etiquetas accesibles),
   guardado/cancelación y vista previa accesible desde el menú.
 - `src/character-volume.js`: volumen de vóxeles contiguos a partir de frente,
   espalda y perfil, separado en seis partes articuladas.
@@ -44,10 +46,11 @@ locales. `pages/fct/index.html` preserva la ruta antigua con una redirección.
 - `src/style.css`: presentación principal del juego.
 - `src/menu-theme.css`: tipografía local, portada ilustrada, acabado del selector
   y centrado/arrastre de sprites en 2D.
-- `src/field-life.js`: detalles de casillas oscuras y aves ocasionales; respeta
+- `src/field-life.js`: detalles de casillas oscuras y cuatro bandadas de 52 aves
+  en total mediante mallas instanciadas, con vuelos escalonados; respeta
   movimiento reducido y no interviene en la selección de casillas.
 - `src/cosmos.js`: cielo con paralaje aparente, planeta rojo, planeta con aro
-  con oclusión 3D, Tierra, galaxia de giro lento y meteoros. Texturas procedurales
+  con oclusión 3D, Tierra con Luna en órbita, galaxia de giro lento y meteoros. Texturas procedurales
   salvo el mapa local Blue Marble de NASA en `src/assets/`.
 - `src/piece-values.js`: puntos de material compartidos por la interfaz y la IA;
   las torres valen cuatro puntos.

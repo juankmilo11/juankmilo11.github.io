@@ -19,7 +19,7 @@ export function initPieceSelector({ playSound, onApply }) {
     const human = appearanceFor(role,'w',draft);
     const info = characterInfo(human);
     const palette = info.variants.find(v => v.id === human.palette);
-    dialog.querySelector('#preview-human-name').textContent = `${info.name} · ${palette.label}`;
+    dialog.querySelector('#piece-preview').setAttribute('aria-label',`Modelo 3D de ${info.name} · ${palette.label}`);
     dialog.querySelector('#preview-human-fallback').src = thumbnailUrl(human);
     status.textContent = 'Preparando los modelos…'; status.dataset.state = 'loading';
     try {
@@ -47,7 +47,8 @@ export function initPieceSelector({ playSound, onApply }) {
     }));
     characterList.replaceChildren(...availableCharacters(role).map(info => {
       const chosen = draft[role].character === info.id;
-      const entry = button(info.name.replace(/ · [FM]$/,''), () => { draft[role] = { character: info.id, palette: 0 }; render(`[data-character="${info.id}"]`); }, 'character-choice');
+      const entry = button('', () => { draft[role] = { character: info.id, palette: 0 }; render(`[data-character="${info.id}"]`); }, 'character-choice');
+      entry.setAttribute('aria-label',info.name);
       const image = document.createElement('img');
       image.src = thumbnailUrl({ character: info.id, palette: chosen ? draft[role].palette : 0 }); image.alt = ''; image.width = 48; image.height = 60;
       entry.prepend(image); entry.setAttribute('aria-pressed',String(chosen)); entry.dataset.character = info.id;
