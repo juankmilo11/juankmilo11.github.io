@@ -7,7 +7,6 @@
 .audio-dock [hidden] { display:none!important; }
 .audio-panel-header { display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:18px; }
 .audio-panel-header button { width:28px!important;height:28px!important;border:0!important;font-size:22px!important;background:transparent!important;color:#c6bd9c;cursor:pointer; }
-.music-title { min-height:40px;font-size:16px;line-height:1.3;color:#c6ccb9; }
 .music-transport { display:flex;justify-content:center;gap:14px; }
 .audio-dock .music-transport button { width:44px;height:40px;border:1px solid #a6a37b66;border-radius:4px;background:#2e392a;color:#eddbab;font-size:21px;cursor:pointer; }
 .audio-dock button:disabled { opacity:.3;cursor:default; }

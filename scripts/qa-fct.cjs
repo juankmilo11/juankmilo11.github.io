@@ -40,6 +40,8 @@ async function inspectViewer(browser) {
   const card=await page.locator('.match-card').boundingBox();
   assert.ok(Math.abs(card.x+card.width/2-720)<3,'menu card centered');
   await page.locator('#audio-reopen').click();
+  assert.equal(await page.locator('#music-title').count(),0);
+  assert.ok(Math.abs(await page.locator('#background-music').evaluate(el=>el.volume)-.15)<.001);
   const seen=[await page.locator('#background-music').getAttribute('data-track')];
   for(let i=0;i<7;i++){await page.locator('#music-next').click();seen.push(await page.locator('#background-music').getAttribute('data-track'));}
   assert.equal(new Set(seen).size,8,'all themes play before a repeat');

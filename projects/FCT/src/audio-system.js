@@ -12,7 +12,7 @@ export function createAudioSystem() {
   const queue=new ShuffleQueue(tracks);
   const cues=Object.fromEntries(['sound1','menu1','menu2','menu3','menu4','user_piece_move','AI_piece_move','check','checkmate'].map(name=>[name,new Audio(`${import.meta.env.BASE_URL}audio/${name}.wav`)]));
   let fxLevel=.35, fxMuted=false, wantsMusic=true, pending=false, lastAttempt=0, failures=0, generation=0;
-  music.volume=.3; music.loop=false;
+  music.volume=.15; music.loop=false;
   function sync() {
     playButton.textContent=music.paused?'▶':'Ⅱ';
     playButton.setAttribute('aria-label',music.paused?'Reproducir música':'Pausar música');
@@ -37,7 +37,6 @@ export function createAudioSystem() {
     generation++;
     music.src=`${import.meta.env.BASE_URL}assets/music/${encodeURIComponent(track.file)}`;
     music.dataset.track=track.id;
-    document.querySelector('#music-title').textContent=track.title;
     music.load();pending=false;sync();if(wantsMusic)attempt();
   }
   function panel(which) {
