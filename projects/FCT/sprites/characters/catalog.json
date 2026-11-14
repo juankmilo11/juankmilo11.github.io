@@ -1,0 +1,776 @@
+[
+  {
+    "id": "squire-female",
+    "name": "Escudera",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Azul",
+        "swatch": "#4d709a"
+      },
+      {
+        "id": 1,
+        "label": "Azul pizarra",
+        "swatch": "#518795"
+      },
+      {
+        "id": 2,
+        "label": "Carmesí",
+        "swatch": "#a74436"
+      },
+      {
+        "id": 3,
+        "label": "Oliva",
+        "swatch": "#647839"
+      },
+      {
+        "id": 4,
+        "label": "Rosa",
+        "swatch": "#a34d7f"
+      }
+    ],
+    "source": "PlayStation - Final Fantasy Tactics - Unit Classes - Squire (Female).png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        275,
+        2
+      ],
+      [
+        564,
+        1
+      ],
+      [
+        1,
+        308
+      ],
+      [
+        277,
+        308
+      ]
+    ]
+  },
+  {
+    "id": "squire-male",
+    "name": "Escudero",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Verde",
+        "swatch": "#568478"
+      },
+      {
+        "id": 1,
+        "label": "Azul",
+        "swatch": "#397ea5"
+      },
+      {
+        "id": 2,
+        "label": "Carmesí",
+        "swatch": "#a84239"
+      },
+      {
+        "id": 3,
+        "label": "Oliva",
+        "swatch": "#6b7a31"
+      },
+      {
+        "id": 4,
+        "label": "Magenta",
+        "swatch": "#a3457a"
+      }
+    ],
+    "source": "PlayStation - Final Fantasy Tactics - Unit Classes - Squire (Male).png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        283,
+        0
+      ],
+      [
+        565,
+        0
+      ],
+      [
+        0,
+        312
+      ],
+      [
+        277,
+        315
+      ]
+    ]
+  },
+  {
+    "id": "knight-female",
+    "name": "Caballera",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Azul",
+        "swatch": "#486ca1"
+      },
+      {
+        "id": 1,
+        "label": "Turquesa",
+        "swatch": "#498f98"
+      },
+      {
+        "id": 2,
+        "label": "Carmesí",
+        "swatch": "#9a4938"
+      },
+      {
+        "id": 3,
+        "label": "Oliva",
+        "swatch": "#586b31"
+      },
+      {
+        "id": 4,
+        "label": "Escarlata",
+        "swatch": "#b7402d"
+      }
+    ],
+    "source": "Knight (Female).png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        274,
+        0
+      ],
+      [
+        560,
+        1
+      ],
+      [
+        0,
+        307
+      ],
+      [
+        271,
+        310
+      ]
+    ]
+  },
+  {
+    "id": "knight-male",
+    "name": "Caballero",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Azul",
+        "swatch": "#456694"
+      },
+      {
+        "id": 1,
+        "label": "Jade",
+        "swatch": "#538b7e"
+      },
+      {
+        "id": 2,
+        "label": "Carmesí",
+        "swatch": "#9c4e46"
+      },
+      {
+        "id": 3,
+        "label": "Oliva",
+        "swatch": "#58652f"
+      },
+      {
+        "id": 4,
+        "label": "Escarlata",
+        "swatch": "#af3b31"
+      }
+    ],
+    "source": "Knight (Male).png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        273,
+        1
+      ],
+      [
+        550,
+        0
+      ],
+      [
+        0,
+        309
+      ],
+      [
+        270,
+        309
+      ]
+    ]
+  },
+  {
+    "id": "dragoon-female",
+    "name": "Dragoon · F",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Azul",
+        "swatch": "#465f91"
+      },
+      {
+        "id": 1,
+        "label": "Turquesa",
+        "swatch": "#579e9c"
+      },
+      {
+        "id": 2,
+        "label": "Cobre",
+        "swatch": "#a9623d"
+      },
+      {
+        "id": 3,
+        "label": "Musgo",
+        "swatch": "#6d8252"
+      },
+      {
+        "id": 4,
+        "label": "Violeta",
+        "swatch": "#95517c"
+      }
+    ],
+    "source": "Dragoon (Female).png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        280,
+        1
+      ],
+      [
+        563,
+        0
+      ],
+      [
+        0,
+        302
+      ],
+      [
+        278,
+        303
+      ]
+    ]
+  },
+  {
+    "id": "dragoon-male",
+    "name": "Dragoon · M",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Acero y rojo",
+        "swatch": "#a1493a"
+      },
+      {
+        "id": 1,
+        "label": "Acero y azul",
+        "swatch": "#4d7d9b"
+      },
+      {
+        "id": 2,
+        "label": "Oro",
+        "swatch": "#af913c"
+      },
+      {
+        "id": 3,
+        "label": "Verde",
+        "swatch": "#69823e"
+      },
+      {
+        "id": 4,
+        "label": "Violeta",
+        "swatch": "#80528c"
+      }
+    ],
+    "source": "Dragoon (Male).png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        289,
+        3
+      ],
+      [
+        572,
+        4
+      ],
+      [
+        0,
+        305
+      ],
+      [
+        287,
+        310
+      ]
+    ]
+  },
+  {
+    "id": "white-mage-female",
+    "name": "Maga blanca",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Rojo",
+        "swatch": "#b4513b"
+      },
+      {
+        "id": 1,
+        "label": "Azul",
+        "swatch": "#608bc1"
+      },
+      {
+        "id": 2,
+        "label": "Rosa",
+        "swatch": "#bf689b"
+      },
+      {
+        "id": 3,
+        "label": "Verde",
+        "swatch": "#70955a"
+      },
+      {
+        "id": 4,
+        "label": "Magenta",
+        "swatch": "#a14e87"
+      }
+    ],
+    "source": "White Mage (Female).png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        282,
+        0
+      ],
+      [
+        564,
+        0
+      ],
+      [
+        0,
+        306
+      ],
+      [
+        280,
+        309
+      ]
+    ]
+  },
+  {
+    "id": "white-mage-male",
+    "name": "Mago blanco",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Rojo",
+        "swatch": "#ac4b37"
+      },
+      {
+        "id": 1,
+        "label": "Azul",
+        "swatch": "#537d9e"
+      },
+      {
+        "id": 2,
+        "label": "Violeta",
+        "swatch": "#86638c"
+      },
+      {
+        "id": 3,
+        "label": "Verde",
+        "swatch": "#5d8254"
+      },
+      {
+        "id": 4,
+        "label": "Magenta",
+        "swatch": "#aa5e96"
+      }
+    ],
+    "source": "White Mage (Male).png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        283,
+        1
+      ],
+      [
+        555,
+        4
+      ],
+      [
+        0,
+        310
+      ],
+      [
+        275,
+        311
+      ]
+    ]
+  },
+  {
+    "id": "black-mage-female",
+    "name": "Maga negra",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Azul",
+        "swatch": "#566db2"
+      },
+      {
+        "id": 1,
+        "label": "Turquesa",
+        "swatch": "#538b90"
+      },
+      {
+        "id": 2,
+        "label": "Pizarra",
+        "swatch": "#536777"
+      },
+      {
+        "id": 3,
+        "label": "Verde",
+        "swatch": "#658645"
+      },
+      {
+        "id": 4,
+        "label": "Carmesí",
+        "swatch": "#9f4737"
+      }
+    ],
+    "source": "Black Mage (Female).png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        274,
+        4
+      ],
+      [
+        547,
+        3
+      ],
+      [
+        0,
+        304
+      ],
+      [
+        272,
+        304
+      ]
+    ]
+  },
+  {
+    "id": "black-mage-male",
+    "name": "Mago negro",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Azul",
+        "swatch": "#476fa8"
+      },
+      {
+        "id": 1,
+        "label": "Turquesa",
+        "swatch": "#3e8b92"
+      },
+      {
+        "id": 2,
+        "label": "Pizarra",
+        "swatch": "#53646c"
+      },
+      {
+        "id": 3,
+        "label": "Verde",
+        "swatch": "#638543"
+      },
+      {
+        "id": 4,
+        "label": "Magenta",
+        "swatch": "#a44175"
+      }
+    ],
+    "source": "Black Mage (Male).png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        277,
+        3
+      ],
+      [
+        564,
+        1
+      ],
+      [
+        0,
+        306
+      ],
+      [
+        276,
+        307
+      ]
+    ]
+  },
+  {
+    "id": "summoner-female",
+    "name": "Invocadora",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Verde",
+        "swatch": "#577b32"
+      },
+      {
+        "id": 1,
+        "label": "Azul",
+        "swatch": "#397d92"
+      },
+      {
+        "id": 2,
+        "label": "Carmesí",
+        "swatch": "#9e3f2b"
+      },
+      {
+        "id": 3,
+        "label": "Ocre",
+        "swatch": "#9a8039"
+      },
+      {
+        "id": 4,
+        "label": "Lavanda",
+        "swatch": "#a097b0"
+      }
+    ],
+    "source": "Summoner (Female).png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        280,
+        0
+      ],
+      [
+        566,
+        1
+      ],
+      [
+        0,
+        305
+      ],
+      [
+        272,
+        309
+      ]
+    ]
+  },
+  {
+    "id": "summoner-male",
+    "name": "Invocador",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Verde",
+        "swatch": "#5b8a36"
+      },
+      {
+        "id": 1,
+        "label": "Turquesa",
+        "swatch": "#398b91"
+      },
+      {
+        "id": 2,
+        "label": "Carmesí",
+        "swatch": "#a13f2c"
+      },
+      {
+        "id": 3,
+        "label": "Ocre",
+        "swatch": "#93743a"
+      },
+      {
+        "id": 4,
+        "label": "Lavanda",
+        "swatch": "#9f92ae"
+      }
+    ],
+    "source": "Summoner (Male).png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        291,
+        2
+      ],
+      [
+        568,
+        4
+      ],
+      [
+        0,
+        308
+      ],
+      [
+        289,
+        313
+      ]
+    ]
+  },
+  {
+    "id": "agrias",
+    "name": "Agrias",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Azul real",
+        "swatch": "#4c6b96"
+      }
+    ],
+    "source": "PlayStation - Final Fantasy Tactics - Playable Characters - Agrias Oaks.png",
+    "origins": [
+      [
+        0,
+        0
+      ]
+    ]
+  },
+  {
+    "id": "ramza",
+    "name": "Ramza",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Azul",
+        "swatch": "#486c9c"
+      },
+      {
+        "id": 1,
+        "label": "Violeta",
+        "swatch": "#746491"
+      },
+      {
+        "id": 2,
+        "label": "Turquesa",
+        "swatch": "#398d94"
+      }
+    ],
+    "source": "PlayStation - Final Fantasy Tactics - Playable Characters - Ramza Beoulve.png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        280,
+        2
+      ],
+      [
+        565,
+        3
+      ]
+    ]
+  },
+  {
+    "id": "delita",
+    "name": "Delita",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Turquesa",
+        "swatch": "#418479"
+      },
+      {
+        "id": 1,
+        "label": "Dorado",
+        "swatch": "#ae8d3b"
+      },
+      {
+        "id": 2,
+        "label": "Carmesí",
+        "swatch": "#a54a2e"
+      }
+    ],
+    "source": "PlayStation - Final Fantasy Tactics - Non-Playable Characters - Delita Hyral.png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        297,
+        4
+      ],
+      [
+        1,
+        313
+      ]
+    ]
+  },
+  {
+    "id": "teta",
+    "name": "Teta",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Violeta",
+        "swatch": "#845788"
+      },
+      {
+        "id": 1,
+        "label": "Carmesí",
+        "swatch": "#a34c39"
+      },
+      {
+        "id": 2,
+        "label": "Verde",
+        "swatch": "#5e7d39"
+      }
+    ],
+    "source": "PlayStation - Final Fantasy Tactics - Non-Playable Characters - Teta Hyral.png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        286,
+        2
+      ],
+      [
+        0,
+        220
+      ]
+    ]
+  }
+]

@@ -126,6 +126,19 @@ newGameButton.addEventListener("click", () => {
   document.querySelector("#new-game").click();
 });
 
+window.addEventListener("fct:new-game", () => {
+  isReviewing = false;
+  currentMove = totalMoves = 0;
+  reviewPauseNote.hidden = true;
+  appShell.classList.remove("is-reviewing");
+  checkmateOverlay.hidden = true;
+  window.fctReview?.reset();
+  updatePositionControls();
+});
+document.querySelectorAll("#review-first, #review-previous, #review-next, #review-last, #review-match").forEach(button => {
+  button.addEventListener("click", () => window.playFctSound?.("sound1"));
+});
+
 new MutationObserver(updateGameStatus).observe(appShell, { attributes: true, attributeFilter: ["class"] });
 
 new MutationObserver(updateGameStatus).observe(statusText, {

@@ -111,7 +111,7 @@ h1,h2,p { margin: 0; }
 .board-2d.hidden,.board-3d.hidden { display: none; }
 .square { position: relative; display: grid; place-items: center; min-width: 0; min-height: 0; padding: 0; border: 0; cursor: pointer; overflow: hidden; touch-action: none; }
 .square.light { background: linear-gradient(145deg, #819d68, #7c9763); }
-.square.dark { background: linear-gradient(145deg, #77935f, #728e5a); }
+.square.dark { background: linear-gradient(145deg, #728e5a, #6d8955); }
 .square.light::after,.square.dark::after { content: ''; position: absolute; inset: 0; opacity: .16; pointer-events: none; background-image: repeating-linear-gradient(32deg, transparent 0 7px, #ffffff16 8px 9px); }
 .square:hover { filter: brightness(1.09); }
 .square.last-move::before,.square.selected::before { content: ''; position: absolute; inset: 0; z-index: 1; background: #d3ae5f44; pointer-events: none; }

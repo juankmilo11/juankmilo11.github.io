@@ -7,10 +7,10 @@
     <meta name="description" content="FCT: Fantasy Chess Tactics, ajedrez clásico con ambientación de fantasía táctica." />
     <link rel="icon" type="image/png" href="./fct-potion.png?v=20261113-6" />
     <link rel="apple-touch-icon" href="./fct-potion.png?v=20261113-6" />
-    <link rel="stylesheet" href="./status.css?v=20261113-13" />
+    <link rel="stylesheet" href="./status.css?v=20261113-14" />
     <title>FCT: Fantasy Chess Tactics</title>
-    <script type="module" crossorigin src="/FCT/assets/index-BkDekqJ3.js"></script>
-    <link rel="stylesheet" crossorigin href="/FCT/assets/index-DIX6vOHa.css">
+    <script type="module" crossorigin src="/FCT/assets/index-CsJszymu.js"></script>
+    <link rel="stylesheet" crossorigin href="/FCT/assets/index-ogtrCcQo.css">
   </head>
   <body>
     <div class="app-shell">
@@ -35,19 +35,7 @@
             <h1>La colina del<br />juramento</h1>
             <p class="muted">Partida clásica</p>
 
-            <div class="players">
-              <div class="player-row is-human">
-                <div class="player-avatar avatar-human">✧</div>
-                <div class="player-details"><span>JUGADOR</span><strong>Viajero de Ivalice</strong></div>
-                <span class="side-badge light-badge">TÚ</span>
-              </div>
-              <div class="versus"><span></span><small>VS</small><span></span></div>
-              <div class="player-row">
-                <div class="player-avatar avatar-ai">♜</div>
-                <div class="player-details"><span>RIVAL LOCAL</span><strong>El estratega</strong></div>
-                <span class="side-badge dark-badge">IA</span>
-              </div>
-            </div>
+            <button class="select-pieces-button" id="select-pieces" type="button" aria-haspopup="dialog" aria-controls="piece-selector"><span aria-hidden="true">♞</span><span><strong>Seleccionar piezas</strong><small id="appearance-summary"></small></span><span aria-hidden="true">›</span></button>
 
             <button class="new-game-button" id="new-game" type="button"><span>⚔</span> Iniciar combate</button>
           </section>
@@ -99,6 +87,16 @@
 
     </div>
 
+    <dialog id="piece-selector" class="piece-selector" aria-labelledby="selector-title" aria-describedby="selector-description">
+      <header class="selector-header"><div><small class="eyebrow">TU COMPAÑÍA</small><h2 id="selector-title">Seleccionar piezas</h2><p id="selector-description">Elige personaje y color. Solo cambia su aspecto: las reglas son las mismas.<br>El rival usará una paleta distinta para que puedas reconocer ambos bandos.</p></div><button class="selector-close" id="appearance-close" type="button" aria-label="Cerrar sin guardar">×</button></header>
+      <nav class="appearance-roles" id="appearance-roles" aria-label="Tipo de pieza"></nav>
+      <div class="selector-content">
+        <section class="selector-options" aria-labelledby="appearance-role-title"><h3 id="appearance-role-title">Aspecto de torres</h3><div class="appearance-characters" id="appearance-characters" role="group" aria-label="Personajes"></div><p class="palette-label">Paletas originales</p><div class="appearance-colors" id="appearance-colors" role="group" aria-label="Color del personaje"></div></section>
+        <section class="selector-preview" aria-label="Vista previa de ambos bandos"><div class="piece-preview" id="piece-preview" role="img" aria-label="Modelos 3D giratorios de tu personaje y el rival"></div><div class="preview-fallbacks"><img id="preview-human-fallback" alt="Tu personaje"><img id="preview-rival-fallback" alt="Personaje rival"></div><div class="preview-labels"><div><strong>TÚ</strong><span id="preview-human-name"></span></div><div><strong>RIVAL · IA</strong><span id="preview-rival-name"></span></div></div><p class="appearance-status" id="appearance-status" role="status"></p><button class="preview-rotate" id="preview-rotate" type="button" aria-pressed="true">Giro automático</button></section>
+      </div>
+      <footer class="selector-footer"><button id="appearance-reset" type="button">Restablecer</button><button id="appearance-preview" type="button">Ver 3D</button><button class="selector-save" id="appearance-save" type="button">Guardar apariencias</button></footer>
+    </dialog>
+
     <dialog id="promotion-dialog" class="promotion-dialog">
       <form method="dialog"><p>El peón ha llegado al final del camino.</p><h2>Elige su promoción</h2><div class="promotion-options">
         <button value="q" type="submit"><span>♛</span><b>Reina</b></button><button value="r" type="submit"><span>♜</span><b>Torre</b></button><button value="b" type="submit"><span>♝</span><b>Alfil</b></button><button value="n" type="submit"><span>♞</span><b>Caballo</b></button>
@@ -123,6 +121,6 @@
 
     <div id="battle-curtain" class="battle-curtain" aria-hidden="true"></div>
 
-    <script src="./game-status.js?v=20261113-13"></script>
+    <script src="./game-status.js?v=20261113-14"></script>
   </body>
 </html>

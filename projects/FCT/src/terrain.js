@@ -8,7 +8,7 @@ export function tileElevation(row, file) {
     + Math.sin(row * 4.1 + file * 7.3) * 0.018;
 }
 
-export const terrainPalette = { light: 0x819d68, dark: 0x77935f, earth: 0x7d9964 };
+export const terrainPalette = { light: 0x819d68, dark: 0x728e5a, earth: 0x7d9964 };
 
 export function islandRadius(angle) {
   return 8.3 + Math.sin(angle * 3 + 0.4) * 0.36 + Math.sin(angle * 7) * 0.16;

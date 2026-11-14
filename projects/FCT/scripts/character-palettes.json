@@ -1,0 +1,18 @@
+{
+  "squire-female": [["Azul", "#4d709a"], ["Azul pizarra", "#518795"], ["Carmesí", "#a74436"], ["Oliva", "#647839"], ["Rosa", "#a34d7f"]],
+  "squire-male": [["Verde", "#568478"], ["Azul", "#397ea5"], ["Carmesí", "#a84239"], ["Oliva", "#6b7a31"], ["Magenta", "#a3457a"]],
+  "knight-female": [["Azul", "#486ca1"], ["Turquesa", "#498f98"], ["Carmesí", "#9a4938"], ["Oliva", "#586b31"], ["Escarlata", "#b7402d"]],
+  "knight-male": [["Azul", "#456694"], ["Jade", "#538b7e"], ["Carmesí", "#9c4e46"], ["Oliva", "#58652f"], ["Escarlata", "#af3b31"]],
+  "dragoon-female": [["Azul", "#465f91"], ["Turquesa", "#579e9c"], ["Cobre", "#a9623d"], ["Musgo", "#6d8252"], ["Violeta", "#95517c"]],
+  "dragoon-male": [["Acero y rojo", "#a1493a"], ["Acero y azul", "#4d7d9b"], ["Oro", "#af913c"], ["Verde", "#69823e"], ["Violeta", "#80528c"]],
+  "white-mage-female": [["Rojo", "#b4513b"], ["Azul", "#608bc1"], ["Rosa", "#bf689b"], ["Verde", "#70955a"], ["Magenta", "#a14e87"]],
+  "white-mage-male": [["Rojo", "#ac4b37"], ["Azul", "#537d9e"], ["Violeta", "#86638c"], ["Verde", "#5d8254"], ["Magenta", "#aa5e96"]],
+  "black-mage-female": [["Azul", "#566db2"], ["Turquesa", "#538b90"], ["Pizarra", "#536777"], ["Verde", "#658645"], ["Carmesí", "#9f4737"]],
+  "black-mage-male": [["Azul", "#476fa8"], ["Turquesa", "#3e8b92"], ["Pizarra", "#53646c"], ["Verde", "#638543"], ["Magenta", "#a44175"]],
+  "summoner-female": [["Verde", "#577b32"], ["Azul", "#397d92"], ["Carmesí", "#9e3f2b"], ["Ocre", "#9a8039"], ["Lavanda", "#a097b0"]],
+  "summoner-male": [["Verde", "#5b8a36"], ["Turquesa", "#398b91"], ["Carmesí", "#a13f2c"], ["Ocre", "#93743a"], ["Lavanda", "#9f92ae"]],
+  "agrias": [["Azul real", "#4c6b96"]],
+  "ramza": [["Azul", "#486c9c"], ["Violeta", "#746491"], ["Turquesa", "#398d94"]],
+  "delita": [["Turquesa", "#418479"], ["Dorado", "#ae8d3b"], ["Carmesí", "#a54a2e"]],
+  "teta": [["Violeta", "#845788"], ["Carmesí", "#a34c39"], ["Verde", "#5e7d39"]]
+}

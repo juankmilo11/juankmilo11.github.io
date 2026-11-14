@@ -18,12 +18,12 @@ test('review pauses show a notice until returning to the live position or starti
     return elements.get(selector);
   }
   let reviewing = false;
-  const window = { fctReview: {
+  const window = { addEventListener() {}, fctReview: {
     refresh: () => ({ total: 4 }), begin: () => 4,
     goTo: index => ({ index, total: 4 }), setReviewing: value => { reviewing = value; }, reset() {},
   } };
   runInNewContext(readFileSync(new URL('../public/game-status.js', import.meta.url), 'utf8'), {
-    document: { querySelector: element }, window,
+    document: { querySelector: element, querySelectorAll: () => [] }, window,
     MutationObserver: class { observe() {} },
     ResizeObserver: class { observe() {} },
   });

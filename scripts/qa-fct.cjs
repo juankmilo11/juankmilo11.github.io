@@ -19,21 +19,157 @@ const server = http.createServer((req, res) => {
 function overlaps(a, b) {
   return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
 }
+async function inspectViewer(browser) {
+  const page = await browser.newPage({viewport:{width:1440,height:1000},reducedMotion:'no-preference'});
+  const errors=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  await page.addInitScript(()=>{
+    window.qaAudio=[];
+    const play=HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play=function(){ window.qaAudio.push(this.currentSrc||this.src); return play.call(this); };
+  });
+  await page.goto(`http://127.0.0.1:${server.address().port}/FCT/`);
+  await page.locator('#select-pieces').waitFor();
+  await page.screenshot({path:path.join(output,'menu-main.png')});
+  await page.locator('#select-pieces').click();
+  await page.waitForFunction(()=>document.querySelector('#appearance-status').dataset.state==='ready');
+  await page.locator('#preview-rotate').click();
+  await page.screenshot({path:path.join(output,'models-front.png')});
+  const canvas=await page.locator('#piece-preview canvas').boundingBox();
+  await page.mouse.move(canvas.x+40,canvas.y+canvas.height*.6);
+  await page.mouse.down();
+  await page.mouse.move(canvas.x+40+canvas.height*.45,canvas.y+canvas.height*.6,{steps:24});
+  await page.mouse.up();
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  await page.screenshot({path:path.join(output,'models-back.png')});
+  assert.ok(await page.evaluate(()=>window.qaAudio.some(src=>src.includes('sound1.wav'))),'selector interactions must play menu audio');
+  assert.deepEqual(errors,[]);
+  await page.locator('#appearance-close').click();
+  await page.locator('#select-pieces').click();
+  await page.keyboard.press('Escape');
+  await page.locator('#piece-selector').waitFor({state:'hidden'});
+  assert.equal(await page.locator('#select-pieces').evaluate(el=>el===document.activeElement),true,'close restores keyboard focus');
+  console.log('OK: front/back orbit, idle animation, menu audio and Escape/focus');
+  await page.close();
+}
+async function specialMoves(browser, width, height) {
+  const cases = [
+    { name:'capturas', black:['d7d5','d8d5'], white:['e2e4','e4d5'], pieces:30, squares:{d5:'Reina'} },
+    { name:'enroque', black:['e7e5','b8c6','f8c5','g8f6'], white:['e2e4','g1f3','f1c4','e1g1'], pieces:32, squares:{g1:'Rey',f1:'Torre'} },
+    { name:'al-paso', black:['a7a6','d7d5','c7c6'], white:['e2e4','e4e5','e5d6'], pieces:31, squares:{d6:'Peón'}, empty:['d5'] },
+    { name:'promocion', black:['h7h5','h5h4','h4h3','h3g2','b8c6'], white:['a2a4','a4a5','a5a6','a6b7','b7a8'], pieces:29, squares:{a8:'Reina'}, promote:true },
+    { name:'jaque-mate', black:['e7e5','d8h4'], white:['f2f3','g2g4'], pieces:32, mate:true },
+  ];
+  for (const fixture of cases) {
+    const page = await browser.newPage({viewport:{width,height},isMobile:true,hasTouch:true,reducedMotion:'reduce'});
+    const errors = [];
+    page.on('pageerror',error=>errors.push(error.message));
+    // Only the opponent's choice is scripted; the actual app validates and
+    // applies every move, renders all pieces and runs its own review controls.
+    await page.route(/\/assets\/ai-worker-[^/]+\.js$/,route=>route.fulfill({contentType:'text/javascript',body:
+      `const moves=${JSON.stringify(fixture.black)};let cursor=0;self.onmessage=({data})=>{if(data.type==='choose-move')self.postMessage({type:'move',requestId:data.requestId,move:moves[cursor++%moves.length]});};`}));
+    await page.goto(`http://127.0.0.1:${server.address().port}/FCT/`);
+    await page.waitForFunction(()=>window.fctReview);
+    await page.locator('#new-game').tap();
+    await page.waitForFunction(()=>document.querySelector('.app-shell').classList.contains('is-playing')&&!document.querySelector('#battle-curtain').classList.contains('is-revealing'));
+    await page.locator('[data-view="2d"]').tap();
+    for (let i=0;i<fixture.white.length;i++) {
+      const move=fixture.white[i];
+      await page.locator(`[data-square="${move.slice(0,2)}"]`).tap();
+      await page.locator(`[data-square="${move.slice(2,4)}"]`).tap();
+      if(fixture.promote&&i===fixture.white.length-1) await page.locator('#promotion-dialog [value="q"]').tap();
+      await page.waitForFunction(count=>document.querySelector('#review-position').textContent.includes(`${count} de ${count}`),(i+1)*2);
+    }
+    assert.equal(await page.locator('#board-2d .piece-token').count(),fixture.pieces);
+    for(const [square,role] of Object.entries(fixture.squares||{})) assert.ok((await page.locator(`[data-square="${square}"]`).getAttribute('aria-label')).includes(role));
+    for(const square of fixture.empty||[]) assert.equal(await page.locator(`[data-square="${square}"] .piece-token`).count(),0);
+    if(fixture.mate) {
+      await page.locator('#checkmate-overlay').waitFor({state:'visible'});
+      await page.locator('#review-match').tap();
+    }
+    await page.locator('#review-first').tap();
+    assert.equal(await page.locator('#board-2d .piece-token').count(),32);
+    await page.locator('#review-last').tap();
+    assert.equal(await page.locator('#board-2d .piece-token').count(),fixture.pieces);
+    await page.locator('[data-view="3d"]').tap();
+    await page.locator('#review-pause-note').waitFor({state:'visible'});
+    await page.screenshot({path:path.join(output,`${fixture.name}-${width}x${height}.png`)});
+    await page.locator('#review-return').tap();
+    if(fixture.mate) {
+      await page.locator('#checkmate-overlay').waitFor({state:'visible'});
+      await page.locator('#play-again').tap();
+      await page.waitForFunction(()=>document.querySelector('#review-position').textContent.includes('0/0'));
+      await page.locator('#review-pause-note').waitFor({state:'hidden'});
+    }
+    if(fixture.name==='capturas') {
+      await page.locator('#review-previous').tap();
+      await page.locator('#return-to-menu').tap();
+      await page.locator('#exit-confirmation [value="exit"]').tap();
+      await page.waitForFunction(()=>!document.querySelector('.app-shell').classList.contains('is-playing'));
+      await page.locator('#new-game').tap();
+      await page.waitForFunction(()=>document.querySelector('#review-position').textContent.includes('0/0'));
+      await page.locator('#review-pause-note').waitFor({state:'hidden'});
+      assert.equal(await page.locator('.app-shell').evaluate(el=>el.classList.contains('is-reviewing')),false);
+    }
+    assert.deepEqual(errors,[]);
+    console.log(`OK ${width}x${height}: ${fixture.name}, review/replay and 3D`);
+    await page.close();
+  }
+}
 (async () => {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   let browser;
   try {
     browser = await chromium.launch({ channel: 'msedge', headless: true, args: ['--enable-unsafe-swiftshader'] });
+    await inspectViewer(browser);
+    if(process.env.FCT_QA_VIEWER_ONLY) return;
     for (const [width, height] of [[1440, 900], [768, 1024], [390, 844], [320, 568], [844, 390]]) {
       const page = await browser.newPage({ viewport: { width, height }, reducedMotion: 'reduce', isMobile: width <= 844, hasTouch: width <= 844 });
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
       await page.goto(`http://127.0.0.1:${server.address().port}/FCT/`);
       await page.waitForFunction(() => window.fctReview);
+      await page.locator('#select-pieces').click();
+      await page.waitForFunction(() => document.querySelector('#appearance-status').dataset.state === 'ready');
+      const selector = page.locator('#piece-selector');
+      assert.equal(await selector.evaluate(el => el.scrollWidth > el.clientWidth),false,'selector horizontal overflow');
+      if (width === 1440) {
+        const characters = await page.locator('[data-character]').evaluateAll(items => items.map(item => item.dataset.character));
+        let variants = 0;
+        for (const character of characters) {
+          await page.locator(`[data-character="${character}"]`).click();
+          const palettes = await page.locator('[data-palette]').evaluateAll(items => items.map(item => item.dataset.palette));
+          for (const palette of palettes) {
+            await page.locator(`[data-palette="${palette}"]`).click();
+            await page.waitForFunction(() => document.querySelector('#appearance-status').dataset.state === 'ready');
+            assert.equal(await page.locator('#preview-human-name').textContent() === await page.locator('#preview-rival-name').textContent(),false,'rival must contrast');
+            variants++;
+          }
+        }
+        assert.equal(variants,70);
+        console.log('OK: all 70 original character palettes build front/back/profile previews');
+      }
+      await page.locator('[data-role="r"]').click();
+      await page.locator('[data-character="summoner-female"]').click();
+      await page.locator('[data-palette="2"]').click();
+      await page.waitForFunction(() => document.querySelector('#appearance-status').dataset.state === 'ready');
+      await page.locator('#piece-preview').scrollIntoViewIfNeeded();
+      await page.screenshot({path:path.join(output,`selector-${width}x${height}.png`)});
+      await page.locator('#appearance-save').click();
+      const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('fct.appearance.v1')));
+      assert.equal(saved.r.character,'summoner-female'); assert.equal(saved.r.palette,2);
+      await page.reload();
+      await page.waitForFunction(() => window.fctReview);
+      await page.locator('#select-pieces').click();
+      assert.equal(await page.locator('[data-character="summoner-female"]').getAttribute('aria-pressed'),'true');
+      await page.locator('[data-character="knight-male"]').click();
+      await page.locator('#appearance-close').click();
+      assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('fct.appearance.v1')).r.character),'summoner-female','cancel must not save');
       await page.locator('#new-game').click();
       await page.locator('#board-3d canvas').waitFor();
       await page.waitForFunction(() => !document.querySelector('#battle-curtain').classList.contains('is-revealing') && document.querySelector('.app-shell').classList.contains('is-playing'));
       await page.locator('[data-view="2d"]').click();
+      assert.ok((await page.locator('[data-square="a1"]').getAttribute('aria-label')).includes('Invocador'));
       await page.locator('[data-square="e2"]').click();
       await page.locator('[data-square="e4"]').click();
       await page.waitForFunction(() => /2 de 2/.test(document.querySelector('#review-position').textContent));
@@ -58,6 +194,8 @@ function overlaps(a, b) {
       console.log(`OK ${width}x${height}: actual move/review/resume, no HUD overlap or runtime errors`);
       await page.close();
     }
+    await specialMoves(browser,390,844);
+    await specialMoves(browser,844,390);
     console.log(`Screenshots: ${output}`);
   } finally {
     if (browser) await browser.close();

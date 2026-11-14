@@ -29,6 +29,16 @@ locales. `pages/fct/index.html` preserva la ruta antigua con una redirección.
   conservan superficies planas para las piezas.
 - `src/audio-cues.js`: selección del sonido de movimiento o captura,
   independiente del bando; pruebas en `projects/FCT/tests/`.
+- `src/appearance-core.js`: catálogo, validación y persistencia de elecciones,
+  y paletas contrastantes para la IA. `appearance.js` añade las miniaturas Vite.
+- `src/piece-selector.js` y `piece-selector.css`: selección por rol, borrador,
+  guardado/cancelación y vista previa accesible desde el menú.
+- `src/character-volume.js`: volumen de vóxeles contiguos a partir de frente,
+  espalda y perfil, separado en seis partes articuladas.
+- `src/character-model.js` y `character-motion.js`: modelos compartidos con
+  referencias y caché limitada; respiración, brazos y piernas.
+- `src/piece-preview.js`: visor Three.js de ambos bandos; carga diferida,
+  rotación y pausa del render al cerrar el selector.
 - `src/style.css`: presentación principal del juego.
 - `public/game-status.js` y `public/status.css`: comportamiento y estilos
   complementarios de estado, controles y revisión de partida.
@@ -36,7 +46,9 @@ locales. `pages/fct/index.html` preserva la ruta antigua con una redirección.
   Vite procesa desde el HTML.
 - `public/fct-potion.png`: fuente del icono del juego y de su enlace en la portada.
 - `sprites/`: hojas originales y recortes utilizados por las piezas.
-  `scripts/crop-sprites.ps1` genera recortes con System.Drawing en Windows.
+  `scripts/build-characters.py` extrae las 70 paletas y tres vistas por personaje
+  con Pillow en `sprites/characters/`. Los recortes anteriores de `cropped/`
+  y `crop-sprites.ps1` son recursos heredados.
 - `DESIGN.md`: concepto y decisiones iniciales; contrastar con la implementación
   actual al planear nuevas funciones.
 

@@ -1,6 +1,8 @@
 import { Chess } from 'chess.js';
 import './style.css';
 import { moveSound } from './audio-cues.js';
+import { appearanceFor, characterInfo, thumbnailUrl } from './appearance.js';
+import { initPieceSelector } from './piece-selector.js';
 
 const game = new Chess();
 const board2d = document.querySelector('#board-2d');
@@ -33,7 +35,6 @@ const audioReopen = document.querySelector('#audio-reopen');
 const audioControl = document.querySelector('.audio-control');
 let musicEnabledByCombat = false;
 
-const classNames = { p: 'Squire', r: 'Knight', n: 'Dragoon', b: 'Mago', q: 'Agrias', k: 'Ramza' };
 const pieceNames = { p: 'Peón', r: 'Torre', n: 'Caballo', b: 'Alfil', q: 'Reina', k: 'Rey' };
 const pieceValues = { p: 1, r: 5, n: 3, b: 3, q: 9, k: 0 };
 const pieceGlyphs = {
@@ -93,9 +94,7 @@ function idleDelayForSquare(square) {
 }
 
 function characterClassName(piece) {
-  if (piece.type === 'q') return piece.color === 'w' ? 'Agrias' : 'Teta';
-  if (piece.type === 'k') return piece.color === 'w' ? 'Ramza' : 'Delita';
-  return classNames[piece.type];
+  return characterInfo(appearanceFor(piece.type,piece.color)).name;
 }
 
 function describePiece(piece) {
@@ -137,7 +136,12 @@ function render2D() {
     if (piece) {
       const token = document.createElement('span');
       token.className = `piece-token ${piece.color === 'w' ? 'piece-white' : 'piece-black'}`;
-      token.textContent = pieceGlyphs[piece.color][piece.type];
+      const art = document.createElement('img');
+      art.className = 'piece-art'; art.alt = ''; art.draggable = false;
+      art.src = thumbnailUrl(appearanceFor(piece.type,piece.color));
+      const role = document.createElement('span'); role.className = 'piece-role';
+      role.textContent = pieceGlyphs[piece.color][piece.type];
+      token.append(art,role);
       token.draggable = false;
       token.dataset.from = square;
       token.title = `${pieceNames[piece.type]} · ${characterClassName(piece)}`;
@@ -218,6 +222,7 @@ function findKing(color) {
 function handleSquare(square) {
   if (!square) return;
   const piece = game.get(square);
+  if (piece && selectedSquare !== square && !isReviewing) playUiSound('sound1');
   const canMove = !thinking && !isReviewing && !game.isGameOver() && game.turn() === 'w';
   if (selectedSquare && canMove) {
     const moves = game.moves({ square: selectedSquare, verbose: true }).filter((move) => move.to === square);
@@ -498,8 +503,9 @@ async function setView(view, { playSound = true } = {}) {
 }
 
 document.querySelectorAll('.view-button').forEach((button) => button.addEventListener('click', () => setView(button.dataset.view)));
-document.querySelector('#reset-camera').addEventListener('click', () => threeBoard?.resetCamera());
+document.querySelector('#reset-camera').addEventListener('click', () => { playUiSound('sound1'); threeBoard?.resetCamera(); });
 async function startCombat() {
+  window.dispatchEvent(new Event('fct:new-game'));
   battleCurtain.classList.remove('is-revealing');
   battleCurtain.classList.add('is-covering');
   await new Promise((resolve) => window.setTimeout(resolve, 190));
@@ -537,10 +543,12 @@ exitConfirmation.addEventListener('close', () => {
   appShell.classList.remove('is-playing');
 });
 audioHide.addEventListener('click', () => {
+  playUiSound('sound1');
   audioControl.hidden = true;
   audioReopen.hidden = false;
 });
 audioReopen.addEventListener('click', () => {
+  playUiSound('sound1');
   audioControl.hidden = false;
   audioReopen.hidden = true;
 });
@@ -639,5 +647,9 @@ aiWorker.onerror = (error) => {
 };
 
 window.addEventListener('resize', () => threeBoard?.resize());
+initPieceSelector({ playSound: playUiSound, onApply: () => { describePiece(null); renderAll(); } });
+document.querySelectorAll('#audio-toggle, #promotion-dialog button, #exit-confirmation [value="cancel"]').forEach(button => {
+  button.addEventListener('click', () => playUiSound('sound1'));
+});
 describePiece(null);
 renderAll();

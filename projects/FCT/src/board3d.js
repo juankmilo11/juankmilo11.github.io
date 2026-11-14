@@ -3,11 +3,10 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { buildLandscape, earthMaterial } from './environment.js';
 import { tileElevation, terrainPalette } from './terrain.js';
 import { createMountainGeometry, createTileGeometry } from './mountain.js';
+import { createCharacter, animateCharacter, releaseCharacter } from './character-model.js';
+import { appearanceFor, appearanceKey, thumbnailUrl } from './appearance.js';
 
-const spriteUrls = import.meta.glob('../sprites/cropped/*.png', { eager: true, query: '?url', import: 'default' });
 const spriteTextures = new Map();
-const voxelGeometryCache = new Map();
-const voxelMaterials = new Map();
 
 const BOARD_SIZE = 8;
 const FILES = 'abcdefgh';
@@ -267,9 +266,9 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
 
   function update(board, state) {
     if (board.flat().filter(Boolean).length === 32 && !(state.animationMove?.reversed && state.animationMove.captured) && (capturedMeshes.length || capturedPieces.length)) {
-      capturedMeshes.forEach((mesh) => world.remove(mesh));
+      capturedMeshes.forEach((mesh) => { world.remove(mesh); releaseCharacter(mesh.userData.visual); });
       capturedMeshes.length = 0;
-      capturedPieces.forEach(({ mesh }) => world.remove(mesh));
+      capturedPieces.forEach(({ mesh }) => { world.remove(mesh); releaseCharacter(mesh.userData.visual); });
       capturedPieces.length = 0;
       capturedSlots.w.clear();
       capturedSlots.b.clear();
@@ -301,7 +300,8 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
     }
     const rookMesh = movement?.rookFrom ? previousBySquare.get(movement.rookFrom) : null;
     const reversingCapture = state.animationMove?.reversed && state.animationMove.captured;
-    const capturedMesh = !reversingCapture && state.lastMove?.captured ? previousBySquare.get(state.lastMove.to) : null;
+    const captureSquare = state.animationMove?.returnCapturedTo ?? state.lastMove?.to;
+    const capturedMesh = !reversingCapture && state.lastMove?.captured ? previousBySquare.get(captureSquare) : null;
     const lastSquares = new Set(state.lastMove ? [state.lastMove.from, state.lastMove.to] : []);
     for (const tile of tileMeshes) {
       const square = tile.userData.square;
@@ -339,7 +339,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
       if (!piece) return;
       const square = `${FILES[file]}${8 - row}`;
       let mesh = previousBySquare.get(square);
-      if (mesh && (mesh.userData.type !== piece.type || mesh.userData.color !== piece.color)) mesh = null;
+      if (mesh && (mesh.userData.type !== piece.type || mesh.userData.color !== piece.color || mesh.userData.appearance !== appearanceKey(appearanceFor(piece.type,piece.color)))) mesh = null;
       const isRestoredCapture = recoveredCapture && square === movement?.returnCapturedTo;
       if (!mesh && isRestoredCapture) mesh = recoveredCapture;
       if (!mesh && (square === movement?.to || square === movement?.rookTo) &&
@@ -411,6 +411,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
         });
       } else {
         world.remove(mesh);
+        releaseCharacter(mesh.userData.visual);
       }
     }
     pieceMeshes.splice(0, pieceMeshes.length, ...nextPieces);
@@ -501,6 +502,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
   let previousFrameTime = 0;
   function animate() {
     requestAnimationFrame(animate);
+    if (document.hidden || !host.clientWidth || !host.clientHeight) { previousFrameTime = 0; return; }
     const now = performance.now();
     const time = now * 0.001;
     const delta = previousFrameTime ? Math.min((now - previousFrameTime) / 1000, 0.05) : 0;
@@ -511,6 +513,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
       const idle = piece.userData.idleAnimation;
       const motion = piece.userData.moveAnimation;
       if (!base || !idle) continue;
+      animateCharacter(piece.userData.visual, time, { moving: Boolean(motion), selected: piece.userData.selected, reducedMotion, phase: idle.phase });
 
       if (motion) {
         const progress = Math.min(1, (now - motion.startTime) / motion.duration);
@@ -529,12 +532,9 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
         continue;
       }
 
-      const selected = piece.userData.selected;
-      const wave = Math.sin(time * idle.speed + idle.phase);
-      piece.position.set(base.x, base.y + (reducedMotion ? 0 : wave * (selected ? 0.045 : idle.lift)), base.z);
-      piece.rotation.y = reducedMotion ? 0 : wave * (selected ? 0.12 : idle.sway);
-      piece.rotation.z = reducedMotion || !selected ? 0 : Math.cos(time * 2.6 + idle.phase) * 0.025;
-      piece.scale.setScalar(1 + (reducedMotion ? 0 : Math.max(0, wave) * (selected ? 0.018 : idle.scale)));
+      piece.position.copy(base);
+      piece.rotation.set(0,0,0);
+      piece.scale.setScalar(1);
     }
     if (windParticles) {
       const positions = windParticles.positions;
@@ -551,6 +551,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
       windParticles.geometry.attributes.position.needsUpdate = true;
     }
     for (const mesh of capturedMeshes) {
+      animateCharacter(mesh.userData.visual,time,{ reducedMotion, phase: mesh.userData.idleAnimation.phase });
       const cheer = mesh.userData.cheer;
       const base = mesh.userData.capturedPosition;
       if (!cheer || !base) continue;
@@ -697,152 +698,47 @@ function createSunsetSky() {
   return texture;
 }
 
+const badgeMaterials = new Map();
+function pieceBadge(type,color) {
+  const key = `${type}-${color}`;
+  if (!badgeMaterials.has(key)) {
+    const canvas = document.createElement('canvas'); canvas.width = canvas.height = 64;
+    const context = canvas.getContext('2d');
+    context.beginPath(); context.arc(32,32,29,0,Math.PI*2);
+    context.fillStyle = '#172219'; context.fill();
+    context.strokeStyle = color === 'w' ? '#eedda6' : '#89cce1'; context.lineWidth = 3; context.stroke();
+    context.fillStyle = context.strokeStyle; context.textAlign = 'center'; context.textBaseline = 'middle';
+    context.font = '43px "Segoe UI Symbol", serif';
+    context.fillText({ p:'♙', r:'♖', n:'♘', b:'♗', q:'♕', k:'♔' }[type],32,33);
+    const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
+    badgeMaterials.set(key,new THREE.SpriteMaterial({ map: texture, depthWrite: false }));
+  }
+  const badge = new THREE.Sprite(badgeMaterials.get(key));
+  badge.position.set(0.22,0.13,0.22); badge.scale.set(0.18,0.18,1); return badge;
+}
+
 function createPiece(type, color) {
-  const texture = getSpriteTexture(type, color);
-  const placeholderMaterial = new THREE.MeshBasicMaterial({ map: texture, transparent: true, alphaTest: 0.08, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
+  const look = appearanceFor(type,color);
   const piece = new THREE.Group();
-  const figure = new THREE.Mesh(new THREE.PlaneGeometry(0.82, 1.02), placeholderMaterial);
-  // White pieces face north and black pieces face south; this rotation stays fixed as the camera orbits.
-  figure.rotation.y = color === 'w' ? Math.PI : 0;
-  figure.position.y = 0.52;
-  figure.castShadow = true;
-  figure.receiveShadow = true;
-  piece.add(figure);
+  const figure = createCharacter(look,color === 'w' ? Math.PI : 0);
+  piece.add(figure,pieceBadge(type,color));
   piece.userData.visual = figure;
-  piece.userData.isVoxel = false;
-  piece.userData.idleAnimation = {
-    phase: Math.random() * Math.PI * 2,
-    speed: 0.65 + Math.random() * 0.75,
-    lift: 0.012 + Math.random() * 0.018,
-    sway: 0.018 + Math.random() * 0.025,
-    scale: 0.004 + Math.random() * 0.006,
-  };
-  getVoxelGeometry(type, color).then((geometry) => {
-    if (!geometry) return;
-    const oldGeometry = figure.geometry;
-    figure.geometry = geometry;
-    oldGeometry.dispose();
-    figure.material = getVoxelMaterial(color);
-    figure.position.y = 0;
-    piece.userData.isVoxel = true;
-  });
+  piece.userData.appearance = appearanceKey(look);
+  piece.userData.idleAnimation = { phase: Math.random()*Math.PI*2 };
+  figure.userData.ready.catch(error => console.error('No se pudo preparar una pieza:',error));
   return piece;
 }
 
-function getSpriteTexture(type, color) {
-  const key = `${type}-${color}`;
-  if (spriteTextures.has(key)) return spriteTextures.get(key);
-  const url = spriteUrls[`../sprites/cropped/${type}-${color}-0.png`];
-  const texture = new THREE.TextureLoader().load(url);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.magFilter = THREE.NearestFilter;
-  texture.minFilter = THREE.NearestFilter;
-  spriteTextures.set(key, texture);
-  return texture;
-}
-
-function getVoxelGeometry(type, color) {
-  const key = `${type}-${color}`;
-  if (voxelGeometryCache.has(key)) return voxelGeometryCache.get(key);
-  const promise = loadSpritePixels(type, color).then((pixels) => pixels ? createVoxelGeometry(pixels) : null);
-  voxelGeometryCache.set(key, promise);
-  return promise;
-}
-
-function loadSpritePixels(type, color) {
-  const url = spriteUrls[`../sprites/cropped/${type}-${color}-0.png`];
-  if (!url) return Promise.resolve(null);
-  return new Promise((resolve) => {
-    const image = new Image();
-    image.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 32;
-      canvas.height = 40;
-      const context = canvas.getContext('2d', { willReadFrequently: true });
-      context.drawImage(image, 0, 0);
-      resolve(context.getImageData(0, 0, 32, 40));
-    };
-    image.onerror = () => resolve(null);
-    image.src = url;
-  });
-}
-
-function getVoxelMaterial(color) {
-  if (!voxelMaterials.has(color)) {
-    voxelMaterials.set(color, new THREE.MeshStandardMaterial({
-      vertexColors: true,
-      roughness: 0.86,
-      metalness: 0,
-      side: THREE.DoubleSide,
-    }));
+function getSpriteTexture(type,color) {
+  const look = appearanceFor(type,color), key = appearanceKey(look);
+  if (!spriteTextures.has(key)) {
+    const texture = new THREE.TextureLoader().load(thumbnailUrl(look));
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.magFilter = texture.minFilter = THREE.NearestFilter;
+    spriteTextures.set(key,texture);
   }
-  return voxelMaterials.get(color);
+  return spriteTextures.get(key);
 }
-
-function createVoxelGeometry(imageData) {
-  const width = 32;
-  const height = 40;
-  const pixelSize = 0.026;
-  const pixelWidth = 0.0234;
-  const depth = 0.18;
-  const halfDepth = depth / 2;
-  const pixels = imageData.data;
-  let bottomRow = 0;
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      if (pixels[(y * width + x) * 4 + 3] > 16) bottomRow = Math.max(bottomRow, y);
-    }
-  }
-
-  const occupied = new Map();
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      const offset = (y * width + x) * 4;
-      if (pixels[offset + 3] < 16) continue;
-      occupied.set(`${x},${y}`, {
-        x0: (x - width / 2) * pixelWidth,
-        y0: (bottomRow - y) * pixelSize,
-        color: [pixels[offset] / 255, pixels[offset + 1] / 255, pixels[offset + 2] / 255],
-      });
-    }
-  }
-
-  const positions = [];
-  const normals = [];
-  const colors = [];
-  function quad(points, normal, color) {
-    const order = [0, 1, 2, 0, 2, 3];
-    for (const i of order) {
-      positions.push(...points[i]);
-      normals.push(...normal);
-      colors.push(...color);
-    }
-  }
-
-  for (const [key, cell] of occupied) {
-    const [x, y] = key.split(',').map(Number);
-    const x0 = cell.x0;
-    const x1 = x0 + pixelWidth;
-    const y0 = cell.y0;
-    const y1 = y0 + pixelSize;
-    const front = halfDepth;
-    const back = -halfDepth;
-    quad([[x0,y0,front],[x1,y0,front],[x1,y1,front],[x0,y1,front]], [0,0,1], cell.color);
-    quad([[x1,y0,back],[x0,y0,back],[x0,y1,back],[x1,y1,back]], [0,0,-1], cell.color);
-    if (!occupied.has(`${x - 1},${y}`)) quad([[x0,y0,back],[x0,y0,front],[x0,y1,front],[x0,y1,back]], [-1,0,0], cell.color);
-    if (!occupied.has(`${x + 1},${y}`)) quad([[x1,y0,front],[x1,y0,back],[x1,y1,back],[x1,y1,front]], [1,0,0], cell.color);
-    if (!occupied.has(`${x},${y - 1}`)) quad([[x0,y1,back],[x0,y1,front],[x1,y1,front],[x1,y1,back]], [0,1,0], cell.color);
-    if (!occupied.has(`${x},${y + 1}`)) quad([[x0,y0,front],[x0,y0,back],[x1,y0,back],[x1,y0,front]], [0,-1,0], cell.color);
-  }
-
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
-  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-  geometry.computeBoundingSphere();
-  return geometry;
-}
-
 function worldToSquare(x, z) {
   const file = Math.round(x + 3.5);
   const row = Math.round(z + 3.5);
