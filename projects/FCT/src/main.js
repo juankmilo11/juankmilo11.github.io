@@ -7,6 +7,7 @@ import { tileDetail } from './terrain.js';
 import './menu-theme.css';
 import { createAudioSystem } from './audio-system.js';
 import { pieceValues } from './piece-values.js';
+import { createFloatMotion } from './piece-motion.js';
 
 const game = new Chess();
 const board2d = document.querySelector('#board-2d');
@@ -32,7 +33,8 @@ const pieceGlyphs = {
 const difficulty = 3;
 let selectedSquare = null;
 let dragTargets = new Set();
-const idleDelaysBySquare = new Map();
+const idleMotionsBySquare = new Map();
+const capturedCheers = new Map();
 let recentMoveAnimation = null;
 let moveAnimationSequence = 0;
 let requestedView = '2d';
@@ -57,9 +59,13 @@ function squareName(row, file) {
   return `${String.fromCharCode(97 + file)}${8 - row}`;
 }
 
-function idleDelayForSquare(square) {
-  if (!idleDelaysBySquare.has(square)) idleDelaysBySquare.set(square, -(Math.random() * 3.8));
-  return idleDelaysBySquare.get(square);
+function idleMotionForSquare(square) {
+  if (!idleMotionsBySquare.has(square)) idleMotionsBySquare.set(square, createFloatMotion());
+  return idleMotionsBySquare.get(square);
+}
+
+function syncFloatPhase(token,motion) {
+  token.style.setProperty('--idle-delay',`${-(performance.now()*.001+motion.phase/motion.speed)}s`);
 }
 
 function characterClassName(piece) {
@@ -112,11 +118,18 @@ function render2D() {
       token.draggable = false;
       token.dataset.from = square;
       token.title = `${pieceNames[piece.type]} · ${characterClassName(piece)}`;
-      token.style.setProperty('--idle-delay', `${idleDelayForSquare(square)}s`);
+      const idle=idleMotionForSquare(square);
+      token.style.setProperty('--idle-duration',`${Math.PI*2/idle.speed}s`);
+      token.style.setProperty('--float-rise',`${1.6+idle.height*28}px`);
+      syncFloatPhase(token,idle);
       if (requestedView === '2d' && recentMoveAnimation && !recentMoveAnimation.appliedSquares?.has(square) &&
           [recentMoveAnimation.to, recentMoveAnimation.rookTo, recentMoveAnimation.returnCapturedTo].includes(square)) {
         token.classList.add(recentMoveAnimation.reversed ? 'piece-rewind-arrival' : recentMoveAnimation.captured ? 'piece-capture-arrival' : 'piece-move-arrival');
         token.style.setProperty('--move-tilt', `${(Math.random() * 6 - 3).toFixed(1)}deg`);
+        token.addEventListener('animationend',()=>{
+          token.classList.remove('piece-rewind-arrival','piece-capture-arrival','piece-move-arrival');
+          syncFloatPhase(token,idle);
+        },{once:true});
         recentMoveAnimation.appliedSquares ??= new Set();
         recentMoveAnimation.appliedSquares.add(square);
         if (recentMoveAnimation.captured) cell.classList.add('capture-impact');
@@ -166,10 +179,15 @@ function renderRemainingPieces(board) {
       icon.title = `${pieceNames[piece.type]} en juego`;
       return icon;
     }));
-    captured.replaceChildren(...capturedByColor[color].map((type) => {
+    captured.replaceChildren(...capturedByColor[color].map((type,index) => {
       const icon = document.createElement('span');
       icon.textContent = pieceGlyphs[color][type];
       icon.title = `${pieceNames[type]} capturada`;
+      const key=`${color}-${index}-${type}`;
+      if(!capturedCheers.has(key))capturedCheers.set(key,{period:3.2+Math.random()*4.8,phase:Math.random()*8});
+      const cheer=capturedCheers.get(key);
+      icon.style.setProperty('--cheer-period',`${cheer.period}s`);
+      icon.style.setProperty('--cheer-delay',`${-(performance.now()*.001+cheer.phase)}s`);
       return icon;
     }));
   }

@@ -7,6 +7,7 @@ import { createCharacter, animateCharacter, releaseCharacter } from './character
 import { appearanceFor, appearanceKey, thumbnailUrl } from './appearance.js';
 import { addFieldLife } from './field-life.js';
 import { createCosmos } from './cosmos.js';
+import { createFloatMotion, floatOffset, createCheerMotion, cheerPose } from './piece-motion.js';
 
 const spriteTextures = new Map();
 
@@ -538,6 +539,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
       }
 
       piece.position.copy(base);
+      if (!reducedMotion) piece.position.y += floatOffset(time,idle);
       piece.rotation.set(0,0,0);
       piece.scale.setScalar(1);
     }
@@ -556,25 +558,13 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
       windParticles.geometry.attributes.position.needsUpdate = true;
     }
     for (const mesh of capturedMeshes) {
-      animateCharacter(mesh.userData.visual,time,{ reducedMotion, phase: mesh.userData.idleAnimation.phase });
       const cheer = mesh.userData.cheer;
       const base = mesh.userData.capturedPosition;
-      if (!cheer || !base) continue;
-      if (!cheer.startedAt && now >= cheer.nextAt) cheer.startedAt = now;
-      if (!cheer.startedAt) continue;
-      const progress = Math.min(1, (now - cheer.startedAt) / cheer.duration);
-      const hop = Math.sin(Math.PI * progress);
-      mesh.position.set(base.x, base.y + hop * cheer.height, base.z);
-      mesh.rotation.z = hop * cheer.tilt;
-      if (progress >= 1) {
-        mesh.position.copy(base);
-        mesh.rotation.z = 0;
-        cheer.startedAt = 0;
-        cheer.nextAt = now + 2400 + Math.random() * 6400;
-        cheer.duration = 520 + Math.random() * 280;
-        cheer.height = 0.09 + Math.random() * 0.1;
-        cheer.tilt = (Math.random() - 0.5) * 0.12;
-      }
+      const pose = cheer && !reducedMotion ? cheerPose(time,cheer) : {lift:0,tilt:0,strength:0};
+      animateCharacter(mesh.userData.visual,time,{ reducedMotion, phase: mesh.userData.idleAnimation.phase, cheer: pose.strength });
+      if (!base) continue;
+      mesh.position.set(base.x,base.y+pose.lift,base.z);
+      mesh.rotation.z=pose.tilt;
     }
     for (let index = capturedPieces.length - 1; index >= 0; index -= 1) {
       const effect = capturedPieces[index];
@@ -590,13 +580,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
         effect.mesh.rotation.z = 0;
         effect.mesh.scale.setScalar(1);
         effect.mesh.userData.capturedPosition = effect.position.clone();
-        effect.mesh.userData.cheer = reducedMotion ? null : {
-          nextAt: now + 1800 + Math.random() * 5200,
-          duration: 520 + Math.random() * 280,
-          height: 0.09 + Math.random() * 0.1,
-          tilt: (Math.random() - 0.5) * 0.12,
-          startedAt: 0,
-        };
+        effect.mesh.userData.cheer = reducedMotion ? null : createCheerMotion(time);
         capturedMeshes.push(effect.mesh);
         capturedPieces.splice(index, 1);
       }
@@ -711,7 +695,7 @@ function createPiece(type, color) {
   piece.add(figure);
   piece.userData.visual = figure;
   piece.userData.appearance = appearanceKey(look);
-  piece.userData.idleAnimation = { phase: Math.random()*Math.PI*2 };
+  piece.userData.idleAnimation = createFloatMotion();
   figure.userData.ready.catch(error => console.error('No se pudo preparar una pieza:',error));
   return piece;
 }

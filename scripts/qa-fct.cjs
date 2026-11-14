@@ -178,6 +178,10 @@ async function specialMoves(browser, width, height) {
       page.on('pageerror', error => errors.push(error.message));
       await page.goto(`http://127.0.0.1:${server.address().port}/FCT/`);
       await page.waitForFunction(() => window.fctReview);
+      const selectButton=await page.locator('#select-pieces').boundingBox();
+      const selectText=await page.locator('#select-pieces strong').boundingBox();
+      assert.ok(Math.abs(selectButton.x+selectButton.width/2-selectText.x-selectText.width/2)<1,'select-pieces text is centered in the whole button');
+      assert.equal(await page.locator('#select-pieces strong').evaluate(el=>getComputedStyle(el).textAlign),'center');
       await page.locator('#select-pieces').click();
       await page.waitForFunction(() => document.querySelector('#appearance-status').dataset.state === 'ready');
       const selector = page.locator('#piece-selector');

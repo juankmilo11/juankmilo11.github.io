@@ -118,7 +118,7 @@ h1,h2,p { margin: 0; }
 .square.last-move::before { background: #f4ca37c9; box-shadow: inset 0 0 0 2px #ffe98e; }
 .square.selected::before { background: #e6c4675b; box-shadow: inset 0 0 0 3px #f5dc8d9c; }
 .square.in-check::before { content: ''; position: absolute; inset: 0; z-index: 1; background: radial-gradient(circle, #d64b3980, #cf57433a 54%, transparent 78%); pointer-events: none; }
-.piece-token { position: relative; z-index: 2; display: grid; place-items: center; width: 91%; height: 91%; line-height: 1; font-family: 'Segoe UI Symbol', 'Noto Sans Symbols 2', 'DejaVu Sans', serif; font-size: clamp(29px, 5.5vw, 58px); cursor: grab; user-select: none; animation: piece-idle 3.3s ease-in-out infinite; animation-delay: var(--idle-delay, 0s); transform-origin: 50% 88%; will-change: transform, filter; filter: drop-shadow(0 3px 2px #1517119c); }
+.piece-token { position: relative; z-index: 2; display: grid; place-items: center; width: 91%; height: 91%; line-height: 1; font-family: 'Segoe UI Symbol', 'Noto Sans Symbols 2', 'DejaVu Sans', serif; font-size: clamp(29px, 5.5vw, 58px); cursor: grab; user-select: none; animation: piece-idle var(--idle-duration,6s) ease-in-out infinite; animation-delay: var(--idle-delay, 0s); transform-origin: 50% 88%; will-change: transform, filter; filter: drop-shadow(0 3px 2px #1517119c); }
 .piece-token:hover { filter: brightness(1.12) drop-shadow(0 4px 3px #151711aa); }
 .piece-token:active { cursor: grabbing; }
 .square.selected .piece-token { animation-name: piece-selected; filter: brightness(1.12) drop-shadow(0 5px 4px #e5ca7c66); }
@@ -127,7 +127,7 @@ h1,h2,p { margin: 0; }
 .piece-token.piece-rewind-arrival { animation: piece-rewind-arrival .42s cubic-bezier(.2,.75,.25,1) both; }
 .piece-captured-ghost { position: fixed; z-index: 40; display: grid; place-items: center; margin: 0; pointer-events: none; animation: piece-captured-fade .4s ease-in both; }
 .square.capture-impact { animation: capture-impact .28s ease-out both; }
-@keyframes piece-idle { 0%,100% { transform: translateY(0) rotate(0deg) scale(1); } 50% { transform: translateY(-1.5px) rotate(.45deg) scale(1.012); } }
+@keyframes piece-idle { 0%,100% { transform: translateY(-.5px); } 50% { transform: translateY(calc(-1 * var(--float-rise,2.4px))); } }
 @keyframes piece-selected { 0%,100% { transform: translateY(-1px) rotate(-.35deg) scale(1.025); } 50% { transform: translateY(-3px) rotate(.35deg) scale(1.055); } }
 @keyframes piece-move-arrival { 0% { transform: translateY(-10px) rotate(var(--move-tilt, 0deg)) scale(.9); } 58% { transform: translateY(1px) rotate(0deg) scale(1.045); } 100% { transform: translateY(0) rotate(0) scale(1); } }
 @keyframes piece-capture-arrival { 0% { transform: translateY(-12px) rotate(var(--move-tilt, 0deg)) scale(.88); } 48% { transform: translateY(2px) rotate(0deg) scale(1.09); } 100% { transform: translateY(0) rotate(0) scale(1); } }
@@ -353,7 +353,8 @@ body { min-height: 100dvh; overflow: hidden; }
 .remaining-icons span { font-size: 12px; line-height: 1; }
 .captured-icons { display: flex; min-height: 0; align-items: center; justify-content: center; gap: 3px; color: #9e9f92; }
 .captured-icons:empty { display: none; }
-.captured-icons span { opacity: .5; font: 10px/1 'Segoe UI Symbol', 'Noto Sans Symbols 2', 'DejaVu Sans', serif; text-decoration: line-through; text-decoration-color: #c45c4e; }
+.captured-icons span { opacity: .5; font: 10px/1 'Segoe UI Symbol', 'Noto Sans Symbols 2', 'DejaVu Sans', serif; text-decoration: line-through; text-decoration-color: #c45c4e; animation: captured-cheer var(--cheer-period,5s) ease-in-out infinite; animation-delay: var(--cheer-delay,0s); }
+@keyframes captured-cheer { 0%,58%,72%,86%,100% { transform: translateY(0) rotate(0); } 65%,79% { transform: translateY(-2.5px) rotate(6deg); } }
 .app-shell.is-playing .lower-panel { bottom: 50px; }
 
 @media (max-width: 900px) {
@@ -423,7 +424,7 @@ body { min-height: 100dvh; overflow: hidden; }
 
 @media (prefers-reduced-motion: reduce) {
   .battle-curtain.is-revealing { transition-duration: .18s; }
-  .piece-token { animation-duration: 6s; }
+  .piece-token,.square.selected .piece-token,.captured-icons span { animation: none; }
   .piece-token.piece-move-arrival,
   .piece-token.piece-capture-arrival,
   .piece-token.piece-rewind-arrival,

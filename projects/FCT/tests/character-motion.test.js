@@ -26,3 +26,14 @@ test('walking swings arms and legs, and reduced motion restores a still pose',()
     assert.equal(mesh.rotation.x,0); assert.equal(mesh.rotation.y,0); assert.equal(mesh.scale.y,1);
   }
 });
+
+test('captured characters raise both arms while cheering and return to their normal pose',()=>{
+  const model=rig();
+  animateCharacter(model,1,{cheer:1});
+  assert.equal(model.userData.rig.leftArm.mesh.rotation.z,.65);
+  assert.equal(model.userData.rig.rightArm.mesh.rotation.z,-.65);
+  animateCharacter(model,1);
+  assert.equal(model.userData.rig.leftArm.mesh.rotation.z,0);
+  animateCharacter(model,1,{cheer:1,reducedMotion:true});
+  assert.equal(model.userData.rig.rightArm.mesh.rotation.z,0);
+});

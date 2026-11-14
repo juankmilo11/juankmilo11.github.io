@@ -51,6 +51,9 @@ locales. `pages/fct/index.html` preserva la ruta antigua con una redirección.
   salvo el mapa local Blue Marble de NASA en `src/assets/`.
 - `src/piece-values.js`: puntos de material compartidos por la interfaz y la IA;
   las torres valen cuatro puntos.
+- `src/piece-motion.js`: fases y alturas individuales de flotación y ráfagas
+  aleatorias de saltos para las capturadas; los desplazamientos se aplican sobre
+  anclas fijas para conservar las casillas y la colocación lateral.
 - `src/audio-system.js` y `audio-system.css`: controles independientes de música
   y efectos, volumen, selección suave, intento de autoplay y desbloqueo por interacción.
 - `src/shuffle-queue.js` y `music-tracks.json`: cola aleatoria sin repetición por

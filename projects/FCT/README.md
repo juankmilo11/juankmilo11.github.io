@@ -31,6 +31,12 @@ including the actual back. This is a stylized voxel reconstruction, not an
 imported rigged character mesh. Head, torso, arms and legs are articulated for
 subtle independent marching in place, alternating feet, arms and breathing. Reduced-motion
 preferences stop those animations and default preview rotation.
+`src/piece-motion.js` gives each live board piece its own slow floating phase,
+speed and height (under 0.05 world units), applied relative to its fixed square
+anchor. Movement and dragging take precedence. Captured pieces rest between
+random one/two-hop cheering bursts and raise their arms while hopping; their
+rack positions remain fixed. 2D sprites use independent floating periods and
+captured HUD icons echo the small hops. Idle animations stop for reduced motion.
 The left-facing profile is mapped anteriorly on both sides; rear head surfaces
 always sample the back projection so facial colors do not appear on the nape.
 Depth profiles are smoothed and anatomically bounded so a hand/weapon in a side
@@ -122,6 +128,7 @@ Optional headless browser QA (requires Playwright and Microsoft Edge):
 ```powershell
 node scripts/qa-fct.cjs
 node scripts/qa-fct-cosmos.cjs
+node scripts/qa-fct-motion.cjs
 ```
 
 Run from the repository root after building. If Playwright is outside the normal
@@ -142,6 +149,9 @@ The cosmos check uses a local Vite server and the real WebGL renderer to compare
 ring pixels against a globe-only image, verifying rear occlusion and front
 visibility. It also checks slow galaxy rotation, reduced motion and Earth loading,
 and saves sky close-ups for visual inspection.
+The motion check samples the real 3D board over several seconds after two
+captures, verifying independent bounded floats, cheering arms, fixed X/Z anchors,
+restoration through review and reduced-motion behavior.
 
 `src/audio-cues.js` preserves the actual previous sound assignments: the human
 move used the historical `AI_piece_move.wav` file and the AI used
