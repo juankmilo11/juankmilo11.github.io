@@ -43,12 +43,12 @@ export function addFieldLife(world, reducedMotion) {
     right.scale.x=-1;
     bird.add(left,right);bird.position.set(-i*.85,i*.12,-i*.28);flock.add(bird);birds.push({left,right});
   }
-  let nextAt=18,startAt=null;
+  let nextAt=8,startAt=null;
   return { update(time) {
     if(startAt===null&&time>=nextAt)startAt=time;
     if(startAt===null)return;
     const progress=(time-startAt)/13;
-    if(progress>=1){flock.visible=false;startAt=null;nextAt=time+38+Math.random()*35;return;}
+    if(progress>=1){flock.visible=false;startAt=null;nextAt=time+14+Math.random()*12;return;}
     flock.visible=true;
     flock.position.set(-10+progress*20,3.5+Math.sin(progress*Math.PI)*.65,-7+Math.sin(progress*Math.PI)*.6);
     birds.forEach(({left,right},i)=>{const flap=Math.sin(time*7+i)*.5;left.rotation.z=flap;right.rotation.z=-flap;});

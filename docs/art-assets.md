@@ -23,6 +23,15 @@ Se sirven desde `projects/FCT/public/fonts/`, sin peticiones a Google Fonts al j
 Las licencias OFL están incluidas junto a los TTF. Los símbolos de ajedrez
 conservan el respaldo tipográfico de símbolos del sistema.
 
+## Planeta Tierra
+
+`projects/FCT/src/assets/earth-blue-marble.jpg` es el mapa de julio de 2004 de
+[Blue Marble: Next Generation con topografía](https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/base-topography/).
+Crédito: Reto Stöckli, NASA Earth Observatory. Se conserva el JPEG original
+de 5400 × 2700 y se reduce en memoria a 1024 × 512 al cargarlo en la esfera.
+El recurso se sirve localmente; el juego no hace peticiones a NASA.
+[Archivo original](https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography/july/world.topo.200407.3x5400x2700.jpg).
+
 ## Sprites y audio
 
 Las hojas originales se conservan en `projects/FCT/sprites/` con sus créditos.

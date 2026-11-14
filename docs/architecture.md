@@ -46,8 +46,11 @@ locales. `pages/fct/index.html` preserva la ruta antigua con una redirección.
   y centrado/arrastre de sprites en 2D.
 - `src/field-life.js`: detalles de casillas oscuras y aves ocasionales; respeta
   movimiento reducido y no interviene en la selección de casillas.
-- `src/cosmos.js`: cielo con paralaje aparente, planetas, galaxia, ilusión de
-  agujero negro y meteoros; materiales y texturas procedurales, sin recursos externos.
+- `src/cosmos.js`: cielo con paralaje aparente, planeta rojo, planeta con aro
+  con oclusión 3D, Tierra, galaxia de giro lento y meteoros. Texturas procedurales
+  salvo el mapa local Blue Marble de NASA en `src/assets/`.
+- `src/piece-values.js`: puntos de material compartidos por la interfaz y la IA;
+  las torres valen cuatro puntos.
 - `src/audio-system.js` y `audio-system.css`: controles independientes de música
   y efectos, volumen, selección suave, intento de autoplay y desbloqueo por interacción.
 - `src/shuffle-queue.js` y `music-tracks.json`: cola aleatoria sin repetición por

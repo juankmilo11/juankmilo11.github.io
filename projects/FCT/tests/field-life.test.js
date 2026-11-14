@@ -16,8 +16,10 @@ test('birds cross occasionally and stay disabled for reduced-motion preferences'
   const world=new THREE.Group(),life=addFieldLife(world,false);
   const flock=world.children.at(-1);
   assert.equal(flock.visible,false);
-  life.update(19);assert.equal(flock.visible,true);
-  life.update(34);assert.equal(flock.visible,false);
+  life.update(7);assert.equal(flock.visible,false);
+  life.update(8);assert.equal(flock.visible,true);
+  life.update(21);assert.equal(flock.visible,false);
+  life.update(47);assert.equal(flock.visible,true,'another flock returns within 26 seconds of the previous crossing');
   const quiet=new THREE.Group();const staticLife=addFieldLife(quiet,true);
   assert.equal(quiet.children.filter(child=>child.isGroup).length,0);
   assert.doesNotThrow(()=>staticLife.update(1000));

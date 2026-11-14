@@ -1,6 +1,7 @@
 import { Chess } from 'chess.js';
+import { pieceValues } from './piece-values.js';
 
-const VALUE = { p: 100, n: 315, b: 330, r: 500, q: 900, k: 0 };
+const VALUE = { ...Object.fromEntries(Object.entries(pieceValues).map(([type,points])=>[type,points*100])), n: 315, b: 330 };
 
 self.onmessage = ({ data }) => {
   if (data?.type !== 'choose-move') return;

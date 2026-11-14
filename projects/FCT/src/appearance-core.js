@@ -12,7 +12,7 @@ export const defaultLoadout = {
   q: { character: 'agrias', palette: 0 }, k: { character: 'ramza', palette: 0 },
 };
 const families = { p: ['squire'], r: ['knight'], n: ['dragoon'], b: ['white-mage','black-mage','summoner'], q: ['agrias','teta'], k: ['ramza','delita'] };
-export function characterHeight(role) { return role==='k'?1.14:role==='q'?1.03:0.92; }
+export function characterHeight(role) { return role==='k'?1.14:role==='q'?1.03:role==='p'?.84:.92; }
 export function availableCharacters(role) {
   return catalog.filter(character => families[role]?.some(family => character.id === family || character.id.startsWith(`${family}-`)));
 }

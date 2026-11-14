@@ -35,8 +35,8 @@ The left-facing profile is mapped anteriorly on both sides; rear head surfaces
 always sample the back projection so facial colors do not appear on the nape.
 Depth profiles are smoothed and anatomically bounded so a hand/weapon in a side
 sprite cannot extrude the face into a snout. Minimum torso/limb depth avoids
-paper-thin side views. Rendered heights are normalized: ordinary pieces 0.92,
-queens 1.03 and kings 1.14 world units; 2D royals also get a small size increase.
+paper-thin side views. Rendered heights are normalized: pawns 0.84, ordinary
+pieces 0.92, queens 1.03 and kings 1.14 world units; 2D keeps the same size order.
 
 Model geometries are shared by appearance, with reference counts and a bounded
 cache of inactive variants. The preview renders only while its dialog is open;
@@ -74,10 +74,21 @@ and flat piece positions are preserved. Seams also accept clicks and drops.
 `src/field-life.js` scatters tiny stones, mud and moss on selected dark squares.
 A small flock crosses occasionally behind the field; reduced-motion mode
 disables it. These decorations do not participate in raycasting or chess rules.
-`src/cosmos.js` adds an infinite-distance star field, two planets (one ringed),
-a spiral galaxy, an accretion-disk/black-hole illusion and occasional meteors.
+`src/cosmos.js` adds an infinite-distance star field, a red planet, a ringed
+planet, Earth and occasional meteors. The ring is a tilted 3D annulus; the globe
+writes depth so it hides the rear arc. The spiral galaxy rotates inside a fixed
+elliptical projection, making one turn in about nine minutes.
 Their directions change with camera orbit; they stay behind the playing field.
 Reduced-motion mode retains a static sky without twinkling or meteors.
+Earth uses NASA's Blue Marble map (credits in `docs/art-assets.md`), uploaded at
+1024 × 512 to keep GPU memory small. Bird flocks first appear after eight seconds,
+cross for thirteen seconds, then return after a randomized 14–26 second gap.
+
+Pawns are slightly smaller: 0.84 world units versus 0.92 for ordinary pieces,
+with the same reduction in 2D. Queens and kings keep their larger sizes.
+`src/piece-values.js` defines the material points used by both the HUD and AI:
+pawn 1, rook 4, knight/bishop 3, queen 9 (the king has no material score).
+The AI retains its small positional/minor-piece adjustments.
 
 ## Music and effect levels
 
@@ -110,6 +121,7 @@ Optional headless browser QA (requires Playwright and Microsoft Edge):
 
 ```powershell
 node scripts/qa-fct.cjs
+node scripts/qa-fct-cosmos.cjs
 ```
 
 Run from the repository root after building. If Playwright is outside the normal
@@ -126,6 +138,10 @@ flow. Scripted opponent replies exercise the app's castling, en passant,
 promotion, captures, mate, review/replay and new-game flows in both mobile
 orientations. These browser tests emulate mobile; they do not replace testing
 on physical iOS/Android hardware. `FCT_QA_VIEWER_ONLY=1` runs just the preview checks.
+The cosmos check uses a local Vite server and the real WebGL renderer to compare
+ring pixels against a globe-only image, verifying rear occlusion and front
+visibility. It also checks slow galaxy rotation, reduced motion and Earth loading,
+and saves sky close-ups for visual inspection.
 
 `src/audio-cues.js` preserves the actual previous sound assignments: the human
 move used the historical `AI_piece_move.wav` file and the AI used

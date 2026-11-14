@@ -102,7 +102,7 @@ async function specialMoves(browser, width, height) {
     { name:'capturas', black:['d7d5','d8d5'], white:['e2e4','e4d5'], pieces:30, squares:{d5:'Reina'} },
     { name:'enroque', black:['e7e5','b8c6','f8c5','g8f6'], white:['e2e4','g1f3','f1c4','e1g1'], pieces:32, squares:{g1:'Rey',f1:'Torre'} },
     { name:'al-paso', black:['a7a6','d7d5','c7c6'], white:['e2e4','e4e5','e5d6'], pieces:31, squares:{d6:'Peón'}, empty:['d5'] },
-    { name:'promocion', black:['h7h5','h5h4','h4h3','h3g2','b8c6'], white:['a2a4','a4a5','a5a6','a6b7','b7a8'], pieces:29, squares:{a8:'Reina'}, promote:true },
+    { name:'promocion', black:['h7h5','h5h4','h4h3','h3g2','b8c6'], white:['a2a4','a4a5','a5a6','a6b7','b7a8'], pieces:29, squares:{a8:'Reina'}, promote:true, balance:12 },
     { name:'jaque-mate', black:['e7e5','d8h4'], white:['f2f3','g2g4'], pieces:32, mate:true },
   ];
   for (const fixture of cases) {
@@ -126,6 +126,10 @@ async function specialMoves(browser, width, height) {
       await page.waitForFunction(count=>document.querySelector('#review-position').textContent.includes(`${count} de ${count}`),(i+1)*2);
     }
     assert.equal(await page.locator('#board-2d .piece-token').count(),fixture.pieces);
+    if(fixture.balance){
+      assert.equal(await page.locator('#remaining-white .remaining-count').textContent(),`+${fixture.balance}`,'captured rook is worth four material points');
+      assert.equal(await page.locator('#remaining-black .remaining-count').textContent(),`-${fixture.balance}`);
+    }
     for(const [square,role] of Object.entries(fixture.squares||{})) assert.ok((await page.locator(`[data-square="${square}"]`).getAttribute('aria-label')).includes(role));
     for(const square of fixture.empty||[]) assert.equal(await page.locator(`[data-square="${square}"] .piece-token`).count(),0);
     if(fixture.mate) {
@@ -235,6 +239,9 @@ async function specialMoves(browser, width, height) {
         const art=await page.locator(`[data-square="${square}"] .piece-art`).boundingBox();
         assert.ok(art.x>=cell.x&&art.y>=cell.y&&art.x+art.width<=cell.x+cell.width+0.5&&art.y+art.height<=cell.y+cell.height+0.5,'PNG fits inside square');
       }
+      const pawn=await page.locator('[data-square="e2"] .piece-token').boundingBox();
+      const rook=await page.locator('[data-square="a1"] .piece-token').boundingBox();
+      assert.ok(pawn.height<rook.height*.94&&pawn.height>rook.height*.89,'pawns are subtly smaller in 2D');
       assert.equal(await page.locator('.piece-role').count(),0,'no role badges below pieces');
       await page.screenshot({path:path.join(output,`board2d-${width}x${height}.png`)});
       if(width===1440) {
