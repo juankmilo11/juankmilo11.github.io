@@ -11,6 +11,7 @@ de aplicación ni base de datos en este repositorio.
 | `index.html`, `styles.css`, `script.js` | Portada, reloj, fondos y ventanas con iframe | Directamente |
 | `img/` | Iconos y fondos de la portada | Recursos estáticos |
 | `pages/paula/` | PACA: página, estilos y filtros | Directamente; única fuente de PACA |
+| `projects/PACA/` | Selección del catálogo y preparación del material de Paula | Originales locales; recursos publicados en `pages/paula/assets/` |
 | `pages/sura/` | Página informativa inicial de SURA | Directamente |
 | `pages/construccion/` | Sección en construcción | Directamente |
 | `pages/fct/` | Redirección de la ruta antigua del juego | Conservar compatibilidad |
@@ -47,6 +48,8 @@ Desde la raíz:
 
 ```powershell
 node scripts/check-site.mjs
+node scripts/check-paca.mjs
+node scripts/test-paca-booking.cjs
 npm --prefix projects/FCT run build
 node scripts/check-site.mjs
 git diff --check

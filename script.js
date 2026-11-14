@@ -33,6 +33,7 @@ let indiceGif = -1;
 let zIndexVentana = 10;
 const ventanasAbiertas = new Set();
 const arrastres = new WeakMap();
+const enlacesOrigen = new WeakMap();
 
 function actualizarHora() {
   reloj.textContent = new Intl.DateTimeFormat("es-CO", {
@@ -97,14 +98,36 @@ function enfocarVentana(ventana) {
 }
 
 function cerrarVentana(ventana) {
+  const devolverFoco = document.activeElement === ventana.querySelector('iframe') || ventana.contains(document.activeElement);
   ventana.querySelector("iframe").src = "about:blank";
   ventana.remove();
   ventanasAbiertas.delete(ventana);
+  if (devolverFoco) enlacesOrigen.get(ventana)?.focus({ preventScroll: true });
 }
 
 function cerrarTodasLasVentanas() {
   [...ventanasAbiertas].forEach(cerrarVentana);
 }
+
+function idiomaVentanaPaca(ventana, idioma) {
+  const espanol = idioma === 'es';
+  ventana.dataset.pacaLanguage = espanol ? 'es' : 'en';
+  const nombre = espanol ? 'PACA | Paula Daniela · Estudio de belleza' : 'PACA | Paula Daniela · Beauty Studio';
+  ventana.querySelector('h2').textContent = nombre;
+  ventana.setAttribute('aria-label', nombre);
+  ventana.querySelector('iframe').title = nombre;
+  ventana.querySelector('.cerrar-ventana').setAttribute('aria-label', espanol ? 'Cerrar ventana PACA' : 'Close PACA window');
+  const ampliada = ventana.classList.contains('ventana-ampliada');
+  ventana.querySelector('.ampliar-ventana').setAttribute('aria-label', espanol
+    ? (ampliada ? 'Restaurar ventana PACA' : 'Ampliar ventana PACA')
+    : (ampliada ? 'Restore PACA window' : 'Expand PACA window'));
+}
+
+window.addEventListener('message', evento => {
+  if (evento.origin !== location.origin || evento.data?.type !== 'paca:language' || !['en','es'].includes(evento.data.language)) return;
+  const ventana = [...ventanasAbiertas].find(item => item.classList.contains('ventana-paca') && item.querySelector('iframe').contentWindow === evento.source);
+  if (ventana) idiomaVentanaPaca(ventana, evento.data.language);
+});
 
 function colocarVentanaAleatoriamente(ventana) {
   const maxLeft = Math.max(0, window.innerWidth - ventana.offsetWidth);
@@ -156,6 +179,31 @@ function crearVentana(enlace) {
 
   ventana.querySelector("h2").textContent =
     enlace.dataset.windowTitle || enlace.textContent.trim().replace(/\s+/g, " ");
+  const nombreVentana = ventana.querySelector('h2').textContent;
+  ventana.setAttribute('aria-label', nombreVentana);
+  iframe.title = nombreVentana;
+  enlacesOrigen.set(ventana, enlace);
+  if (enlace.getAttribute('href') === 'pages/paula/index.html') {
+    ventana.classList.add('ventana-paca');
+    const ampliar = document.createElement('button');
+    ampliar.type = 'button';
+    ampliar.className = 'ampliar-ventana';
+    ampliar.setAttribute('aria-label', 'Ampliar ventana PACA');
+    ampliar.setAttribute('aria-pressed', 'false');
+    ampliar.textContent = '↗';
+    const controles = document.createElement('div');
+    controles.className = 'controles-ventana';
+    controles.append(ampliar, ventana.querySelector('.cerrar-ventana'));
+    encabezado.append(controles);
+    idiomaVentanaPaca(ventana, 'en');
+    ampliar.addEventListener('click', () => {
+      const maximizada = ventana.classList.toggle('ventana-ampliada');
+      ampliar.setAttribute('aria-pressed', String(maximizada));
+      idiomaVentanaPaca(ventana, ventana.dataset.pacaLanguage);
+      ampliar.textContent = maximizada ? '↙' : '↗';
+      if (!maximizada) colocarVentanaAleatoriamente(ventana);
+    });
+  }
   encabezado.style.backgroundColor = enlace.dataset.barColor || "#333";
   iframe.src = enlace.getAttribute("href");
   document.body.append(ventana);

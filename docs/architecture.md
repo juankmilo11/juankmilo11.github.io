@@ -8,8 +8,13 @@ Los enlaces con `data-open-tab` abren otra pestaña (FCT); el resto abre ventana
 Al iniciar se abren las secciones estáticas de forma escalonada.
 
 Cada sección bajo `pages/` es independiente. PACA carga su propio CSS y JS,
-con filtros de servicios y animaciones. SURA y construcción contienen estilos
-locales. `pages/fct/index.html` preserva la ruta antigua con una redirección.
+con catálogo JSON de trabajos reales, filtros, búsqueda, visor de fotos/videos
+y formulario de solicitudes con copia y envío manual por Instagram. Su ventana
+es más amplia y puede maximizarse; el iframe conserva su diseño adaptable.
+`projects/PACA/` documenta la selección y prepara recursos; el archivo original
+y los informes completos se conservan locales y se excluyen de Git. SURA y
+construcción contienen estilos locales. `pages/fct/index.html` preserva la ruta
+antigua con una redirección.
 
 ## FCT
 

@@ -1,3 +1,6 @@
 **/node_modules/
 **/dist/
 .DS_Store
+# PACA: preserve the supplied archive locally; publish only the curated assets.
+/projects/PACA/paulaadaniiela/
+/projects/PACA/work/

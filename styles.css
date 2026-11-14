@@ -269,6 +269,21 @@ button { cursor: pointer; font: inherit; }
   background: #fff;
 }
 
+.ventana-paca {
+  width: min(1180px, calc(100vw - 28px));
+  height: min(820px, calc(100dvh - 32px));
+}
+.ventana-paca .barra-ventana { color: #1d191b; }
+.controles-ventana { display: flex; align-items: center; gap: 6px; }
+.ampliar-ventana { min-width: 28px; min-height: 26px; padding: 0; line-height: 1; font-size: 1.1rem; }
+.ventana-paca.ventana-ampliada {
+  width: calc(100vw - 12px);
+  height: calc(100dvh - 12px);
+  left: 6px!important;
+  top: 6px!important;
+  transform: none!important;
+}
+
 @keyframes rotacion_continua {
   to { transform: rotate(360deg); }
 }

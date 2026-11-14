@@ -1,0 +1,637 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "id": "hero-nails",
+      "category": "nails",
+      "title": "French & flowers",
+      "alt": "Pink French tips with raised floral details.",
+      "date": "2026-07-23",
+      "publication": "2026-07-23_14-41-57_UTC",
+      "src": "assets/hero-nails.webp",
+      "width": 1200,
+      "height": 1600,
+      "translations": {
+        "es": {
+          "title": "French y flores",
+          "alt": "Uñas con french rosado y flores en relieve."
+        }
+      }
+    },
+    {
+      "id": "nails-autumn",
+      "category": "nails",
+      "title": "Autumn mood",
+      "alt": "Brown-toned manicure with autumn details.",
+      "date": "2026-10-08",
+      "publication": "2026-10-08_18-12-36_UTC",
+      "src": "assets/nails-autumn.webp",
+      "width": 1200,
+      "height": 1600,
+      "translations": {
+        "es": {
+          "title": "Aire de otoño",
+          "alt": "Manicura en tonos marrones con detalles de otoño."
+        }
+      }
+    },
+    {
+      "id": "nails-summer",
+      "category": "nails",
+      "title": "Summer color",
+      "alt": "Multicolored nails with raised flowers and summer accents.",
+      "date": "2026-06-03",
+      "publication": "2026-06-03_16-24-40_UTC",
+      "src": "assets/nails-summer.webp",
+      "width": 1200,
+      "height": 1600,
+      "video": "assets/nails-motion.mp4",
+      "translations": {
+        "es": {
+          "title": "Colores de verano",
+          "alt": "Uñas multicolor con flores en relieve y acentos de verano."
+        }
+      }
+    },
+    {
+      "id": "nails-coral",
+      "category": "nails",
+      "title": "Coral bloom",
+      "alt": "Short coral nails with delicate white flowers.",
+      "date": "2026-04-21",
+      "publication": "2026-04-21_14-53-58_UTC",
+      "src": "assets/nails-coral.webp",
+      "width": 720,
+      "height": 960,
+      "translations": {
+        "es": {
+          "title": "Flores coral",
+          "alt": "Uñas cortas coral con delicadas flores blancas."
+        }
+      }
+    },
+    {
+      "id": "nails-red",
+      "category": "nails",
+      "title": "Red season",
+      "alt": "Red nails with white decorative details.",
+      "date": "2025-12-22",
+      "publication": "2025-12-22_15-52-29_UTC",
+      "src": "assets/nails-red.webp",
+      "width": 1400,
+      "height": 1464,
+      "translations": {
+        "es": {
+          "title": "Temporada roja",
+          "alt": "Uñas rojas con detalles decorativos blancos."
+        }
+      }
+    },
+    {
+      "id": "nails-valentine",
+      "category": "nails",
+      "title": "Love notes",
+      "alt": "Pink manicure with red hearts in different designs.",
+      "date": "2026-01-20",
+      "publication": "2026-01-20_16-08-00_UTC",
+      "src": "assets/nails-valentine.webp",
+      "width": 1400,
+      "height": 1400,
+      "translations": {
+        "es": {
+          "title": "Notas de amor",
+          "alt": "Manicura rosa con corazones rojos en distintos diseños."
+        }
+      }
+    },
+    {
+      "id": "nails-pink",
+      "category": "nails",
+      "title": "Pink romance",
+      "alt": "Long pink nails with bows and delicate details.",
+      "date": "2026-02-23",
+      "publication": "2026-02-23_03-37-16_UTC",
+      "src": "assets/nails-pink.webp",
+      "width": 1400,
+      "height": 1400,
+      "translations": {
+        "es": {
+          "title": "Romance rosa",
+          "alt": "Uñas largas en rosa con lazos y detalles delicados."
+        }
+      }
+    },
+    {
+      "id": "nails-cat-eye",
+      "category": "nails",
+      "title": "Cat eye & chrome",
+      "alt": "Cat-eye manicure with chrome accents.",
+      "date": "2026-02-24",
+      "publication": "2026-02-24_22-02-59_UTC",
+      "src": "assets/nails-cat-eye.webp",
+      "width": 640,
+      "height": 1136,
+      "translations": {
+        "es": {
+          "title": "Ojo de gato y cromo",
+          "alt": "Manicura con efecto cat eye y acentos cromados."
+        }
+      }
+    },
+    {
+      "id": "nails-chrome",
+      "category": "nails",
+      "title": "French chrome",
+      "alt": "French manicure with a shiny chrome finish.",
+      "date": "2026-02-25",
+      "publication": "2026-02-25_18-51-57_UTC",
+      "src": "assets/nails-chrome.webp",
+      "width": 640,
+      "height": 1136,
+      "translations": {
+        "es": {
+          "title": "French cromado",
+          "alt": "Manicura french con acabado cromado brillante."
+        }
+      }
+    },
+    {
+      "id": "nails-citrus",
+      "category": "nails",
+      "title": "Citrus flowers",
+      "alt": "Orange and yellow gradient nails decorated with white flowers.",
+      "date": "2025-06-03",
+      "publication": "2025-06-03_12-26-21_UTC",
+      "src": "assets/nails-citrus.webp",
+      "width": 1148,
+      "height": 1530,
+      "translations": {
+        "es": {
+          "title": "Flores cítricas",
+          "alt": "Uñas con degradado naranja y amarillo, decoradas con flores blancas."
+        }
+      }
+    },
+    {
+      "id": "nails-floral",
+      "category": "nails",
+      "title": "Floral details",
+      "alt": "Pink nails with small hand-painted flowers.",
+      "date": "2025-05-29",
+      "publication": "2025-05-29_00-16-06_UTC",
+      "src": "assets/nails-floral.webp",
+      "width": 720,
+      "height": 1280,
+      "translations": {
+        "es": {
+          "title": "Detalles florales",
+          "alt": "Uñas rosas con flores pequeñas pintadas a mano."
+        }
+      }
+    },
+    {
+      "id": "nails-white",
+      "category": "nails",
+      "title": "White on nude",
+      "alt": "Nude-base nails with white floral designs.",
+      "date": "2025-10-06",
+      "publication": "2025-10-06_01-04-23_UTC",
+      "src": "assets/nails-white.webp",
+      "width": 640,
+      "height": 1136,
+      "translations": {
+        "es": {
+          "title": "Blanco sobre nude",
+          "alt": "Uñas con base nude y diseños florales blancos."
+        }
+      }
+    },
+    {
+      "id": "nails-berry",
+      "category": "nails",
+      "title": "Berry energy",
+      "alt": "Fuchsia and wine-colored nails with contrasting details.",
+      "date": "2025-10-06",
+      "publication": "2025-10-06_01-32-37_UTC",
+      "src": "assets/nails-berry.webp",
+      "width": 1400,
+      "height": 1421,
+      "translations": {
+        "es": {
+          "title": "Energía fucsia",
+          "alt": "Uñas en fucsia y vino con detalles en contraste."
+        }
+      }
+    },
+    {
+      "id": "nails-green",
+      "category": "nails",
+      "title": "French garden",
+      "alt": "French manicure with floral decorations and green leaves.",
+      "date": "2025-08-28",
+      "publication": "2025-08-28_14-35-59_UTC",
+      "src": "assets/nails-green.webp",
+      "width": 1072,
+      "height": 1072,
+      "translations": {
+        "es": {
+          "title": "Jardín french",
+          "alt": "Manicura french con adornos florales y hojas verdes."
+        }
+      }
+    },
+    {
+      "id": "nails-blue",
+      "category": "nails",
+      "title": "Ice blue",
+      "alt": "Light blue acrylic nails with a glossy finish.",
+      "date": "2022-03-17",
+      "publication": "2022-03-17_02-31-20_UTC",
+      "src": "assets/nails-blue.webp",
+      "width": 720,
+      "height": 720,
+      "translations": {
+        "es": {
+          "title": "Azul hielo",
+          "alt": "Uñas acrílicas azul claro con acabado brillante."
+        }
+      }
+    },
+    {
+      "id": "nails-smile",
+      "category": "nails",
+      "title": "Happy details",
+      "alt": "Lilac and blue nails with little smiley faces and playful motifs.",
+      "date": "2022-04-08",
+      "publication": "2022-04-08_00-37-42_UTC",
+      "src": "assets/nails-smile.webp",
+      "width": 720,
+      "height": 720,
+      "translations": {
+        "es": {
+          "title": "Detalles felices",
+          "alt": "Uñas lila y azul con pequeñas caritas y motivos divertidos."
+        }
+      }
+    },
+    {
+      "id": "nails-animal",
+      "category": "nails",
+      "title": "Wild touch",
+      "alt": "Animal-print manicure with white nails.",
+      "date": "2022-04-17",
+      "publication": "2022-04-17_17-44-25_UTC",
+      "src": "assets/nails-animal.webp",
+      "width": 720,
+      "height": 720,
+      "translations": {
+        "es": {
+          "title": "Toque salvaje",
+          "alt": "Manicura con estampado animal y uñas blancas."
+        }
+      }
+    },
+    {
+      "id": "nails-daisy",
+      "category": "nails",
+      "title": "Blue daisies",
+      "alt": "Light blue manicure with daisies and black-and-white patterns.",
+      "date": "2022-06-02",
+      "publication": "2022-06-02_01-12-26_UTC",
+      "src": "assets/nails-daisy.webp",
+      "width": 1080,
+      "height": 1080,
+      "translations": {
+        "es": {
+          "title": "Margaritas azules",
+          "alt": "Manicura azul claro con margaritas y estampados en blanco y negro."
+        }
+      }
+    },
+    {
+      "id": "nails-sky",
+      "category": "nails",
+      "title": "Sky blue",
+      "alt": "Long pastel blue nails with white details.",
+      "date": "2022-06-13",
+      "publication": "2022-06-13_00-29-13_UTC",
+      "src": "assets/nails-sky.webp",
+      "width": 900,
+      "height": 1600,
+      "translations": {
+        "es": {
+          "title": "Azul cielo",
+          "alt": "Uñas largas en azul pastel con detalles blancos."
+        }
+      }
+    },
+    {
+      "id": "nails-pink-french",
+      "category": "nails",
+      "title": "Pink French",
+      "alt": "Pink French nails with a glossy finish.",
+      "date": "2022-08-23",
+      "publication": "2022-08-23_17-28-24_UTC",
+      "src": "assets/nails-pink-french.webp",
+      "width": 900,
+      "height": 1600,
+      "translations": {
+        "es": {
+          "title": "French rosa",
+          "alt": "Uñas french rosa con acabado brillante."
+        }
+      }
+    },
+    {
+      "id": "nails-black",
+      "category": "nails",
+      "title": "Dark lines",
+      "alt": "Black and nude nails with line art.",
+      "date": "2023-01-20",
+      "publication": "2023-01-20_17-28-06_UTC",
+      "src": "assets/nails-black.webp",
+      "width": 900,
+      "height": 1600,
+      "translations": {
+        "es": {
+          "title": "Líneas oscuras",
+          "alt": "Uñas negras y nude con arte de líneas."
+        }
+      }
+    },
+    {
+      "id": "nails-polka",
+      "category": "nails",
+      "title": "Polka dots",
+      "alt": "Brown and light blue manicure with polka dots.",
+      "date": "2026-10-11",
+      "publication": "2026-10-11_21-58-01_UTC",
+      "src": "assets/nails-polka.webp",
+      "width": 720,
+      "height": 1280,
+      "translations": {
+        "es": {
+          "title": "Lunares",
+          "alt": "Manicura marrón y azul claro con lunares."
+        }
+      }
+    },
+    {
+      "id": "hero-tattoo",
+      "category": "tattoo",
+      "title": "Botanical ink",
+      "alt": "Black ink tattoo of a floral branch, leaves and a butterfly.",
+      "date": "2025-04-15",
+      "publication": "2025-04-15_16-31-18_UTC",
+      "src": "assets/hero-tattoo.webp",
+      "width": 720,
+      "height": 900,
+      "translations": {
+        "es": {
+          "title": "Tinta botánica",
+          "alt": "Tatuaje floral con rama, hojas y mariposa en tinta negra."
+        }
+      }
+    },
+    {
+      "id": "tattoo-faith",
+      "category": "tattoo",
+      "title": "Lines with meaning",
+      "alt": "Black ink cross tattoo with a calligraphic detail.",
+      "date": "2023-01-23",
+      "publication": "2023-01-23_21-49-43_UTC",
+      "src": "assets/tattoo-faith.webp",
+      "width": 1400,
+      "height": 1374,
+      "translations": {
+        "es": {
+          "title": "Líneas con sentido",
+          "alt": "Tatuaje de cruz con detalle caligráfico en tinta negra."
+        }
+      }
+    },
+    {
+      "id": "tattoo-lettering",
+      "category": "tattoo",
+      "title": "A phrase, a story",
+      "alt": "Fine-script phrase tattoo on the forearm.",
+      "date": "2023-10-01",
+      "publication": "2023-10-01_20-17-20_UTC",
+      "src": "assets/tattoo-lettering.webp",
+      "width": 1318,
+      "height": 1354,
+      "translations": {
+        "es": {
+          "title": "Una frase, una historia",
+          "alt": "Tatuaje de una frase en escritura fina sobre el antebrazo."
+        }
+      }
+    },
+    {
+      "id": "tattoo-name",
+      "category": "tattoo",
+      "title": "Lettering",
+      "alt": "A name tattooed in calligraphy on the arm.",
+      "date": "2023-10-31",
+      "publication": "2023-10-31_04-01-20_UTC",
+      "src": "assets/tattoo-name.webp",
+      "width": 720,
+      "height": 1280,
+      "translations": {
+        "es": {
+          "title": "Caligrafía",
+          "alt": "Nombre tatuado en caligrafía sobre el brazo."
+        }
+      }
+    },
+    {
+      "id": "tattoo-paw",
+      "category": "tattoo",
+      "title": "Lasting paw prints",
+      "alt": "Black ink animal paw-print tattoo.",
+      "date": "2024-05-12",
+      "publication": "2024-05-12_21-02-03_UTC",
+      "src": "assets/tattoo-paw.webp",
+      "width": 1283,
+      "height": 1283,
+      "translations": {
+        "es": {
+          "title": "Huellas que quedan",
+          "alt": "Tatuaje de huella de animal en tinta negra."
+        }
+      }
+    },
+    {
+      "id": "tattoo-flowers",
+      "category": "tattoo",
+      "title": "To remember",
+      "alt": "Fine-line tattoo with a name, flowers and a silhouette.",
+      "date": "2024-10-12",
+      "publication": "2024-10-12_13-30-34_UTC",
+      "src": "assets/tattoo-flowers.webp",
+      "width": 1239,
+      "height": 1239,
+      "translations": {
+        "es": {
+          "title": "Para recordar",
+          "alt": "Tatuaje con nombre, flores y silueta en líneas finas."
+        }
+      }
+    },
+    {
+      "id": "tattoo-fine-line",
+      "category": "tattoo",
+      "title": "Fine line",
+      "alt": "Fine-line figure and floral tattoo on the back.",
+      "date": "2026-03-25",
+      "publication": "2026-03-25_14-36-37_UTC",
+      "src": "assets/tattoo-fine-line.webp",
+      "width": 640,
+      "height": 1136,
+      "translations": {
+        "es": {
+          "title": "Línea fina",
+          "alt": "Tatuaje de figura y flores en líneas finas sobre la espalda."
+        }
+      }
+    },
+    {
+      "id": "tattoo-match",
+      "category": "tattoo",
+      "title": "Matching ink",
+      "alt": "Small line-art heart tattoo on the arm.",
+      "date": "2026-10-11",
+      "publication": "2026-10-11_21-49-20_UTC",
+      "src": "assets/tattoo-match.webp",
+      "width": 900,
+      "height": 1600,
+      "video": "assets/tattoo-motion.mp4",
+      "translations": {
+        "es": {
+          "title": "Tinta compartida",
+          "alt": "Tatuaje pequeño de corazones en línea sobre el brazo."
+        }
+      }
+    },
+    {
+      "id": "hero-pmu",
+      "category": "pmu",
+      "title": "Ombré brows",
+      "alt": "Before-and-after comparison of permanent eyebrow makeup.",
+      "date": null,
+      "publication": "PMU4",
+      "src": "assets/hero-pmu.webp",
+      "width": 900,
+      "height": 1600,
+      "translations": {
+        "es": {
+          "title": "Cejas ombré",
+          "alt": "Comparación antes y después de unas cejas con maquillaje permanente."
+        }
+      }
+    },
+    {
+      "id": "pmu-lips",
+      "category": "pmu",
+      "title": "Lip neutralization",
+      "alt": "Before-and-after comparison of lip neutralization.",
+      "date": null,
+      "publication": "PMU5",
+      "src": "assets/pmu-lips.webp",
+      "width": 900,
+      "height": 1600,
+      "video": "assets/pmu-motion.mp4",
+      "translations": {
+        "es": {
+          "title": "Neutralización de labios",
+          "alt": "Comparación antes y después de neutralización de labios."
+        }
+      }
+    },
+    {
+      "id": "pmu-eyeliner",
+      "category": "pmu",
+      "title": "Soft eyeliner",
+      "alt": "Close-up of soft eyeliner on the upper eyelid.",
+      "date": "2025-11-29",
+      "publication": "2025-11-29_17-08-20_UTC",
+      "src": "assets/pmu-eyeliner.webp",
+      "width": 640,
+      "height": 1136,
+      "translations": {
+        "es": {
+          "title": "Delineado suave",
+          "alt": "Detalle de delineado suave en el párpado superior."
+        }
+      }
+    },
+    {
+      "id": "makeup-social",
+      "category": "makeup",
+      "title": "Event makeup",
+      "alt": "Event makeup with softly shaded eyeshadow.",
+      "date": "2021-03-10",
+      "publication": "2021-03-10_01-57-28_UTC",
+      "src": "assets/makeup-social.webp",
+      "width": 480,
+      "height": 480,
+      "translations": {
+        "es": {
+          "title": "Maquillaje social",
+          "alt": "Maquillaje social con sombras en tonos suaves."
+        }
+      }
+    },
+    {
+      "id": "makeup-art",
+      "category": "makeup",
+      "title": "Art makeup",
+      "alt": "Colorful artistic skull makeup.",
+      "date": "2021-10-31",
+      "publication": "2021-10-31_05-59-54_UTC",
+      "src": "assets/makeup-art.webp",
+      "width": 1080,
+      "height": 1080,
+      "translations": {
+        "es": {
+          "title": "Maquillaje artístico",
+          "alt": "Maquillaje artístico de calavera con colores vivos."
+        }
+      }
+    },
+    {
+      "id": "hair-braids",
+      "category": "hair",
+      "title": "Braids",
+      "alt": "Long braids with decorative details.",
+      "date": "2021-01-17",
+      "publication": "2021-01-17_00-25-42_UTC",
+      "src": "assets/hair-braids.webp",
+      "width": 704,
+      "height": 880,
+      "translations": {
+        "es": {
+          "title": "Trenzas",
+          "alt": "Peinado de trenzas largas con detalles decorativos."
+        }
+      }
+    },
+    {
+      "id": "hair-color",
+      "category": "hair",
+      "title": "Color & style",
+      "alt": "Long straight hair with vivid red color.",
+      "date": "2021-11-08",
+      "publication": "2021-11-08_15-22-36_UTC",
+      "src": "assets/hair-color.webp",
+      "width": 1080,
+      "height": 1080,
+      "translations": {
+        "es": {
+          "title": "Color y estilo",
+          "alt": "Cabello largo liso con coloración roja intensa."
+        }
+      }
+    }
+  ]
+}
