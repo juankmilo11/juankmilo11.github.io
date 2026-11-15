@@ -11,8 +11,8 @@
     bindings.push({node,source,original:node.nodeValue});
   }
   const attributes = [];
-  document.querySelectorAll('[aria-label],[title],[placeholder],meta[name="description"]').forEach(element => {
-    for (const attribute of ['aria-label','title','placeholder','content']) {
+  document.querySelectorAll('[aria-label],[title],[placeholder],[alt],meta[name="description"]').forEach(element => {
+    for (const attribute of ['aria-label','title','placeholder','alt','content']) {
       const source=element.getAttribute(attribute);
       if(source && Object.hasOwn(locales.staticText,source))attributes.push({element,attribute,source});
     }

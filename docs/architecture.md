@@ -15,7 +15,12 @@ El botón de color interrumpe el ciclo durante cinco segundos y después lo reto
 
 Cada sección bajo `pages/` es independiente. PACA carga su propio CSS y JS,
 con catálogo JSON de trabajos reales, filtros, búsqueda, visor de fotos/videos
-y formulario de solicitudes con copia y envío manual por Instagram. Su ventana
+y formulario de solicitudes con copia y envío manual por Instagram.
+La agenda manual vive en `pages/paula/assets/availability.json`;
+`schedule.js` valida horarios y solapamientos, `agenda.js` construye el calendario
+y `agenda.html` permite preparar un archivo actualizado para publicarlo. Las
+solicitudes no bloquean espacios hasta que Paula confirme la cita y registre
+el horario ocupado. Su ventana
 es más amplia y puede maximizarse; el iframe conserva su diseño adaptable.
 `projects/PACA/` documenta la selección y prepara recursos; el archivo original
 y los informes completos se conservan locales y se excluyen de Git. LBDSEGUROS

@@ -2,9 +2,9 @@
   'use strict';
   document.documentElement.classList.remove('no-js');
   const $ = selector => document.querySelector(selector);
-  const I = window.PacaI18n, t = I.t;
+  const I = window.PacaI18n, t = I.t, icons = window.PacaIcons;
   const labels = {};
-  const syncLabels=()=>['nails','tattoo','pmu','makeup','hair'].forEach(key=>{labels[key]=t(key);});
+  const syncLabels=()=>['nails','tattoo','pmu','makeup'].forEach(key=>{labels[key]=t(key);});
   syncLabels();
   window.initPacaBooking();
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -15,7 +15,8 @@
     motion.setAttribute('aria-pressed', String(paused));
     motion.setAttribute('aria-label', t(paused ? 'resume' : 'pause'));
     motion.title = motion.getAttribute('aria-label');
-    motion.textContent = paused ? '▷' : 'Ⅱ';
+    motion.replaceChildren(icons.create(paused ? 'play' : 'pause'));
+    document.dispatchEvent(new CustomEvent('paca:motion'));
   }
   syncMotion();
   motion.addEventListener('click', () => { paused = !paused; syncMotion(); });
@@ -29,7 +30,12 @@
     const image = new Image();
     image.onload = () => {
       if (request !== heroRequest) return;
-      heroKey=key;hero.src = image.src; hero.alt = t('hero.'+key);
+      heroKey=key;
+      const previous=hero.cloneNode();previous.removeAttribute('id');previous.alt='';previous.setAttribute('aria-hidden','true');previous.classList.add('hero-previous');
+      hero.parentElement.querySelectorAll('.hero-previous').forEach(item=>item.remove());
+      if(!paused&&!reduced.matches)hero.after(previous);
+      hero.src=image.src;hero.alt=t('hero.'+key);
+      if(previous.isConnected){const fade=previous.animate([{opacity:1},{opacity:0}],{duration:850,easing:'ease-in-out',fill:'forwards'});fade.finished.then(()=>previous.remove()).catch(()=>previous.remove());}
       document.querySelectorAll('[data-hero]').forEach(item => {
         item.classList.toggle('is-active', item === button);
         item.setAttribute('aria-pressed', String(item === button));
@@ -59,25 +65,25 @@
   const normalize = text => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   function curatedOrder(all) {
     const buckets = Object.fromEntries(Object.keys(labels).map(key => [key, all.filter(item => item.category === key)]));
-    const result = [], pattern = ['nails','tattoo','pmu','nails','makeup','tattoo','nails','hair','nails'];
+    const result = [], pattern = ['nails','tattoo','pmu','nails','makeup','tattoo','nails','makeup','nails'];
     while (Object.values(buckets).some(bucket => bucket.length)) for (const key of pattern) if(buckets[key].length) result.push(buckets[key].shift());
     return result;
   }
   function render() {
     const query = normalize(search.value.trim());
-    filtered = entries.filter(entry => (category === 'all' || entry.category === category || (category === 'beauty' && ['makeup','hair'].includes(entry.category))) && normalize(`${entry.title} ${entry.alt} ${entry.translations.es.title} ${entry.translations.es.alt} ${t(entry.category,{},'en')} ${t(entry.category,{},'es')}`).includes(query)).map(entry=>I.entry(entry));
+    filtered = entries.filter(entry => (category === 'all' || entry.category === category || (category === 'beauty' && entry.category==='makeup')) && normalize(`${entry.title} ${entry.alt} ${entry.translations.es.title} ${entry.translations.es.alt} ${t(entry.category,{},'en')} ${t(entry.category,{},'es')}`).includes(query)).map(entry=>I.entry(entry));
     const visible = filtered.slice(0,limit);
     grid.replaceChildren(...visible.map((entry,index) => {
-      const article = document.createElement('article'); article.className='work-card';
+      const article = document.createElement('article'); article.className='work-card';article.style.setProperty('--reveal-order',index%3);
       const button = document.createElement('button'); button.type='button';button.className='work-open';button.setAttribute('aria-label',t('view',{title:entry.title,category:labels[entry.category]}));
       const frame=document.createElement('div');frame.className='work-image';
       const img=document.createElement('img');img.src=entry.src;img.alt=entry.alt;img.width=entry.width;img.height=entry.height;img.loading='lazy';img.decoding='async';
       frame.append(img);
-      const overlay=document.createElement('span');overlay.className='work-overlay';overlay.setAttribute('aria-hidden','true');const overlayText=document.createElement('span');overlayText.textContent=t('viewWork');overlay.append(overlayText);frame.append(overlay);
-      if(entry.video){const badge=document.createElement('span');badge.className='work-badge';badge.textContent=t('videoBadge');frame.append(badge);}
+      const overlay=document.createElement('span');overlay.className='work-overlay';overlay.setAttribute('aria-hidden','true');const overlayText=document.createElement('span');icons.label(overlayText,t('viewWork'),'arrow-up-right');overlay.append(overlayText);frame.append(overlay);
+      if(entry.video){const badge=document.createElement('span');badge.className='work-badge';icons.label(badge,t('videoBadge'),'play');frame.append(badge);}
       const meta=document.createElement('div');meta.className='work-meta';
       const copy=document.createElement('div'),title=document.createElement('h3'),tag=document.createElement('p');title.textContent=entry.title;tag.textContent=labels[entry.category];copy.append(title,tag);
-      const arrow=document.createElement('span');arrow.className='work-arrow';arrow.textContent='↗';arrow.setAttribute('aria-hidden','true');meta.append(copy,arrow);
+      const arrow=document.createElement('span');arrow.className='work-arrow';arrow.append(icons.create('arrow-up-right'));arrow.setAttribute('aria-hidden','true');meta.append(copy,arrow);
       button.append(frame,meta);article.append(button);button.addEventListener('click',()=>openWork(index,button));return article;
     }));
     grid.querySelectorAll('.work-card').forEach(reveal);
@@ -106,11 +112,11 @@
     $('#work-count').textContent=`${activeIndex+1} / ${filtered.length}`;
     const old=$('#work-video');if(old)old.remove();
     if(entry.video){
-      const videoButton=document.createElement('button');videoButton.id='work-video';videoButton.className='text-button';videoButton.type='button';videoButton.textContent=t('watchVideo');
+      const videoButton=document.createElement('button');videoButton.id='work-video';videoButton.className='text-button';videoButton.type='button';icons.label(videoButton,t('watchVideo'),'play');
       $('#work-description').after(videoButton);
       videoButton.addEventListener('click',()=>{
         if(media.querySelector('video')){displayWork();return;}
-        stopMedia();const video=document.createElement('video');video.src=entry.video;video.poster=entry.src;video.controls=true;video.playsInline=true;video.preload='metadata';video.setAttribute('aria-label',t('videoLabel',{title:entry.title}));media.append(video);videoButton.textContent=t('backPhoto');
+        stopMedia();const video=document.createElement('video');video.src=entry.video;video.poster=entry.src;video.controls=true;video.playsInline=true;video.preload='metadata';video.setAttribute('aria-label',t('videoLabel',{title:entry.title}));media.append(video);icons.label(videoButton,t('backPhoto'),'arrow-up-right');
       });
     }
   }
@@ -128,7 +134,7 @@
   $('#work-book').addEventListener('click',()=>{
     const entry=filtered[activeIndex];
     const source=entries.find(item=>item.id===entry.id);
-    pendingBooking={service:['hair','makeup'].includes(entry.category)?'beauty':entry.category,reference:{en:source.title,es:source.translations.es.title}};dialog.close();
+    pendingBooking={service:entry.category==='makeup'?'beauty':entry.category,reference:{en:source.title,es:source.translations.es.title}};dialog.close();
   });
   async function loadCatalog(){
     try{
@@ -141,7 +147,7 @@
   function syncEmpty(){
     $('#catalog-empty h3').textContent=t(loadFailed?'retryTitle':'emptyTitle');
     $('#catalog-empty p').textContent=t(loadFailed?'retryText':'emptyText');
-    $('#catalog-reset').textContent=t(loadFailed?'retry':'resetCatalog');
+    icons.label($('#catalog-reset'),t(loadFailed?'retry':'resetCatalog'),'arrow-up-right');
     if(loadFailed)$('#catalog-status').textContent=t('catalogError');
   }
   document.addEventListener('paca:language',()=>{

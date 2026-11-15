@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "entries": [
     {
       "id": "hero-nails",
@@ -596,40 +596,6 @@
         "es": {
           "title": "Maquillaje artístico",
           "alt": "Maquillaje artístico de calavera con colores vivos."
-        }
-      }
-    },
-    {
-      "id": "hair-braids",
-      "category": "hair",
-      "title": "Braids",
-      "alt": "Long braids with decorative details.",
-      "date": "2021-01-17",
-      "publication": "2021-01-17_00-25-42_UTC",
-      "src": "assets/hair-braids.webp",
-      "width": 704,
-      "height": 880,
-      "translations": {
-        "es": {
-          "title": "Trenzas",
-          "alt": "Peinado de trenzas largas con detalles decorativos."
-        }
-      }
-    },
-    {
-      "id": "hair-color",
-      "category": "hair",
-      "title": "Color & style",
-      "alt": "Long straight hair with vivid red color.",
-      "date": "2021-11-08",
-      "publication": "2021-11-08_15-22-36_UTC",
-      "src": "assets/hair-color.webp",
-      "width": 1080,
-      "height": 1080,
-      "translations": {
-        "es": {
-          "title": "Color y estilo",
-          "alt": "Cabello largo liso con coloración roja intensa."
         }
       }
     }

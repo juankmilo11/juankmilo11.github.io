@@ -21,3 +21,10 @@ test('every catalog item retains English source copy and Spanish translations in
   assert.ok(entry.translations.es.title&&entry.translations.es.alt,entry.id);
  }
 });
+test('every customer-facing text and accessible label has Spanish copy',()=>{
+ const html=fs.readFileSync('pages/paula/index.html','utf8').replace(/<script[\s\S]*?<\/script>/g,'');
+ const brand=new Set(['PAULA','DANIELA','PAULA DANIELA','paca','EN','ES','English','Español','@paulaadaniiela']);
+ const texts=html.split(/<[^>]*>/).map(text=>text.trim()).filter(text=>/[a-zA-Z]/.test(text));
+ for(const match of html.matchAll(/(?:aria-label|placeholder|alt|title)="([^"]+)"/g))texts.push(match[1]);
+ for(const text of texts)assert.ok(brand.has(text)||Object.hasOwn(copy.staticText,text),`Missing Spanish translation: ${text}`);
+});

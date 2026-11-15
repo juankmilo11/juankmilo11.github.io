@@ -11,9 +11,9 @@ las imágenes en siete hojas de contacto. El inventario y la clasificación
 orientativa de todo el archivo están en `work/`; los videos no seleccionados
 pueden requerir revisión adicional.
 
-La selección web contiene 37 trabajos: 22 uñas, 8 tatuajes, 3 maquillaje
-permanente, 2 maquillaje y 2 cabello. Incluye 38 WebP (con retrato de Paula)
-y tres videos cortos, unos 5.74 MiB en total. Se corrigió orientación y tamaño;
+La selección web contiene 35 trabajos: 22 uñas, 8 tatuajes, 3 maquillaje
+permanente y 2 maquillaje. Incluye 36 WebP (con retrato de Paula)
+y tres videos cortos. Se corrigió orientación y tamaño;
 no se retocaron piel, diseños ni resultados. Se descartaron duplicados,
 promociones antiguas, precios históricos, certificados y fotos familiares.
 
@@ -32,7 +32,7 @@ node scripts/check-paca.mjs
 ```
 
 La selección usa rutas de origen estables. Para añadir un trabajo, incluirlo
-en `selection.json` con categoría `nails`, `tattoo`, `pmu`, `makeup` o `hair`,
+en `selection.json` con categoría `nails`, `tattoo`, `pmu`, `makeup`,
 título y descripción visual, y volver a preparar. El retrato tiene categoría
 `null` porque no es una tarjeta del catálogo. Una alternativa es editar
 `pages/paula/assets/catalog.json` y añadir directamente un recurso optimizado.
@@ -52,3 +52,7 @@ continuo pausable y exploración visual. No se reutilizaron sus recursos.
 El inglés es el idioma original de `title` y `alt`; cada selección incluye
 `translations.es` con sus equivalentes en español. Al añadir trabajos, completar
 ambos idiomas para que el selector EN / ES cubra también el catálogo.
+
+Trenzas y coloración de cabello se retiraron de la selección publicada y de
+`selection.json`; no deben regenerarse como servicios disponibles. Los
+originales permanecen en el archivo local.

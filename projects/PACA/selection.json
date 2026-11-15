@@ -531,36 +531,6 @@
     }
   },
   {
-    "id": "hair-braids",
-    "category": "hair",
-    "title": "Braids",
-    "alt": "Long braids with decorative details.",
-    "source": "projects/PACA/paulaadaniiela/2021-01-17_00-25-42_UTC_2.jpg",
-    "date": "2021-01-17",
-    "publication": "2021-01-17_00-25-42_UTC",
-    "translations": {
-      "es": {
-        "title": "Trenzas",
-        "alt": "Peinado de trenzas largas con detalles decorativos."
-      }
-    }
-  },
-  {
-    "id": "hair-color",
-    "category": "hair",
-    "title": "Color & style",
-    "alt": "Long straight hair with vivid red color.",
-    "source": "projects/PACA/paulaadaniiela/2021-11-08_15-22-36_UTC_2.jpg",
-    "date": "2021-11-08",
-    "publication": "2021-11-08_15-22-36_UTC",
-    "translations": {
-      "es": {
-        "title": "Color y estilo",
-        "alt": "Cabello largo liso con coloración roja intensa."
-      }
-    }
-  },
-  {
     "id": "portrait-paula",
     "category": null,
     "title": "Paula Daniela",

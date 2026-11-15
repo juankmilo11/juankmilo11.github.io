@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "timeZone": "America/New_York",
+  "updatedAt": "2026-11-15",
+  "open": "07:00",
+  "close": "19:00",
+  "weekdays": [1, 2, 3, 4, 5],
+  "slotMinutes": 30,
+  "horizonDays": 60,
+  "durationMinutes": {"fullSet": null, "fill": null, "removalOnly": null, "nails": null, "tattoo": null, "pmu": null, "beauty": null, "consultation": null},
+  "removalMinutes": null,
+  "closedDates": [],
+  "blocked": []
+}
