@@ -284,8 +284,8 @@ enlaces.forEach((enlace) => {
 function cambiarVelocidad() {
   const velocidad = velocidades[velocidadActual];
   document.documentElement.style.setProperty("--rotation-speed", velocidad);
-  escenario.title = `Reactivar GIF · glitch · rotación: ${velocidad}`;
-  escenario.setAttribute("aria-label", `Yin Yang: reactivar GIF, animar el título y cambiar velocidad. Rotación actual: ${velocidad}`);
+  escenario.title = "btn_2";
+  escenario.setAttribute("aria-label", "btn_2");
   velocidadActual = (velocidadActual + 1) % velocidades.length;
 }
 
