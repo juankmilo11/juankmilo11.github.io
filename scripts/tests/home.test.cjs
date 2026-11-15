@@ -241,7 +241,7 @@ test('one shuffled rotation visits all nine GIFs and never immediately repeats a
   for (let index = 1; index < shown.length; index++) assert.notEqual(shown[index], shown[index - 1]);
 });
 
-test('a random color cancels an in-flight swap and the automatic GIF sequence resumes', async () => {
+test('color mode persists until Yin Yang resumes GIFs without opening windows', async () => {
   const page = browser({ imageDelay: 2000 });
   await page.advance(500);
   page.click('.boton_color');
@@ -251,7 +251,12 @@ test('a random color cancels an in-flight swap and the automatic GIF sequence re
   assert.equal(page.document.body.classList.contains('fondo-gif'), false, 'A stale image load must not overwrite the selected color');
   assert.equal(page.document.documentElement.style.getPropertyValue('--page-bg'), color);
   await page.advance(7000);
-  assert.equal(page.document.body.classList.contains('fondo-gif'), true, 'Color mode must eventually return to automatic GIFs');
+  assert.equal(page.document.body.classList.contains('fondo-gif'), false);
+  assert.equal(page.controls['.boton_color'].getAttribute('aria-pressed'),'true');
+  page.click('.escenario');await page.advance(1000);
+  assert.equal(page.document.body.classList.contains('fondo-gif'),true);
+  assert.equal(page.controls['.boton_color'].getAttribute('aria-pressed'),'false');
+  assert.equal(page.windows().length,0);
 });
 
 test('unavailable GIFs leave the page visible and retry without opening windows', async () => {
@@ -262,41 +267,17 @@ test('unavailable GIFs leave the page visible and retry without opening windows'
   assert.ok(page.images.length >= 2, 'Failures must not stop the rotation permanently');
 });
 
-test('Yin Yang opens internal windows once, changes speed, and never opens FCT automatically', async () => {
-  const page = browser();
-  page.click('.escenario');
-  page.click('.escenario');
-  page.click('.escenario');
-  await page.advance(2399);
-  assert.equal(page.windows().length, 0, 'Pending windows leave the title glitch visible for 2.4 seconds');
-  await page.advance(1);
-  assert.equal(page.windows().length, 1, 'The first window opens after the glitch');
-  await page.advance(600);
-  assert.equal(page.windows().length, 2, 'Repeated clicks must reuse windows and cancel duplicate stagger timers');
-  const urls = page.windows().map(item => item.querySelector('iframe').src).sort();
-  assert.deepEqual(urls, ['pages/paula/index.html', 'pages/sura/index.html']);
-  assert.equal(page.document.documentElement.style.getPropertyValue('--rotation-speed'), '0.5s');
-  page.click('.escenario');
-  assert.equal(page.windows().length, 2, 'Existing windows are reused immediately');
-  await page.advance(3000);
-  assert.equal(page.document.documentElement.style.getPropertyValue('--rotation-speed'), '30s');
-  assert.equal(page.windows().length, 2);
-  const fctClick = page.links[2].dispatch('click');
-  assert.equal(Boolean(fctClick.defaultPrevented), false, 'FCT retains normal new-tab navigation');
+test('Yin Yang changes speed without opening windows or disturbing an active GIF cycle', async () => {
+  const page=browser();await page.advance(1000);const first=shownGif(page);
+  page.click('.escenario');page.click('.escenario');page.click('.escenario');
+  await page.advance(3000);assert.equal(page.windows().length,0);assert.equal(shownGif(page),first);
+  assert.equal(page.document.documentElement.style.getPropertyValue('--rotation-speed'),'0.5s');
+  assert.equal(Boolean(page.links[2].dispatch('click').defaultPrevented),false);
 });
 
-test('section links open immediately and pending Yin Yang windows reuse the same iframe', async () => {
-  const page = browser();
-  page.click('.escenario');
-  await page.advance(1000);
-  page.links[1].dispatch('click');
-  assert.equal(page.windows().length, 1);
-  const paca = page.windows()[0];
-  const frame = paca.querySelector('iframe');
-  await page.advance(2000);
-  assert.equal(page.windows().length, 2);
-  assert.ok(page.windows().includes(paca));
-  assert.equal(paca.querySelector('iframe'), frame, 'A delayed opener must not recreate an already opened section');
+test('bubbles open windows immediately and reuse existing iframes', () => {
+  const page=browser();page.links[1].dispatch('click');const frame=page.windows()[0].querySelector('iframe');
+  page.links[1].dispatch('click');assert.equal(page.windows().length,1);assert.equal(page.windows()[0].querySelector('iframe'),frame);
 });
 
 test('the title glitch ends after a few seconds and can restart on another Yin Yang click', async () => {
@@ -315,8 +296,7 @@ test('the title glitch ends after a few seconds and can restart on another Yin Y
 
 test('closing the top window with Escape preserves other windows and allows reopening', async () => {
   const page = browser();
-  page.click('.escenario');
-  await page.advance(3000);
+  page.links[0].dispatch('click');page.links[1].dispatch('click');
   const top = page.windows().sort((a, b) => Number(b.style.zIndex) - Number(a.style.zIndex))[0];
   const removedFrame = top.querySelector('iframe');
   page.document.activeElement = removedFrame;
@@ -324,12 +304,11 @@ test('closing the top window with Escape preserves other windows and allows reop
   assert.equal(page.windows().length, 1);
   assert.equal(removedFrame.src, 'about:blank');
   assert.ok(page.links.includes(page.document.activeElement), 'Focus returns to the section link');
-  page.click('.escenario');
-  await page.advance(3000);
+  page.links[1].dispatch('click');
   assert.equal(page.windows().length, 2);
 });
 
-test('PACA language messages require the matching iframe and origin, and maximize still works', async () => {
+test('PACA language messages require the matching iframe and origin, and size controls are absent', async () => {
   const page = browser();
   page.links[1].dispatch('click');
   const paca = page.windows()[0];
@@ -341,16 +320,11 @@ test('PACA language messages require the matching iframe and origin, and maximiz
   assert.match(paca.querySelector('h2').textContent, /Beauty Studio/);
   page.window.dispatch('message', message);
   assert.match(paca.querySelector('h2').textContent, /Estudio de belleza/);
-  const maximize = paca.querySelector('.ampliar-ventana');
-  maximize.dispatch('click');
-  assert.equal(paca.classList.contains('ventana-ampliada'), true);
-  assert.match(maximize.getAttribute('aria-label'), /Restaurar/);
-  maximize.dispatch('click');
-  assert.equal(paca.classList.contains('ventana-ampliada'), false);
-  assert.match(maximize.getAttribute('aria-label'), /Ampliar/);
+  assert.equal(paca.querySelector('.ampliar-ventana'),null);
+  assert.equal(paca.classList.contains('ventana-ampliada'),false);
 });
 
-test('windows open and reopen centered on desktop and mobile, including PACA restore', () => {
+test('windows open and reopen centered on desktop and mobile', () => {
   for (const [width, height] of [[1280, 900], [375, 667], [812, 375]]) {
     const page = browser();
     page.window.innerWidth = width;
@@ -368,12 +342,6 @@ test('windows open and reopen centered on desktop and mobile, including PACA res
       popup.style.top = '0px';
       link.dispatch('click');
       assertCentered(popup);
-      const maximize = popup.querySelector('.ampliar-ventana');
-      if (maximize) {
-        maximize.dispatch('click');
-        maximize.dispatch('click');
-        assertCentered(popup);
-      }
     }
     assert.equal(page.windows().length, 2, 'Reopening must preserve the existing windows');
   }

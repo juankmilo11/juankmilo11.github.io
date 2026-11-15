@@ -1,0 +1,24 @@
+.theme-toggle{flex:none;display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--line);border-radius:50%;color:var(--ink);background:transparent;font-size:18px;transition:background .2s}
+.theme-toggle:hover{background:var(--pink)}
+html[data-theme=dark]{--ink:#f6e8ee;--paper:#211a22;--pink:#4c2e40;--accent:#edaecb;--muted:#c8abb9;--line:#a8788b60;color-scheme:dark}
+html[data-theme=dark] .masthead,html[data-theme=dark] .masthead.is-scrolled{background:#211a22ed;box-shadow:0 5px 24px #0003}
+html[data-theme=dark] .hero{background:#211a22}
+html[data-theme=dark] .hero-photo::after{background:linear-gradient(90deg,#211a22eb,#211a22a8 40%,#211a2245),linear-gradient(0deg,#211a22e6,transparent 55%)}
+html[data-theme=dark] .hero-intro,html[data-theme=dark] .hero-tabs button{color:var(--ink)}
+html[data-theme=dark] .hero-tabs button.is-active{color:var(--accent)}
+html[data-theme=dark] .hero-photo img{filter:brightness(.7)}
+html[data-theme=dark] .services,html[data-theme=dark] .artist,html[data-theme=dark] .booking,html[data-theme=dark] .footer{background:linear-gradient(135deg,#2d202b,#211a22);color:var(--ink)}
+html[data-theme=dark] .ticker,html[data-theme=dark] .booking-panel,html[data-theme=dark] .booking-panel #nail-plan,html[data-theme=dark] .booking-panel .agenda,html[data-theme=dark] .booking-policy,html[data-theme=dark] #booking-summary,html[data-theme=dark] .work-image,html[data-theme=dark] .work-media,html[data-theme=dark] .reference-preview{background:#30232f;color:var(--ink);border-color:var(--line)}
+html[data-theme=dark] .nav-book,html[data-theme=dark] .dark-button,html[data-theme=dark] .light-button,html[data-theme=dark] .filter.is-active,html[data-theme=dark] .filter:hover,html[data-theme=dark] .outline-button:hover{background:#634156;color:#fff1f7;border-color:#a36a87}
+html[data-theme=dark] .nav-book:hover,html[data-theme=dark] .dark-button:hover,html[data-theme=dark] .floating-book:hover{background:#795269;color:#fff}
+html[data-theme=dark] .artist-portrait img,html[data-theme=dark] .artist-details,html[data-theme=dark] .artist-details>div+div{border-color:var(--line)}
+html[data-theme=dark] .calendar-days button:not(:disabled):hover{background:#59364a}
+html[data-theme=dark] .calendar-days button[aria-pressed=true],html[data-theme=dark] .calendar-days button[aria-pressed=true]:hover,html[data-theme=dark] .time-slot[aria-pressed=true]{background:#a5587b;color:#fff;border-color:#df9abc}
+html[data-theme=dark] .calendar-days button:disabled{color:#8b7582}
+html[data-theme=dark] .booking-panel input:not([type=checkbox]),html[data-theme=dark] .booking-panel select,html[data-theme=dark] .booking-panel textarea,html[data-theme=dark] .catalog-search{border-color:#a8788b90}
+html[data-theme=dark] input::placeholder,html[data-theme=dark] textarea::placeholder{color:#b79daa;opacity:1}
+html[data-theme=dark] select option{background:#30232f;color:var(--ink)}
+html[data-theme=dark] .work-dialog::backdrop{background:#110d13df}
+html[data-theme=dark] .work-overlay span,html[data-theme=dark] .work-badge{color:var(--ink)}
+@media(max-width:740px){.masthead{gap:9px}.theme-toggle{width:30px;height:30px;font-size:16px}}
+@media(max-width:480px){.masthead{padding-inline:12px;gap:8px}.masthead .brand{font-size:13px;gap:6px}.masthead .brand-icon{font-size:28px}.masthead .brand small{font-size:5px}.masthead .nav-book{font-size:0;width:32px;height:32px;padding:7px;gap:0;justify-content:center}.masthead .nav-book span{font-size:18px}.language-control{margin-left:auto}.language-control button{font-size:8px;padding-inline:3px}}

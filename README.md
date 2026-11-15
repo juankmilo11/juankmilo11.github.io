@@ -68,11 +68,10 @@ La portada reutiliza su icono publicado.
 
 La portada inicia sin ventanas y alterna los nueve GIF en orden aleatorio sin
 repeticiones por ciclo: un segundo de oscurecimiento (o hasta terminar la carga),
-un segundo para aclarar y cinco segundos de imagen. El color manual dura cinco
-segundos antes de retomar los GIF. El Yin Yang abre o enfoca LBDSEGUROS y PACA,
-cambia la velocidad de rotación y activa el glitch del título durante 2,4 segundos.
-Las nuevas ventanas aparecen al terminar la animación; sus burbujas las abren
-directamente.
+un segundo para aclarar y cinco segundos de imagen. El control btn_1 combina la bandera de Colombia y el símbolo de luz; el color
+manual permanece activo hasta pulsar el Yin Yang. Este retoma los GIF, cambia
+la velocidad y activa el glitch durante 2,4 segundos. Solo las burbujas abren
+ventanas, que conservan su tamaño original adaptable a la pantalla.
 
 Subir los commits al `origin` configurado:
 [juankmilo11.github.io](https://github.com/juankmilo11/juankmilo11.github.io).

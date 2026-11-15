@@ -238,7 +238,8 @@
     "I have read and understand the appointment guidelines. *": "He leído y entiendo las condiciones de la cita. *",
     "Your details and photos stay on this page. Nothing is sent automatically. Copy your request and attach your photos in your Instagram message.": "Tus datos y fotos permanecen en esta página. No se envía nada automáticamente. Copia tu solicitud y adjunta las fotos en tu mensaje de Instagram.",
     "New Jersey, USA": "New Jersey, EE. UU.",
-    "NEW JERSEY, USA": "NEW JERSEY, EE. UU."
+    "NEW JERSEY, USA": "NEW JERSEY, EE. UU.",
+    "Switch to night mode": "Activar modo noche"
   },
   "en": {
     "nails": "Nails & nail art",
@@ -324,7 +325,9 @@
     "summaryPolicy": "I have read the appointment guidelines and will contact Paula about delays, cancellations or rescheduling.",
     "summaryCurrentPhoto": "Current nails photo to attach",
     "summaryInspirationPhoto": "Inspiration photo to attach",
-    "summaryAttachPhotos": "I will attach these photos to this Instagram message."
+    "summaryAttachPhotos": "I will attach these photos to this Instagram message.",
+    "themeNight": "Switch to night mode",
+    "themeDay": "Switch to day mode"
   },
   "es": {
     "nails": "Uñas y nail art",
@@ -410,7 +413,9 @@
     "summaryPolicy": "He leído las condiciones de la cita y avisaré a Paula en caso de retraso, cancelación o reprogramación.",
     "summaryCurrentPhoto": "Foto actual de las uñas para adjuntar",
     "summaryInspirationPhoto": "Foto de inspiración para adjuntar",
-    "summaryAttachPhotos": "Adjuntaré estas fotos a este mensaje de Instagram."
+    "summaryAttachPhotos": "Adjuntaré estas fotos a este mensaje de Instagram.",
+    "themeNight": "Activar modo noche",
+    "themeDay": "Activar modo día"
   }
 };
   if(typeof module==='object'&&module.exports)module.exports=locales;

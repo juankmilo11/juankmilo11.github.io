@@ -110,3 +110,12 @@ movimiento sutil de tarjetas y transiciones con pausa y movimiento reducido.
 Comprobar también `node scripts/test-paca-schedule.cjs` y
 `node scripts/test-paca-i18n.cjs`. Las traducciones incluyen textos alternativos
 de imágenes y conservan los datos escritos al cambiar de idioma.
+
+## Contraste
+
+El selector de sol/luna de la cabecera cambia todo el catálogo, visor, agenda
+y formulario entre día y noche. Cada nueva visita inicia en claro. El idioma
+no altera el contraste elegido; el marco exterior recibe el cambio mediante
+un mensaje validado por origen y por iframe. No hay control de ampliación.
+
+Verificar con `node scripts/test-paca-theme.cjs`.

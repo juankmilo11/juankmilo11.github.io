@@ -5,13 +5,13 @@
 `index.html` carga `styles.css` y `script.js`. El script administra el reloj,
 fondos GIF, colores, rotación del yin yang y ventanas arrastrables con iframe.
 Los enlaces con `data-open-tab` abren otra pestaña (FCT); el resto abre ventanas.
-Al iniciar no se abre ninguna ventana. El Yin Yang abre o enfoca LBDSEGUROS y
-PACA de forma escalonada, cambia su velocidad y anima el título. Las ventanas
+Al iniciar no se abre ninguna ventana. El Yin Yang cambia su velocidad y anima el título; si btn_1 activó el color
+manual, retoma los GIF. Las ventanas se abren únicamente desde las burbujas. Las ventanas
 se reutilizan por sección y se centran al abrirse o restaurarse, conservando el
 arrastre manual. PACA utiliza un marco rosa con el mismo estilo XP. Los nueve GIF se precargan y decodifican de uno en
 uno, con una cola aleatoria sin repeticiones por ciclo y una transición oscura
 de un segundo, un segundo de aclarado y cinco segundos de visualización.
-El botón de color interrumpe el ciclo durante cinco segundos y después lo retoma.
+El botón btn_1 mantiene el color manual hasta que el Yin Yang reactive los GIF.
 
 Cada sección bajo `pages/` es independiente. PACA carga su propio CSS y JS,
 con catálogo JSON de trabajos reales, filtros, búsqueda, visor de fotos/videos
@@ -21,7 +21,7 @@ La agenda manual vive en `pages/paula/assets/availability.json`;
 y `agenda.html` permite preparar un archivo actualizado para publicarlo. Las
 solicitudes no bloquean espacios hasta que Paula confirme la cita y registre
 el horario ocupado. Su ventana
-es más amplia y puede maximizarse; el iframe conserva su diseño adaptable.
+es más amplia y tiene tamaño fijo adaptable al viewport; el iframe conserva su diseño adaptable.
 `projects/PACA/` documenta la selección y prepara recursos; el archivo original
 y los informes completos se conservan locales y se excluyen de Git. LBDSEGUROS
 conserva la ruta `pages/sura/` y contiene únicamente el GIF de construcción,

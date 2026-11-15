@@ -5,7 +5,6 @@ const reloj = document.querySelector("#reloj");
 const plantillaVentana = document.querySelector("#plantilla-ventana");
 const escenario = document.querySelector(".escenario");
 const enlaces = [...document.querySelectorAll(".enlace")];
-const enlacesVentana = enlaces.filter((enlace) => !enlace.hasAttribute("data-open-tab"));
 
 const fondosGif = [
   "img/fondos/gif1.gif",
@@ -25,7 +24,6 @@ let zIndexVentana = 10;
 const ventanasAbiertas = new Set();
 const arrastres = new WeakMap();
 const enlacesOrigen = new WeakMap();
-const temporizadoresVentana = new Map();
 const TIEMPOS_FONDO = { oscurecer: 1000, aclarar: 1000, mostrar: 5000, carga: 20000 };
 const DURACION_GLITCH = 2400;
 let colaFondos = [];
@@ -52,8 +50,10 @@ function numeroAleatorio([min, max]) {
 }
 
 function cambiarColorFondo() {
-  // A manual color gets a full five seconds before the slideshow resumes.
+  // Manual color mode remains active until the Yin Yang resumes the slideshow.
   versionFondo++;
+  clearTimeout(temporizadorFondo);
+  botonColor.setAttribute("aria-pressed", "true");
   document.body.classList.remove("fondo-gif", "fondo-oscurecido");
   let color;
   do {
@@ -61,7 +61,7 @@ function cambiarColorFondo() {
   } while (color === ultimoColorFondo);
   ultimoColorFondo = color;
   document.documentElement.style.setProperty("--page-bg", color);
-  programarFondo(TIEMPOS_FONDO.mostrar);
+
 }
 
 function luminanciaColor(hex) {
@@ -180,10 +180,6 @@ function idiomaVentanaPaca(ventana, idioma) {
   ventana.setAttribute('aria-label', nombre);
   ventana.querySelector('iframe').title = nombre;
   ventana.querySelector('.cerrar-ventana').setAttribute('aria-label', espanol ? 'Cerrar ventana PACA' : 'Close PACA window');
-  const ampliada = ventana.classList.contains('ventana-ampliada');
-  ventana.querySelector('.ampliar-ventana').setAttribute('aria-label', espanol
-    ? (ampliada ? 'Restaurar ventana PACA' : 'Ampliar ventana PACA')
-    : (ampliada ? 'Restore PACA window' : 'Expand PACA window'));
 }
 
 window.addEventListener('message', evento => {
@@ -193,7 +189,6 @@ window.addEventListener('message', evento => {
 });
 
 function centrarVentana(ventana) {
-  if (ventana.classList.contains("ventana-ampliada")) return;
   const maxLeft = Math.max(0, window.innerWidth - ventana.offsetWidth);
   const maxTop = Math.max(0, window.innerHeight - ventana.offsetHeight);
   ventana.style.left = `${maxLeft / 2}px`;
@@ -203,7 +198,7 @@ function centrarVentana(ventana) {
 
 function habilitarArrastre(ventana, encabezado) {
   encabezado.addEventListener("pointerdown", (evento) => {
-    if (evento.button !== 0 || evento.target.closest("button") || ventana.classList.contains("ventana-ampliada")) return;
+    if (evento.button !== 0 || evento.target.closest("button")) return;
 
     enfocarVentana(ventana);
     const rect = ventana.getBoundingClientRect();
@@ -256,24 +251,7 @@ function crearVentana(enlace) {
   enlacesOrigen.set(ventana, enlace);
   if (enlace.getAttribute('href') === 'pages/paula/index.html') {
     ventana.classList.add('ventana-paca');
-    const ampliar = document.createElement('button');
-    ampliar.type = 'button';
-    ampliar.className = 'ampliar-ventana';
-    ampliar.setAttribute('aria-label', 'Ampliar ventana PACA');
-    ampliar.setAttribute('aria-pressed', 'false');
-    ampliar.textContent = '↗';
-    const controles = document.createElement('div');
-    controles.className = 'controles-ventana';
-    controles.append(ampliar, ventana.querySelector('.cerrar-ventana'));
-    encabezado.append(controles);
     idiomaVentanaPaca(ventana, 'en');
-    ampliar.addEventListener('click', () => {
-      const maximizada = ventana.classList.toggle('ventana-ampliada');
-      ampliar.setAttribute('aria-pressed', String(maximizada));
-      idiomaVentanaPaca(ventana, ventana.dataset.pacaLanguage);
-      ampliar.textContent = maximizada ? '↙' : '↗';
-      if (!maximizada) centrarVentana(ventana);
-    });
   }
   iframe.src = enlace.getAttribute("href");
   document.body.append(ventana);
@@ -306,8 +284,8 @@ enlaces.forEach((enlace) => {
 function cambiarVelocidad() {
   const velocidad = velocidades[velocidadActual];
   document.documentElement.style.setProperty("--rotation-speed", velocidad);
-  escenario.title = `Abrir ventanas · glitch · rotación: ${velocidad}`;
-  escenario.setAttribute("aria-label", `Yin Yang: abrir ventanas, animar el título y cambiar velocidad. Rotación actual: ${velocidad}`);
+  escenario.title = `Reactivar GIF · glitch · rotación: ${velocidad}`;
+  escenario.setAttribute("aria-label", `Yin Yang: reactivar GIF, animar el título y cambiar velocidad. Rotación actual: ${velocidad}`);
   velocidadActual = (velocidadActual + 1) % velocidades.length;
 }
 
@@ -337,17 +315,10 @@ function animarTitulo() {
 function activarYinYang() {
   cambiarVelocidad();
   animarTitulo();
-  enlacesVentana.forEach((enlace, indice) => {
-    if (temporizadoresVentana.has(enlace)) return;
-    if ([...ventanasAbiertas].some((ventana) => enlacesOrigen.get(ventana) === enlace)) {
-      crearVentana(enlace);
-      return;
-    }
-    temporizadoresVentana.set(enlace, setTimeout(() => {
-      temporizadoresVentana.delete(enlace);
-      crearVentana(enlace);
-    }, DURACION_GLITCH + indice * 450));
-  });
+  if (botonColor.getAttribute('aria-pressed') === 'true') {
+    botonColor.setAttribute('aria-pressed', 'false');
+    cambiarFondoGif();
+  }
 }
 
 
@@ -362,7 +333,6 @@ document.addEventListener("keydown", (evento) => {
 // Keep every open window inside the visible screen after resizing.
 window.addEventListener("resize", () => {
   ventanasAbiertas.forEach((ventana) => {
-    if (ventana.classList.contains("ventana-ampliada")) return;
     const rect = ventana.getBoundingClientRect();
     ventana.style.left = `${Math.max(0, Math.min(rect.left, window.innerWidth - ventana.offsetWidth))}px`;
     ventana.style.top = `${Math.max(0, Math.min(rect.top, window.innerHeight - ventana.offsetHeight))}px`;
@@ -372,3 +342,9 @@ window.addEventListener("resize", () => {
 cambiarFondoGif();
 actualizarHora();
 setInterval(actualizarHora, 1000);
+
+window.addEventListener('message', evento => {
+  if (evento.origin !== location.origin || evento.data?.type !== 'paca:theme' || !['light','dark'].includes(evento.data.theme)) return;
+  const ventana = [...ventanasAbiertas].find(item => item.classList.contains('ventana-paca') && item.querySelector('iframe').contentWindow === evento.source);
+  if (ventana) ventana.dataset.theme = evento.data.theme;
+});

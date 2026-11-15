@@ -70,7 +70,9 @@ button { cursor: pointer; font: inherit; }
   justify-content: center;
   gap: 20px;
   color: #fff;
-  background: linear-gradient(#3888f4 0%, #1764d5 12%, #195bd0 82%, #1245aa 100%);
+  background: linear-gradient(#3888f4d9 0%, #1764d5d9 12%, #195bd0d9 82%, #1245aad9 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-top: 1px solid #71afff;
   border-bottom: 1px solid #052f87;
   box-shadow: 0 2px 7px #00132d60;
@@ -357,13 +359,7 @@ button { cursor: pointer; font: inherit; }
   box-shadow: inset 1px 1px #ffffff80, inset -1px -1px #84234f80, 0 1px 1px #912c5c;
 }
 .ventana-paca .cerrar-ventana { background: linear-gradient(135deg, #ffb7d3, #d95a95 48%, #a82d67); }
-.ventana-paca.ventana-ampliada {
-  width: calc(100vw - 12px);
-  height: calc(100dvh - 12px);
-  left: 6px !important;
-  top: 6px !important;
-  transform: none !important;
-}
+
 
 @keyframes rotacion_continua { to { transform: rotate(360deg); } }
 @keyframes interferencia {
@@ -397,3 +393,11 @@ button { cursor: pointer; font: inherit; }
   .icono_imagen, .escenario, .redes a, .yin-yang .yin, .yin-yang .yang { transition: none; }
   .escenario:hover, .escenario:active { scale: 1; }
 }
+
+/* Colombia and light now share one control. */
+.boton_color{width:44px;min-height:32px;padding:2px;border-color:#ffffffa0;color:#fff;background:linear-gradient(to bottom,#fbd116 0 50%,#003893 50% 75%,#ce1126 75% 100%);text-shadow:0 1px 3px #000,0 0 2px #000;box-shadow:inset 0 0 0 1px #ffffff40,0 1px 3px #001b5d80}
+.boton_color:hover,.boton_color:active{background:linear-gradient(to bottom,#fbd116 0 50%,#003893 50% 75%,#ce1126 75% 100%);border-color:#fff}
+.boton_color[aria-pressed=true]{outline:2px solid #ffdf75;outline-offset:2px}
+.ventana{resize:none}
+.ventana-paca[data-theme=dark]{border-color:#683b54;background:#241b24}
+.ventana-paca[data-theme=dark] .barra-ventana{background-image:linear-gradient(#81526b,#5b334c 22%,#452539);border-top-color:#aa7a94;box-shadow:inset 0 1px #aa7a94,inset 0 -1px #27151f}
