@@ -189,6 +189,7 @@ button { cursor: pointer; font: inherit; }
   gap: clamp(10px, 3vw, 32px);
 }
 .enlace {
+  --icon-glow: #8ecae680;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -220,12 +221,14 @@ button { cursor: pointer; font: inherit; }
   border-radius: 50%;
   background: #e9f2fc;
   box-shadow: 0 3px 0 #00358170, 0 5px 14px #0006, inset 0 1px #fff;
-  transition: transform 180ms ease, box-shadow 180ms ease;
+  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
 }
 .enlace:hover .icono_imagen, .enlace:focus-visible .icono_imagen {
   transform: translateY(-4px) scale(1.04);
-  box-shadow: 0 3px 0 #00358170, 0 8px 20px #0008, 0 0 0 3px #b6dcff50;
+  box-shadow: 0 3px 0 #00358170, 0 8px 20px #0008;
+  filter: drop-shadow(0 3px 7px var(--icon-glow));
 }
+.enlace-paca { --icon-glow: #ed9ab580; }
 .enlace:hover span, .enlace:focus-visible span { background: #095ad5c9; border-color: #9dcaff8c; }
 .enlace-paca:hover span, .enlace-paca:focus-visible span { background: #ed9ab5; border-color: #ffc0dc; color: #452039; text-shadow: 0 1px #ffe3ef; }
 .enlace-fct:hover span, .enlace-fct:focus-visible span { background: #176b3aed; border-color: #a8e8b5; }
