@@ -5,15 +5,22 @@
 `index.html` carga `styles.css` y `script.js`. El script administra el reloj,
 fondos GIF, colores, rotación del yin yang y ventanas arrastrables con iframe.
 Los enlaces con `data-open-tab` abren otra pestaña (FCT); el resto abre ventanas.
-Al iniciar se abren las secciones estáticas de forma escalonada.
+Al iniciar no se abre ninguna ventana. El Yin Yang abre o enfoca LBDSEGUROS y
+PACA de forma escalonada, cambia su velocidad y anima el título. Las ventanas
+se reutilizan por sección. Los nueve GIF se precargan y decodifican de uno en
+uno, con una cola aleatoria sin repeticiones por ciclo y una transición oscura
+de un segundo, un segundo de aclarado y cinco segundos de visualización.
+El botón de color interrumpe el ciclo durante cinco segundos y después lo retoma.
 
 Cada sección bajo `pages/` es independiente. PACA carga su propio CSS y JS,
 con catálogo JSON de trabajos reales, filtros, búsqueda, visor de fotos/videos
 y formulario de solicitudes con copia y envío manual por Instagram. Su ventana
 es más amplia y puede maximizarse; el iframe conserva su diseño adaptable.
 `projects/PACA/` documenta la selección y prepara recursos; el archivo original
-y los informes completos se conservan locales y se excluyen de Git. SURA y
-construcción contienen estilos locales. `pages/fct/index.html` preserva la ruta
+y los informes completos se conservan locales y se excluyen de Git. LBDSEGUROS
+conserva la ruta `pages/sura/` y contiene únicamente el GIF de construcción,
+ajustado al ancho y al borde inferior. La antigua ruta de construcción se
+conserva por compatibilidad y ya no tiene burbuja. `pages/fct/index.html` preserva la ruta
 antigua con una redirección.
 
 ## FCT

@@ -1,8 +1,5 @@
 // Select the page controls once so each handler can stay small and focused.
 const botonColor = document.querySelector(".boton_color");
-const botonGif = document.querySelector(".boton_gif");
-const botonTitulo = document.querySelector(".boton_titulo");
-const botonAcc = document.querySelector(".boton_acc");
 const titulo = document.querySelector(".titulo");
 const reloj = document.querySelector("#reloj");
 const plantillaVentana = document.querySelector("#plantilla-ventana");
@@ -19,21 +16,25 @@ const fondosGif = [
   "img/fondos/gif6.gif",
   "img/fondos/gif7.gif",
   "img/fondos/gif8.gif",
-  "img/fondos/gif9.gif",
-  "img/fondos/gif10.gif",
-  "img/fondos/gif11.gif",
-  "img/fondos/gif12.gif",
-  "img/fondos/gif13.gif",
-  "img/fondos/gif14.gif"
+  "img/fondos/gif9.gif"
 ];
 const velocidades = ["7s", "2s", "0.5s", "30s"];
-const etiquetasVelocidad = ["4×", "15×", "60×", "↺"];
 let velocidadActual = 0;
 let indiceGif = -1;
 let zIndexVentana = 10;
 const ventanasAbiertas = new Set();
 const arrastres = new WeakMap();
 const enlacesOrigen = new WeakMap();
+const temporizadoresVentana = new Map();
+const TIEMPOS_FONDO = { oscurecer: 1000, aclarar: 1000, mostrar: 5000, carga: 20000 };
+const DURACION_GLITCH = 2400;
+let colaFondos = [];
+let ultimoGifElegido = -1;
+let fondoPreparado = null;
+let temporizadorFondo;
+let versionFondo = 0;
+let temporizadorGlitch;
+let finGlitch;
 
 function actualizarHora() {
   reloj.textContent = new Intl.DateTimeFormat("es-CO", {
@@ -51,13 +52,16 @@ function numeroAleatorio([min, max]) {
 }
 
 function cambiarColorFondo() {
-  document.body.classList.remove("fondo-gif");
+  // A manual color gets a full five seconds before the slideshow resumes.
+  versionFondo++;
+  document.body.classList.remove("fondo-gif", "fondo-oscurecido");
   let color;
   do {
     color = `hsl(${numeroAleatorio(COLOR_RANGES.hue)} ${numeroAleatorio(COLOR_RANGES.saturation)}% ${numeroAleatorio(COLOR_RANGES.lightness)}%)`;
   } while (color === ultimoColorFondo);
   ultimoColorFondo = color;
   document.documentElement.style.setProperty("--page-bg", color);
+  programarFondo(TIEMPOS_FONDO.mostrar);
 }
 
 function luminanciaColor(hex) {
@@ -86,11 +90,74 @@ function restaurarColorYinYang() {
   document.documentElement.style.removeProperty("--outline-color");
 }
 
-function cambiarFondoGif() {
-  indiceGif = (indiceGif + 1) % fondosGif.length;
-  document.body.classList.add("fondo-gif");
-  document.body.style.setProperty("--gif-fondo", `url("${fondosGif[indiceGif]}")`);
-  botonGif.setAttribute("aria-label", `Fondo GIF ${indiceGif + 1} de ${fondosGif.length}`);
+function elegirSiguienteGif() {
+  if (!colaFondos.length) {
+    colaFondos = fondosGif.map((_, indice) => indice);
+    for (let i = colaFondos.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [colaFondos[i], colaFondos[j]] = [colaFondos[j], colaFondos[i]];
+    }
+    // Visit all nine backgrounds before reshuffling, without adjacent repeats.
+    if (colaFondos[0] === ultimoGifElegido) {
+      [colaFondos[0], colaFondos[1]] = [colaFondos[1], colaFondos[0]];
+    }
+  }
+  ultimoGifElegido = colaFondos.shift();
+  return ultimoGifElegido;
+}
+
+function prepararSiguienteGif() {
+  const indice = elegirSiguienteGif();
+  return new Promise((resolve) => {
+    const imagen = new Image();
+    let terminado = false;
+    const finalizar = (resultado) => {
+      if (terminado) return;
+      terminado = true;
+      clearTimeout(limite);
+      imagen.onload = null;
+      imagen.onerror = null;
+      resolve(resultado);
+    };
+    const limite = setTimeout(() => finalizar(null), TIEMPOS_FONDO.carga);
+    imagen.onload = async () => {
+      try {
+        if (imagen.decode) await imagen.decode();
+        finalizar({ indice, imagen });
+      } catch {
+        finalizar(null);
+      }
+    };
+    imagen.onerror = () => finalizar(null);
+    imagen.src = fondosGif[indice];
+  });
+}
+
+function programarFondo(demora) {
+  clearTimeout(temporizadorFondo);
+  temporizadorFondo = setTimeout(cambiarFondoGif, demora);
+}
+
+async function cambiarFondoGif() {
+  const version = ++versionFondo;
+  document.body.classList.add("fondo-oscurecido");
+  // Load only the next image, behind the blackout, then reveal a decoded GIF.
+  fondoPreparado ||= prepararSiguienteGif();
+  const [siguiente] = await Promise.all([
+    fondoPreparado,
+    new Promise((resolve) => setTimeout(resolve, TIEMPOS_FONDO.oscurecer))
+  ]);
+  if (version !== versionFondo) return;
+  fondoPreparado = null;
+  if (siguiente) {
+    indiceGif = siguiente.indice;
+    document.body.style.setProperty("--gif-fondo", `url("${fondosGif[indiceGif]}")`);
+    document.body.classList.add("fondo-gif");
+  }
+  // On failure, keep the current background and try the next file next cycle.
+  document.body.classList.remove("fondo-oscurecido");
+  fondoPreparado = prepararSiguienteGif();
+  programarFondo(TIEMPOS_FONDO.aclarar + TIEMPOS_FONDO.mostrar);
 }
 
 function enfocarVentana(ventana) {
@@ -103,10 +170,6 @@ function cerrarVentana(ventana) {
   ventana.remove();
   ventanasAbiertas.delete(ventana);
   if (devolverFoco) enlacesOrigen.get(ventana)?.focus({ preventScroll: true });
-}
-
-function cerrarTodasLasVentanas() {
-  [...ventanasAbiertas].forEach(cerrarVentana);
 }
 
 function idiomaVentanaPaca(ventana, idioma) {
@@ -139,7 +202,7 @@ function colocarVentanaAleatoriamente(ventana) {
 
 function habilitarArrastre(ventana, encabezado) {
   encabezado.addEventListener("pointerdown", (evento) => {
-    if (evento.target.closest("button")) return;
+    if (evento.button !== 0 || evento.target.closest("button") || ventana.classList.contains("ventana-ampliada")) return;
 
     enfocarVentana(ventana);
     const rect = ventana.getBoundingClientRect();
@@ -170,9 +233,15 @@ function habilitarArrastre(ventana, encabezado) {
   };
   encabezado.addEventListener("pointerup", detenerArrastre);
   encabezado.addEventListener("pointercancel", detenerArrastre);
+  encabezado.addEventListener("lostpointercapture", detenerArrastre);
 }
 
 function crearVentana(enlace) {
+  const existente = [...ventanasAbiertas].find((ventana) => enlacesOrigen.get(ventana) === enlace);
+  if (existente) {
+    enfocarVentana(existente);
+    return existente;
+  }
   const ventana = plantillaVentana.content.firstElementChild.cloneNode(true);
   const encabezado = ventana.querySelector(".barra-ventana");
   const iframe = ventana.querySelector("iframe");
@@ -204,7 +273,6 @@ function crearVentana(enlace) {
       if (!maximizada) colocarVentanaAleatoriamente(ventana);
     });
   }
-  encabezado.style.backgroundColor = enlace.dataset.barColor || "#333";
   iframe.src = enlace.getAttribute("href");
   document.body.append(ventana);
   ventanasAbiertas.add(ventana);
@@ -220,8 +288,7 @@ function crearVentana(enlace) {
 }
 
 botonColor.addEventListener("click", cambiarColorFondo);
-botonGif.addEventListener("click", cambiarFondoGif);
-escenario.addEventListener("click", () => window.location.reload());
+escenario.addEventListener("click", activarYinYang);
 
 enlaces.forEach((enlace) => {
   enlace.addEventListener("pointerenter", () => actualizarColorYinYang(enlace));
@@ -235,28 +302,52 @@ enlaces.forEach((enlace) => {
   });
 });
 
-botonTitulo.addEventListener("click", () => {
-  titulo.animate(
-    [
-      { transform: "scale(1)", opacity: 1 },
-      { transform: "scale(1.18)", opacity: 0.75 },
-      { transform: "scale(1)", opacity: 1 }
-    ],
-    { duration: 700, easing: "ease-in-out" }
-  );
-  cerrarTodasLasVentanas();
-});
-
-botonAcc.addEventListener("click", () => {
-  const indice = velocidadActual;
-  const velocidad = velocidades[indice];
-  const etiqueta = etiquetasVelocidad[indice];
+function cambiarVelocidad() {
+  const velocidad = velocidades[velocidadActual];
   document.documentElement.style.setProperty("--rotation-speed", velocidad);
-  botonAcc.textContent = etiqueta;
-  botonAcc.title = `Velocidad de rotación: ${etiqueta}`;
-  botonAcc.setAttribute("aria-label", `Velocidad de rotación: ${etiqueta}`);
+  escenario.title = `Abrir ventanas · glitch · rotación: ${velocidad}`;
+  escenario.setAttribute("aria-label", `Yin Yang: abrir ventanas, animar el título y cambiar velocidad. Rotación actual: ${velocidad}`);
   velocidadActual = (velocidadActual + 1) % velocidades.length;
-});
+}
+
+function animarTitulo() {
+  clearInterval(temporizadorGlitch);
+  clearTimeout(finGlitch);
+  const fuentes = ['"MS Gothic", monospace', '"Yu Mincho", serif', '"Yu Gothic", sans-serif', 'Meiryo, sans-serif', '"MS Mincho", serif', '"Courier New", monospace'];
+  const colores = ["#ffffff", "#78e8ff", "#ff93ed", "#ffe783", "#b6ffb0", "#c9b5ff"];
+  const movimientoReducido = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let paso = 0;
+  const actualizar = () => {
+    titulo.style.setProperty("--glitch-font", fuentes[paso % fuentes.length]);
+    titulo.style.setProperty("--glitch-color", colores[paso % colores.length]);
+    paso++;
+  };
+  titulo.classList.add("titulo-glitch");
+  actualizar();
+  temporizadorGlitch = setInterval(actualizar, movimientoReducido ? 600 : 180);
+  finGlitch = setTimeout(() => {
+    clearInterval(temporizadorGlitch);
+    titulo.classList.remove("titulo-glitch");
+    titulo.style.removeProperty("--glitch-font");
+    titulo.style.removeProperty("--glitch-color");
+  }, DURACION_GLITCH);
+}
+
+function activarYinYang() {
+  cambiarVelocidad();
+  animarTitulo();
+  enlacesVentana.forEach((enlace, indice) => {
+    if (temporizadoresVentana.has(enlace)) return;
+    if ([...ventanasAbiertas].some((ventana) => enlacesOrigen.get(ventana) === enlace)) {
+      crearVentana(enlace);
+      return;
+    }
+    temporizadoresVentana.set(enlace, setTimeout(() => {
+      temporizadoresVentana.delete(enlace);
+      crearVentana(enlace);
+    }, DURACION_GLITCH + indice * 450));
+  });
+}
 
 
 document.addEventListener("keydown", (evento) => {
@@ -270,17 +361,13 @@ document.addEventListener("keydown", (evento) => {
 // Keep every open window inside the visible screen after resizing.
 window.addEventListener("resize", () => {
   ventanasAbiertas.forEach((ventana) => {
+    if (ventana.classList.contains("ventana-ampliada")) return;
     const rect = ventana.getBoundingClientRect();
-    ventana.style.left = `${Math.min(rect.left, Math.max(0, window.innerWidth - ventana.offsetWidth))}px`;
-    ventana.style.top = `${Math.min(rect.top, Math.max(0, window.innerHeight - ventana.offsetHeight))}px`;
+    ventana.style.left = `${Math.max(0, Math.min(rect.left, window.innerWidth - ventana.offsetWidth))}px`;
+    ventana.style.top = `${Math.max(0, Math.min(rect.top, window.innerHeight - ventana.offsetHeight))}px`;
   });
 });
 
-cambiarColorFondo();
+cambiarFondoGif();
 actualizarHora();
 setInterval(actualizarHora, 1000);
-
-// Stagger the welcome windows so they do not all open at the same instant.
-enlacesVentana.forEach((enlace, indice) => {
-  setTimeout(() => crearVentana(enlace), 900 + indice * 1800);
-});

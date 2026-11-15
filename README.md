@@ -12,8 +12,8 @@ de aplicación ni base de datos en este repositorio.
 | `img/` | Iconos y fondos de la portada | Recursos estáticos |
 | `pages/paula/` | PACA: página, estilos y filtros | Directamente; única fuente de PACA |
 | `projects/PACA/` | Selección del catálogo y preparación del material de Paula | Originales locales; recursos publicados en `pages/paula/assets/` |
-| `pages/sura/` | Página informativa inicial de SURA | Directamente |
-| `pages/construccion/` | Sección en construcción | Directamente |
+| `pages/sura/` | LBDSEGUROS: GIF de construcción a todo el ancho | Directamente |
+| `pages/construccion/` | Antigua sección en construcción, sin acceso desde la portada | Compatibilidad |
 | `pages/fct/` | Redirección de la ruta antigua del juego | Conservar compatibilidad |
 | `projects/FCT/` | Fuentes, dependencias y recursos del juego | Editar y compilar |
 | `FCT/` | Salida de producción del juego en `/FCT/` | Generar con Vite |
@@ -48,6 +48,7 @@ Desde la raíz:
 
 ```powershell
 node scripts/check-site.mjs
+node --test scripts/tests/home.test.cjs
 node scripts/check-paca.mjs
 node scripts/test-paca-booking.cjs
 npm --prefix projects/FCT run build
@@ -64,6 +65,14 @@ La compilación reemplaza `FCT/`; incluir su salida junto con los cambios de
 fuentes en el commit. Los recursos repetidos entre `projects/FCT/` y `FCT/`
 son fuente y salida de publicación y se conservan para servir el juego.
 La portada reutiliza su icono publicado.
+
+La portada inicia sin ventanas y alterna los nueve GIF en orden aleatorio sin
+repeticiones por ciclo: un segundo de oscurecimiento (o hasta terminar la carga),
+un segundo para aclarar y cinco segundos de imagen. El color manual dura cinco
+segundos antes de retomar los GIF. El Yin Yang abre o enfoca LBDSEGUROS y PACA,
+cambia la velocidad de rotación y activa el glitch del título durante 2,4 segundos.
+Las nuevas ventanas aparecen al terminar la animación; sus burbujas las abren
+directamente.
 
 Subir los commits al `origin` configurado:
 [juankmilo11.github.io](https://github.com/juankmilo11/juankmilo11.github.io).
