@@ -155,10 +155,10 @@ button { cursor: pointer; font: inherit; }
   border: 0;
   border-radius: 50%;
   background: transparent;
-  filter: drop-shadow(0 5px 13px #0008);
+  filter: drop-shadow(0 5px 13px #0008) drop-shadow(0 0 12px var(--yin-glow, transparent)) drop-shadow(0 0 25px var(--yin-glow-soft, transparent));
   transition: filter 180ms ease, scale 180ms ease;
 }
-.escenario:hover { filter: drop-shadow(0 6px 20px #001537) drop-shadow(0 0 9px #c5e6ff65); scale: 1.025; }
+.escenario:hover { filter: drop-shadow(0 6px 20px #001537) drop-shadow(0 0 12px var(--yin-glow, #c5e6ff65)) drop-shadow(0 0 25px var(--yin-glow-soft, transparent)); scale: 1.025; }
 .escenario:active { scale: 0.97; }
 .yin-yang {
   position: absolute;

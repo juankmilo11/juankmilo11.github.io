@@ -347,6 +347,20 @@ test('windows open and reopen centered on desktop and mobile', () => {
   }
 });
 
+test('Yin Yang halo follows the hovered or focused bubble and clears on exit', () => {
+  const page=browser(),style=page.document.documentElement.style;
+  page.links[2].dataset.glowColor='#a8e8b5';
+  for(const link of page.links){
+    const expected=link.dataset.glowColor||link.dataset.barColor;
+    link.dispatch('pointerenter');
+    assert.equal(style.getPropertyValue('--yin-glow'),expected+'b3');
+    assert.equal(style.getPropertyValue('--yin-glow-soft'),expected+'59');
+    link.dispatch('pointerleave');assert.equal(style.getPropertyValue('--yin-glow'),'');
+    link.dispatch('focus');assert.equal(style.getPropertyValue('--yin-glow'),expected+'b3');
+    link.dispatch('blur');assert.equal(style.getPropertyValue('--yin-glow-soft'),'');
+  }
+});
+
 test('windows stay within the viewport after resize and titlebar dragging', async () => {
   const page = browser();
   page.links[0].dispatch('click');

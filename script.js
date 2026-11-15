@@ -72,6 +72,9 @@ function luminanciaColor(hex) {
 
 function actualizarColorYinYang(enlace) {
   const acento = enlace.dataset.barColor || "#ffffff";
+  const halo = enlace.dataset.glowColor || acento;
+  document.documentElement.style.setProperty("--yin-glow", `${halo}b3`);
+  document.documentElement.style.setProperty("--yin-glow-soft", `${halo}59`);
   const luminancia = luminanciaColor(acento);
   const acentoClaro = (luminancia + 0.05) / 0.05 >= 1.05 / (luminancia + 0.05);
   document.documentElement.style.setProperty("--yin-color", acentoClaro ? acento : "#ffffff");
@@ -88,6 +91,8 @@ function restaurarColorYinYang() {
   document.documentElement.style.removeProperty("--yin-color");
   document.documentElement.style.removeProperty("--yang-color");
   document.documentElement.style.removeProperty("--outline-color");
+  document.documentElement.style.removeProperty("--yin-glow");
+  document.documentElement.style.removeProperty("--yin-glow-soft");
 }
 
 function elegirSiguienteGif() {
