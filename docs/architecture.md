@@ -7,7 +7,8 @@ fondos GIF, colores, rotación del yin yang y ventanas arrastrables con iframe.
 Los enlaces con `data-open-tab` abren otra pestaña (FCT); el resto abre ventanas.
 Al iniciar no se abre ninguna ventana. El Yin Yang abre o enfoca LBDSEGUROS y
 PACA de forma escalonada, cambia su velocidad y anima el título. Las ventanas
-se reutilizan por sección. Los nueve GIF se precargan y decodifican de uno en
+se reutilizan por sección y se centran al abrirse o restaurarse, conservando el
+arrastre manual. PACA utiliza un marco rosa con el mismo estilo XP. Los nueve GIF se precargan y decodifican de uno en
 uno, con una cola aleatoria sin repeticiones por ciclo y una transición oscura
 de un segundo, un segundo de aclarado y cinco segundos de visualización.
 El botón de color interrumpe el ciclo durante cinco segundos y después lo retoma.

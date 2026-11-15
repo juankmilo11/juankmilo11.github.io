@@ -192,11 +192,12 @@ window.addEventListener('message', evento => {
   if (ventana) idiomaVentanaPaca(ventana, evento.data.language);
 });
 
-function colocarVentanaAleatoriamente(ventana) {
+function centrarVentana(ventana) {
+  if (ventana.classList.contains("ventana-ampliada")) return;
   const maxLeft = Math.max(0, window.innerWidth - ventana.offsetWidth);
   const maxTop = Math.max(0, window.innerHeight - ventana.offsetHeight);
-  ventana.style.left = `${Math.round(Math.random() * maxLeft)}px`;
-  ventana.style.top = `${Math.round(Math.random() * maxTop)}px`;
+  ventana.style.left = `${maxLeft / 2}px`;
+  ventana.style.top = `${maxTop / 2}px`;
   ventana.style.transform = "none";
 }
 
@@ -239,6 +240,7 @@ function habilitarArrastre(ventana, encabezado) {
 function crearVentana(enlace) {
   const existente = [...ventanasAbiertas].find((ventana) => enlacesOrigen.get(ventana) === enlace);
   if (existente) {
+    centrarVentana(existente);
     enfocarVentana(existente);
     return existente;
   }
@@ -270,7 +272,7 @@ function crearVentana(enlace) {
       ampliar.setAttribute('aria-pressed', String(maximizada));
       idiomaVentanaPaca(ventana, ventana.dataset.pacaLanguage);
       ampliar.textContent = maximizada ? '↙' : '↗';
-      if (!maximizada) colocarVentanaAleatoriamente(ventana);
+      if (!maximizada) centrarVentana(ventana);
     });
   }
   iframe.src = enlace.getAttribute("href");
@@ -278,8 +280,7 @@ function crearVentana(enlace) {
   ventanasAbiertas.add(ventana);
   enfocarVentana(ventana);
 
-  // Give each window a different position within the visible screen.
-  colocarVentanaAleatoriamente(ventana);
+  centrarVentana(ventana);
 
   ventana.addEventListener("pointerdown", () => enfocarVentana(ventana));
   ventana.querySelector(".cerrar-ventana").addEventListener("click", () => cerrarVentana(ventana));

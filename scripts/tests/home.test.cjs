@@ -350,6 +350,35 @@ test('PACA language messages require the matching iframe and origin, and maximiz
   assert.match(maximize.getAttribute('aria-label'), /Ampliar/);
 });
 
+test('windows open and reopen centered on desktop and mobile, including PACA restore', () => {
+  for (const [width, height] of [[1280, 900], [375, 667], [812, 375]]) {
+    const page = browser();
+    page.window.innerWidth = width;
+    page.window.innerHeight = height;
+    const assertCentered = popup => {
+      assert.equal(parseFloat(popup.style.left), (width - popup.offsetWidth) / 2);
+      assert.equal(parseFloat(popup.style.top), (height - popup.offsetHeight) / 2);
+      assert.equal(popup.style.transform, 'none');
+    };
+    for (const link of page.links.slice(0, 2)) {
+      link.dispatch('click');
+      const popup = page.windows().at(-1);
+      assertCentered(popup);
+      popup.style.left = '0px';
+      popup.style.top = '0px';
+      link.dispatch('click');
+      assertCentered(popup);
+      const maximize = popup.querySelector('.ampliar-ventana');
+      if (maximize) {
+        maximize.dispatch('click');
+        maximize.dispatch('click');
+        assertCentered(popup);
+      }
+    }
+    assert.equal(page.windows().length, 2, 'Reopening must preserve the existing windows');
+  }
+});
+
 test('windows stay within the viewport after resize and titlebar dragging', async () => {
   const page = browser();
   page.links[0].dispatch('click');

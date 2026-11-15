@@ -1,3 +1,16 @@
+@font-face {
+  font-family: "Cinzel";
+  src: url("FCT/fonts/Cinzel.ttf") format("truetype");
+  font-weight: 400 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Crimson Pro";
+  src: url("FCT/fonts/CrimsonPro.ttf") format("truetype");
+  font-weight: 200 900;
+  font-display: swap;
+}
+
 :root {
   color-scheme: light;
   --page-bg: #081322;
@@ -78,7 +91,10 @@ button { cursor: pointer; font: inherit; }
   color: #1e365c;
   background: linear-gradient(#fff, #f4f2e8 65%, #d8d4c5);
   box-shadow: inset 1px 1px #fff, inset -1px -1px #c1c1b5, 0 1px 1px #00358b;
-  font-size: 1rem;
+  font-family: "Yu Mincho", "MS Mincho", serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1;
 }
 .boton_color:hover { border-color: #eab433; box-shadow: inset 0 0 0 2px #f8cf76; }
 .boton_color:active { background: #dfdfd4; box-shadow: inset 1px 1px 2px #aca899; }
@@ -185,6 +201,8 @@ button { cursor: pointer; font: inherit; }
   border-radius: 5px;
 }
 .enlace span {
+  font-family: "Cinzel", Georgia, serif;
+  font-weight: 600;
   padding: 3px 7px;
   border: 1px solid transparent;
   border-radius: 3px;
@@ -207,6 +225,21 @@ button { cursor: pointer; font: inherit; }
   box-shadow: 0 3px 0 #00358170, 0 8px 20px #0008, 0 0 0 3px #b6dcff50;
 }
 .enlace:hover span, .enlace:focus-visible span { background: #095ad5c9; border-color: #9dcaff8c; }
+.enlace-paca:hover span, .enlace-paca:focus-visible span { background: #ed9ab5; border-color: #ffc0dc; color: #452039; text-shadow: 0 1px #ffe3ef; }
+.enlace-fct:hover span, .enlace-fct:focus-visible span { background: #176b3aed; border-color: #a8e8b5; }
+.enlace-fct .icono_imagen {
+  object-fit: contain;
+  image-rendering: pixelated;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  filter: drop-shadow(0 3px 4px #0009);
+}
+.enlace-fct:hover .icono_imagen, .enlace-fct:focus-visible .icono_imagen {
+  box-shadow: none;
+  filter: drop-shadow(0 3px 7px #a8e8b580);
+}
 .enlace:focus-visible, button:focus-visible, .redes a:focus-visible {
   outline: 3px solid #ffdf75;
   outline-offset: 4px;
@@ -226,7 +259,7 @@ button { cursor: pointer; font: inherit; }
   text-shadow: 0 1px 3px #000;
   font-size: 0.78rem;
 }
-.copyright { display: inline-block; }
+.copyright { display: inline-block; font-family: "Crimson Pro", Georgia, serif; font-size: 1rem; font-weight: 500; }
 .redes { display: flex; align-items: center; gap: 8px; }
 .redes a {
   width: 32px;
@@ -238,7 +271,8 @@ button { cursor: pointer; font: inherit; }
   background: #04163350;
   transition: background 180ms ease, transform 180ms ease;
 }
-.redes a:hover { background: #1261c8a6; transform: translateY(-2px); }
+.redes a:hover, .redes a:focus-visible { background: #1261c8a6; transform: translateY(-2px); }
+.redes .red-instagram:hover, .redes .red-instagram:focus-visible { background: #c7500c; }
 .redes svg { display: block; width: 100%; height: 100%; }
 
 /* Luna-style frames, beveled controls and glossy blue title bars. */
@@ -306,6 +340,23 @@ button { cursor: pointer; font: inherit; }
 .cerrar-ventana:active, .ampliar-ventana:active { filter: brightness(0.85); box-shadow: inset 1px 1px 2px #0005; }
 .ventana iframe { width: 100%; min-height: 0; flex: 1; border: 0; background: #ece9d8; }
 .ventana-paca { width: min(1180px, calc(100vw - 28px)); height: min(820px, calc(100dvh - 32px)); }
+.ventana-paca {
+  border-color: #bc477f;
+  background: #f9dce9;
+  box-shadow: inset 1px 0 #ffc3df, 0 10px 30px #0008, 0 1px 2px #000b;
+}
+.ventana-paca .barra-ventana {
+  background-image: linear-gradient(#ffb9d9 0%, #ed88b6 9%, #d35b94 22%, #c84c87 75%, #a8346c 100%);
+  border-top-color: #ffe3f0;
+  box-shadow: inset 0 1px #ffcde3, inset 0 -1px #8d2557;
+}
+.ventana-paca .barra-ventana h2 { text-shadow: 1px 1px #84234f; }
+.ventana-paca .ampliar-ventana, .ventana-paca .cerrar-ventana {
+  background: linear-gradient(135deg, #ffd4e7, #e88bb6 48%, #b83f79);
+  text-shadow: 1px 1px #84234f;
+  box-shadow: inset 1px 1px #ffffff80, inset -1px -1px #84234f80, 0 1px 1px #912c5c;
+}
+.ventana-paca .cerrar-ventana { background: linear-gradient(135deg, #ffb7d3, #d95a95 48%, #a82d67); }
 .ventana-paca.ventana-ampliada {
   width: calc(100vw - 12px);
   height: calc(100dvh - 12px);
