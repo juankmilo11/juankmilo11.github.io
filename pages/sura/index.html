@@ -8,13 +8,16 @@
     * { box-sizing: border-box; }
     html { min-height: 100%; background: #fff; }
     body { margin: 0; height: 100vh; height: 100dvh; overflow: hidden; display: flex; align-items: flex-end; background: #fff; }
-    main { width: 100%; }
-    .gif-construccion { display: block; width: 100%; height: auto; max-height: 100vh; max-height: 100dvh; object-fit: cover; object-position: center bottom; }
+    main { position: relative; width: 100%; overflow: hidden; }
+    .gif-construccion { display: block; width: 100%; height: auto; }
+    /* Stretch only the band (y=62..104 of the 791x460 canvas) over its 31px gutter. */
+    .gif-banda { position: absolute; inset: 0; width: 100%; height: 100%; transform: scaleX(1.04079); transform-origin: left; clip-path: inset(13.47826% 0 77.39130% 0); pointer-events: none; }
   </style>
 </head>
 <body>
   <main>
-    <img class="gif-construccion" src="../../img/enconstruccion.gif" alt="LBDSEGUROS: sitio en construcción">
+    <img class="gif-construccion" src="../../img/enconstruccion.gif" width="791" height="460" alt="LBDSEGUROS: sitio en construcción">
+    <img class="gif-banda" src="../../img/enconstruccion.gif" width="791" height="460" alt="" aria-hidden="true">
   </main>
 </body>
 </html>

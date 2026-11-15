@@ -254,6 +254,9 @@ function crearVentana(enlace) {
   ventana.setAttribute('aria-label', nombreVentana);
   iframe.title = nombreVentana;
   enlacesOrigen.set(ventana, enlace);
+  if (enlace.getAttribute('href') === 'pages/sura/index.html') {
+    ventana.classList.add('ventana-lbds');
+  }
   if (enlace.getAttribute('href') === 'pages/paula/index.html') {
     ventana.classList.add('ventana-paca');
     idiomaVentanaPaca(ventana, 'en');
