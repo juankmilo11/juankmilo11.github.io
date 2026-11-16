@@ -69,7 +69,8 @@ incluyendo móvil.
 La compilación reemplaza `FCT/`; incluir su salida junto con los cambios de
 fuentes en el commit. Los recursos repetidos entre `projects/FCT/` y `FCT/`
 son fuente y salida de publicación y se conservan para servir el juego.
-La portada reutiliza su icono publicado.
+La portada usa cuatro variantes transparentes del mismo símbolo circular en
+`img/bubble-*.png`: azul claro, rosa, verde y naranja; JK continúa la fila.
 
 La portada inicia con cinco segundos de glitch en el título y las burbujas
 bloqueadas, incluido el Yin Yang. Después recuperan la interacción con ratón,

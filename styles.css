@@ -188,7 +188,7 @@ button { cursor: pointer; font: inherit; }
 .enlaces {
   width: min(100%, 640px);
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: start;
   gap: clamp(10px, 3vw, 32px);
 }
@@ -236,9 +236,9 @@ button { cursor: pointer; font: inherit; }
   filter: drop-shadow(0 3px 7px var(--icon-glow));
 }
 .enlace-paca { --icon-glow: #ed9ab580; }
-.enlace-admin { --icon-glow: #ffffff80; position: fixed; right: max(20px, env(safe-area-inset-right)); bottom: max(20px, env(safe-area-inset-bottom)); z-index: 3; }
+.enlace-admin { --icon-glow: #ed862f80; }
 .enlace-admin .icono_imagen { object-fit: contain; border: 0; background: transparent; box-shadow: none; opacity: 0.35; filter: drop-shadow(0 3px 4px #0009); transition: opacity 180ms ease, transform 180ms ease, filter 180ms ease; }
-.enlace-admin:hover .icono_imagen, .enlace-admin:focus-visible .icono_imagen { box-shadow: none; opacity: 0.55; filter: drop-shadow(0 3px 7px #ffffff66); }
+.enlace-admin:hover .icono_imagen, .enlace-admin:focus-visible .icono_imagen { box-shadow: none; opacity: 0.55; filter: drop-shadow(0 3px 7px #ed862f80); }
 .ventana.ventana-admin { width: min(520px, calc(100vw - 28px)); height: min(620px, calc(100dvh - 32px)); }
 .ventana.ventana-admin.admin-abierto { width: min(1180px, calc(100vw - 28px)); height: min(820px, calc(100dvh - 32px)); }
 .ventana.ventana-admin { border-color: #ed862f80; box-shadow: inset 1px 0 #ffcc94, 0 10px 30px #0008, 0 1px 2px #000b; }
@@ -270,7 +270,7 @@ button { cursor: pointer; font: inherit; }
 /* Allow the longer credit and social links to wrap independently. */
 .footer {
   min-height: 58px;
-  padding: 12px calc(clamp(58px, 9vw, 80px) + 40px) max(14px, env(safe-area-inset-bottom)) 20px;
+  padding: 12px 20px max(14px, env(safe-area-inset-bottom));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -439,3 +439,8 @@ button { cursor: pointer; font: inherit; }
 .ventana{resize:none}
 .ventana-paca[data-theme=dark]{border-color:#683b5480;background:transparent}
 .ventana-paca[data-theme=dark] .barra-ventana{background-image:linear-gradient(#81526bb3,#5b334cb3 22%,#452539b3);border-top-color:#aa7a94;box-shadow:inset 0 1px #aa7a94,inset 0 -1px #27151f}
+
+/* Shared transparent silhouettes; retain JK’s lighter translucency. */
+.enlace .icono-abstracto{object-fit:contain;border:0;background:transparent;box-shadow:none;image-rendering:auto;opacity:.65;filter:drop-shadow(0 3px 4px #0009)}.enlace:hover .icono-abstracto,.enlace:focus-visible .icono-abstracto{box-shadow:none;opacity:.85;filter:drop-shadow(0 3px 7px var(--icon-glow))}.enlace-admin .icono-abstracto{opacity:.35}.enlace-admin:hover .icono-abstracto,.enlace-admin:focus-visible .icono-abstracto{opacity:.55}
+
+@media(max-width:480px){.enlace:first-child span{font-size:9px;white-space:nowrap}}
