@@ -8,11 +8,11 @@
   <meta name="theme-color" content="#121a25">
   <title>JK · Juankmilo</title>
   <link rel="icon" type="image/webp" href="../../img/jk-icon.webp">
-  <link rel="stylesheet" href="admin.css?v=2026-11-16-agenda-events">
+  <link rel="stylesheet" href="admin.css?v=2026-11-16-multiselect">
   <script src="../../shared/api-config.js?v=2026-11-16-online" defer></script>
   <script src="../../shared/api.js?v=2026-11-16-final-polish" defer></script>
-  <script src="../paula/js/schedule.js?v=2026-11-16-agenda-events" defer></script>
-  <script src="admin.js?v=2026-11-16-agenda-events" defer></script>
+  <script src="../paula/js/schedule.js?v=2026-11-16-multiselect" defer></script>
+  <script src="admin.js?v=2026-11-16-multiselect" defer></script>
 </head>
 <body>
   <main id="access" class="access">
@@ -61,7 +61,7 @@
               <label>Días cerrados<textarea id="schedule-closed" rows="4" placeholder="2026-12-25&#10;2027-01-01"></textarea><span class="hint">Una fecha por línea, con formato AAAA-MM-DD. Las fechas grises son ejemplos: solo se cierran al escribirlas y guardar.</span></label>
               <label>Bloqueos manuales<textarea id="schedule-blocked" rows="5" placeholder="2026-12-02 09:00-11:30"></textarea><span class="hint">Un bloqueo por línea: AAAA-MM-DD HH:mm-HH:mm. El texto gris es un ejemplo, no un bloqueo guardado. No incluyas datos de clientes.</span></label>
               <p id="schedule-state" class="hint" role="status"></p>
-              <div class="section-actions"><button id="schedule-preview" type="button">Visualizar agenda</button><button class="primary" type="submit">Guardar disponibilidad</button></div>
+              <div class="section-actions"><button id="schedule-preview" type="button">Visualizar agenda</button><button id="schedule-cancel" type="button">Cancelar</button><button class="primary" type="submit">Guardar disponibilidad</button></div>
             </form>
           </section>
         </section>
@@ -71,7 +71,7 @@
     </div>
   </div>
 
-  <dialog id="schedule-preview-dialog" aria-labelledby="preview-title"><div class="dialog-form"><header class="dialog-header"><h2 id="preview-title">Vista previa de la agenda</h2><button class="icon-button" data-close="schedule-preview-dialog" type="button" aria-label="Cerrar vista previa">×</button></header><p class="hint">Vista previa del borrador: no guarda cambios. Muestra todas las citas y sus estados, incluidos los registros cancelados. Solo las confirmadas y los bloqueos ocupan horarios. Horario de New Jersey · New York.</p><button id="preview-refresh" type="button">Actualizar agenda</button><label>Servicio<select id="preview-service"></select></label><div class="preview-navigation"><button id="preview-previous" type="button" aria-label="Mes anterior">←</button><h3 id="preview-month"></h3><button id="preview-next" type="button" aria-label="Mes siguiente">→</button></div><div id="preview-legend" class="preview-legend" aria-label="Estados de la agenda"></div><p id="preview-month-summary" class="hint" role="status"></p><div class="preview-weekdays" aria-hidden="true"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div id="preview-days" class="preview-days"></div><section id="preview-events-section" aria-labelledby="preview-events-title"><h3 id="preview-events-title">Eventos del día</h3><div id="preview-events" class="preview-events"></div></section><p id="preview-status" role="status"></p><div id="preview-times" class="preview-times"></div><p class="hint">Puedes consultar cualquier día, incluso si está cerrado o ya pasó. Las marcas indican citas y bloqueos; pulsa el día para ver su detalle. Las pendientes, completadas y canceladas no bloquean nuevos horarios.</p></div></dialog>
+  <dialog id="schedule-preview-dialog" aria-labelledby="preview-title"><div class="dialog-form"><header class="dialog-header"><h2 id="preview-title">Vista previa de la agenda</h2><button class="icon-button" data-close="schedule-preview-dialog" type="button" aria-label="Cerrar vista previa">×</button></header><p class="hint">Vista previa del borrador: no guarda cambios. Muestra todas las citas y sus estados, incluidos los registros cancelados. Solo las confirmadas y los bloqueos ocupan horarios. Horario de New Jersey · New York.</p><button id="preview-refresh" type="button">Actualizar agenda</button><fieldset><legend>Servicios para consultar horarios</legend><p class="hint">Selecciona cualquier combinación para comparar horarios. Las citas y los bloqueos se muestran siempre.</p><div class="section-actions"><button id="preview-select-all" type="button">Seleccionar todos</button><button id="preview-select-none" type="button">Quitar selección</button></div><div id="preview-services" class="preview-services"></div></fieldset><div class="preview-navigation"><button id="preview-previous" type="button" aria-label="Mes anterior">←</button><h3 id="preview-month"></h3><button id="preview-next" type="button" aria-label="Mes siguiente">→</button></div><div id="preview-legend" class="preview-legend" aria-label="Estados de la agenda"></div><p id="preview-month-summary" class="hint" role="status"></p><div class="preview-weekdays" aria-hidden="true"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div id="preview-days" class="preview-days"></div><section id="preview-events-section" aria-labelledby="preview-events-title"><h3 id="preview-events-title">Eventos del día</h3><div id="preview-events" class="preview-events"></div></section><p id="preview-status" role="status"></p><div id="preview-times" class="preview-times"></div><p class="hint">Puedes consultar cualquier día, incluso si está cerrado o ya pasó. Las marcas indican citas y bloqueos; pulsa el día para ver su detalle. Las pendientes, completadas y canceladas no bloquean nuevos horarios.</p></div></dialog>
   <dialog id="edit-dialog" aria-labelledby="edit-title">
     <form id="edit-form" class="dialog-form">
       <header class="dialog-header"><div><p class="eyebrow">PACA / SOLICITUD</p><h2 id="edit-title">Editar solicitud</h2></div><button class="icon-button" data-close="edit-dialog" type="button" aria-label="Cerrar edición">×</button></header>

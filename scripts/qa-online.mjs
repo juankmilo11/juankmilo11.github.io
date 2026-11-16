@@ -157,6 +157,15 @@ try {
   await a.page.locator('#schedule-tab').click();
   await a.page.locator('#schedule-form:not([aria-busy])').waitFor();
   assert.equal(await a.page.locator('#dashboard .topbar h1').innerText(),'ADMIN');
+  const originalHorizon=await a.page.locator('#schedule-horizon').inputValue();
+  const originalMinimum=await a.page.locator('[data-estimate="fullSet"][data-part="minMinutes"]').inputValue();
+  await a.page.locator('#schedule-horizon').fill('999');
+  await a.page.locator('[data-estimate="fullSet"][data-part="minMinutes"]').fill('999');
+  await a.page.locator('#schedule-closed').fill('invalid date');
+  await a.page.locator('#schedule-cancel').click();
+  assert.equal(await a.page.locator('#schedule-horizon').inputValue(),originalHorizon);
+  assert.equal(await a.page.locator('[data-estimate="fullSet"][data-part="minMinutes"]').inputValue(),originalMinimum);
+  assert.equal(await a.page.locator('#schedule-closed').inputValue(),'');
   await a.page.locator('[data-estimate="fullSet"][data-part="minMinutes"]').fill('75');
   await a.page.locator('[data-estimate="fullSet"][data-part="maxMinutes"]').fill('135');
   await a.page.locator('[data-estimate="fullSet"][data-part="minPrice"]').fill('45');
@@ -172,6 +181,20 @@ try {
   await eventDay.click();assert.equal(await a.page.locator('.preview-event').count(),5,'Every appointment status plus the manual block is visible');
   assert.match(await a.page.locator('#preview-events').innerText(),/Cancelada · No bloquea horarios/);
   assert.match(await a.page.locator('#preview-events').innerText(),/Día cerrado/);
+  assert.equal(await a.page.locator('[data-preview-service]:checked').count(),8);
+  await a.page.locator('[data-preview-service][value="tattoo"]').uncheck();
+  assert.equal(await a.page.locator('[data-preview-service]:checked').count(),7);
+  await a.page.locator('#preview-select-none').click();
+  assert.equal(await a.page.locator('[data-preview-service]:checked').count(),0);
+  assert.match(await a.page.locator('#preview-status').innerText(),/Selecciona al menos/);
+  assert.equal(await a.page.locator('.preview-event').count(),5,'Service comparison does not hide appointments or manual blocks');
+  await a.page.locator('#preview-select-all').click();
+  await a.page.locator('#preview-days button:not(.is-unavailable)').first().click();
+  assert.equal(await a.page.locator('.preview-service-times').count(),8);
+  await a.page.locator('[data-preview-service][value="tattoo"]').uncheck();
+  assert.equal(await a.page.locator('.preview-service-times').count(),7);
+  await a.page.locator('#preview-select-all').click();
+  await eventDay.click();
   assert.equal((await (await fetch(origin+'/api/availability')).json()).closedDates.includes(date),false,'Preview does not save draft closure');
   await a.page.screenshot({path:path.join(output,'agenda-preview.png')});
   for(const width of [768,375,320]){
@@ -188,6 +211,9 @@ try {
   await a.page.screenshot({path:path.join(output,'availability-mobile.png')});
   await a.page.locator('#schedule-form [type="submit"]').click();
   await a.page.getByText('Disponibilidad guardada. Las nuevas visitas usarán estos horarios.',{exact:true}).waitFor();
+  await a.page.locator('[data-estimate="fullSet"][data-part="maxMinutes"]').fill('999');
+  await a.page.locator('#schedule-cancel').click();
+  assert.equal(await a.page.locator('[data-estimate="fullSet"][data-part="maxMinutes"]').inputValue(),'135','Cancel uses the latest successful save');
   const updated=(await (await fetch(origin+'/api/availability')).json());assert.ok(updated.closedDates.includes(date));assert.equal(updated.estimates.fullSet.maxMinutes,135);
   assert.equal((await fetch(origin+'/api/appointments',{method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':crypto.randomUUID()},body:JSON.stringify(overlapPayload)})).status,409,'Saved closure rejects real submissions');
   const catalog=await browser.newPage();await catalog.goto(origin+'/pages/paula/');

@@ -378,12 +378,7 @@
       if (marker !== scheduleRequest) return false;
       if (!result.config || !Number.isInteger(result.version)) throw new Error('El servidor no devolvió la disponibilidad válida.');
       schedule = result;
-      const config = result.config;
-      $('#schedule-horizon').value = config.horizonDays;
-      for (const key of Object.keys(estimateLabels)) for (const part of estimateParts) $(`[data-estimate="${key}"][data-part="${part.key}"]`).value = config.estimates?.[key]?.[part.key] ?? '';
-      $('#schedule-closed').value = config.closedDates.join('\n');
-      $('#schedule-blocked').value = config.blocked.map(block => `${block.date} ${block.start}-${block.end}`).join('\n');
-      scheduleState(false);
+      restoreSchedule();
       if (!$('#schedule-panel').hidden && !$('#paca-panel').hidden) announce('#dashboard-status', successMessage, successMessage ? 'success' : '');
       return true;
     } catch (error) { if (marker === scheduleRequest && !$('#schedule-panel').hidden && !$('#paca-panel').hidden) report('#dashboard-status', error); return false; }
@@ -394,13 +389,25 @@
       }
     }
   }
+  function restoreSchedule(){
+    if(!schedule)return;
+    $('#schedule-form').reset();
+    const config = schedule.config;
+      $('#schedule-horizon').value = config.horizonDays;
+      for (const key of Object.keys(estimateLabels)) for (const part of estimateParts) $(`[data-estimate="${key}"][data-part="${part.key}"]`).value = config.estimates?.[key]?.[part.key] ?? '';
+      $('#schedule-closed').value = config.closedDates.join('\n');
+      $('#schedule-blocked').value = config.blocked.map(block => `${block.date} ${block.start}-${block.end}`).join('\n');
+      scheduleState(false);
+    for(const control of $('#schedule-form').elements)control.setCustomValidity?.('');
+  }
+  $('#schedule-cancel').addEventListener('click',()=>{if($('#schedule-form').getAttribute('aria-busy')==='true')return;restoreSchedule();announce('#dashboard-status','Cambios descartados. Se restauró la disponibilidad guardada.');});
   const estimateLabels={...durationLabels,removalExtra:'Retiro adicional'};
   const estimateParts=[{key:'minMinutes',label:'Desde (min)',min:1,max:720,step:1},{key:'maxMinutes',label:'Hasta (min)',min:1,max:720,step:1},{key:'minPrice',label:'Desde (USD)',min:0,max:10000,step:0.01},{key:'maxPrice',label:'Hasta (USD)',min:0,max:10000,step:0.01}];
   for (const [key, name] of Object.entries(estimateLabels)) {
     const group=document.createElement('fieldset');group.className='estimate-row';group.append(textElement('legend',name));
     for(const part of estimateParts){const label=textElement('label',part.label),input=document.createElement('input');Object.assign(input,{type:'number',min:part.min,max:part.max,step:part.step,required:true});input.dataset.estimate=key;input.dataset.part=part.key;input.setAttribute('aria-label',`${name}: ${part.label}`);label.append(input);group.append(label);}
     $('#duration-fields').append(group);
-    if(key!=='removalExtra'){const option=document.createElement('option');option.value=key;option.textContent=name;$('#preview-service').append(option);}
+    if(key!=='removalExtra'){const label=textElement('label',name),input=document.createElement('input');input.type='checkbox';input.value=key;input.checked=true;input.dataset.previewService='';label.prepend(input);$('#preview-services').append(label);}
   }
   function scheduleState(dirty){
     $('#schedule-state').textContent=dirty?'Cambios sin guardar. Visualiza la agenda y guarda para aplicarlos.':`${schedule?.config.closedDates.length||0} días cerrados y ${schedule?.config.blocked.length||0} bloqueos manuales guardados.`;
@@ -449,7 +456,7 @@
   }
   function renderPreview(){
     const S=window.PacaSchedule,config=previewConfig;if(!config)return;
-    const key=$('#preview-service').value,details={service:Object.hasOwn(serviceLabels,key)?key:'nails',nailType:key,removal:'no'};
+    const selectedServices=[...document.querySelectorAll('[data-preview-service]:checked')].map(input=>input.value);
     const events=config.events||[],manual=previewDraft.blocked;
     const counts=Object.fromEntries(Object.keys(statusLabels).map(status=>[status,events.filter(e=>e.status===status).length]));
     $('#preview-month').textContent=new Intl.DateTimeFormat('es-CO',{timeZone:'UTC',month:'long',year:'numeric'}).format(new Date(previewCursor+'-01T12:00:00Z'));
@@ -485,10 +492,15 @@
       for(const block of blocks){const card=textElement('article','','preview-event manual-block');card.append(textElement('strong',block.start+'–'+block.end+' · Bloqueo manual'),textElement('p','No se ofrecen horarios que se crucen con este intervalo.','hint'));eventList.append(card);}
       if(!records.length&&!blocks.length)eventList.append(textElement('p','Sin citas ni bloqueos manuales registrados en este día.','hint'));
     }
-    const times=$('#preview-times');times.replaceChildren();const slots=previewDate?S.slots(previewDate,config,details):[],reason=previewDate?previewDayReason(previewDate,config):'';
-    $('#preview-status').textContent=!previewDate?'':reason?'No se ofrecen nuevas solicitudes: '+reason.toLowerCase()+'.':S.formatEstimate(config,details,'es')+' '+slots.filter(s=>s.available).length+' horas de inicio disponibles.';
-    for(const slot of slots){const label=textElement('span',slot.time+(slot.available?'':' · Ocupado'));label.className=slot.available?'preview-slot':'preview-slot is-busy';times.append(label);}
+    const times=$('#preview-times');times.replaceChildren();const reason=previewDate?previewDayReason(previewDate,config):'';
+    $('#preview-status').textContent=!selectedServices.length?'Selecciona al menos un servicio para consultar sus horarios.':!previewDate?'':reason?'No se ofrecen nuevas solicitudes: '+reason.toLowerCase()+'.':'';
+    if(previewDate&&!reason)for(const key of selectedServices){
+      const details={service:Object.hasOwn(serviceLabels,key)?key:'nails',nailType:key,removal:'no'},slots=S.slots(previewDate,config,details),section=textElement('section','','preview-service-times');
+      section.append(textElement('h4',durationLabels[key]),textElement('p',S.formatEstimate(config,details,'es'),'hint'),textElement('p',slots.filter(s=>s.available).length+' horas de inicio disponibles.','hint'));
+      const grid=textElement('div','','preview-times');for(const slot of slots){const label=textElement('span',slot.time+(slot.available?'':' · Ocupado'),slot.available?'preview-slot':'preview-slot is-busy');grid.append(label);}section.append(grid);times.append(section);
+    }
   }
+
   async function loadPreview(month){
     const marker=++previewRequest;previewCursor=month;previewConfig=null;
     $('#schedule-preview-dialog').setAttribute('aria-busy','true');
@@ -507,7 +519,8 @@
     try{previewDraft=draftConfig();previewDate='';$('#schedule-preview-dialog').showModal();loadPreview(window.PacaSchedule.studioNow().date.slice(0,7));}
     catch(error){report('#dashboard-status',error);}
   });
-  $('#preview-service').addEventListener('change',renderPreview);
+  $('#preview-services').addEventListener('change',renderPreview);
+  for(const [id,checked] of [['preview-select-all',true],['preview-select-none',false]])$('#'+id).addEventListener('click',()=>{document.querySelectorAll('[data-preview-service]').forEach(input=>input.checked=checked);renderPreview();});
   $('#preview-refresh').addEventListener('click',()=>loadPreview(previewCursor));
   $('#schedule-preview-dialog').addEventListener('close',()=>{previewRequest++;previewConfig=null;previewDraft=null;for(const id of ['preview-days','preview-events','preview-times'])$('#'+id).replaceChildren();$('#preview-month-summary').textContent='';$('#preview-status').textContent='';});
   for(const [id,delta] of [['preview-previous',-1],['preview-next',1]])$('#'+id).addEventListener('click',()=>{const date=new Date(previewCursor+'-01T12:00:00Z');date.setUTCMonth(date.getUTCMonth()+delta);previewDate='';loadPreview(date.toISOString().slice(0,7));});
