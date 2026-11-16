@@ -24,8 +24,14 @@ del minuto, suspendiendo el temporizador mientras la pestaña está oculta.
 `img/fondos/README.md` registra los archivos vigentes sin renumerar sus nombres.
 
 Cada sección bajo `pages/` es independiente. PACA carga su propio CSS y JS,
-con catálogo JSON de trabajos reales, filtros, búsqueda, visor de fotos/videos
-y formulario de solicitudes con copia y envío manual por Instagram.
+con catálogo JSON de trabajos reales, filtros sin contadores ni buscador y visor
+de fotos/videos. La agenda y el formulario de solicitudes se encuentran en un
+diálogo independiente (`js/booking-window.js`, `css/booking-window.css`) con
+copia y envío manual por Instagram. Los accesos de cita conservan la selección
+y las referencias del catálogo, y cerrar el diálogo preserva el borrador.
+Los encabezados de secciones y servicios no incluyen números.
+Las animaciones usan CSS con opacidad y transformaciones; no hay control de
+pausa manual ni cálculos de inclinación en cada movimiento del puntero.
 La agenda manual vive en `pages/paula/assets/availability.json`;
 `schedule.js` valida horarios y solapamientos, `agenda.js` construye el calendario
 y `agenda.html` permite preparar un archivo actualizado para publicarlo. Las

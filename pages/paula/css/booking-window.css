@@ -1,0 +1,51 @@
+.booking-dialog {
+  width: min(1100px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--paper);
+  color: var(--ink);
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.booking-dialog::backdrop { background: #211322a8; }
+.booking-dialog[open] { animation: dialog-arrive .25s ease-out; }
+.booking-window-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--pink);
+}
+.booking-window-bar h2 { font: 600 13px/1.4 var(--body); letter-spacing: 0; }
+#booking-window-close {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 24px;
+  line-height: 1;
+}
+.booking-dialog .booking { padding: 36px clamp(16px, 4vw, 44px); }
+.booking-dialog .booking-copy { display: block; top: 85px; }
+.booking-dialog .booking-panel { margin-top: 0; scroll-margin-top: 85px; }
+.booking-dialog .booking-panel input { scroll-margin-top: 95px; }
+@media (max-width: 740px) {
+  .booking-dialog { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); border-radius: 12px; }
+  .booking-window-bar { padding: 10px 16px; }
+  .booking-dialog .booking-copy { position: static; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .booking-dialog[open] { animation: none; }
+}

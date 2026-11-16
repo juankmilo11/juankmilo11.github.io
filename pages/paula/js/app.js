@@ -8,24 +8,12 @@
   syncLabels();
   window.initPacaBooking();
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
-  const motion = $('#motion-toggle');
-  let paused = reduced.matches;
-  function syncMotion() {
-    document.documentElement.classList.toggle('motion-paused', paused);
-    motion.setAttribute('aria-pressed', String(paused));
-    motion.setAttribute('aria-label', t(paused ? 'resume' : 'pause'));
-    motion.title = motion.getAttribute('aria-label');
-    motion.replaceChildren(icons.create(paused ? 'play' : 'pause'));
-    document.dispatchEvent(new CustomEvent('paca:motion'));
-  }
-  syncMotion();
-  motion.addEventListener('click', () => { paused = !paused; syncMotion(); });
-  reduced.addEventListener('change', event => { paused = event.matches; syncMotion(); });
   const hero = $('#hero-image');
   let heroKey='nails';
   hero.alt=t('hero.'+heroKey);
   let heroRequest = 0;
   document.querySelectorAll('[data-hero]').forEach(button => button.addEventListener('click', () => {
+    if (button.dataset.hero === heroKey) { heroRequest++; return; }
     const key = button.dataset.hero, request = ++heroRequest;
     const image = new Image();
     image.onload = () => {
@@ -33,47 +21,40 @@
       heroKey=key;
       const previous=hero.cloneNode();previous.removeAttribute('id');previous.alt='';previous.setAttribute('aria-hidden','true');previous.classList.add('hero-previous');
       hero.parentElement.querySelectorAll('.hero-previous').forEach(item=>item.remove());
-      if(!paused&&!reduced.matches)hero.after(previous);
+      if(!reduced.matches)hero.after(previous);
       hero.src=image.src;hero.alt=t('hero.'+key);
-      if(previous.isConnected){const fade=previous.animate([{opacity:1},{opacity:0}],{duration:850,easing:'ease-in-out',fill:'forwards'});fade.finished.then(()=>previous.remove()).catch(()=>previous.remove());}
+      if(previous.isConnected){const fade=previous.animate([{opacity:1},{opacity:0}],{duration:400,easing:'ease-out',fill:'forwards'});fade.finished.then(()=>previous.remove()).catch(()=>previous.remove());}
       document.querySelectorAll('[data-hero]').forEach(item => {
         item.classList.toggle('is-active', item === button);
         item.setAttribute('aria-pressed', String(item === button));
       });
-      if (!paused && !reduced.matches) hero.animate([{opacity:.2,transform:'scale(1.03)'},{opacity:1,transform:'scale(1)'}],{duration:600,easing:'ease-out'});
     };
     image.src = `assets/hero-${key}.webp`;
   }));
   document.querySelectorAll('[data-book]').forEach(button => button.addEventListener('click', () => {
     document.dispatchEvent(new CustomEvent('paca:book',{detail:{service:button.dataset.book}}));
   }));
-  const floating = $('.floating-book');
-  if ('IntersectionObserver' in window) {
-    const observer = new IntersectionObserver(entries => entries.forEach(entry => {
-      if(entry.target.id === 'agendar') floating.classList.toggle('is-hidden', entry.isIntersecting);
-    }), {threshold:0});
-    observer.observe($('#agendar'));
-  }
   const dialog = $('#work-dialog'), media = $('#work-media');
-  const grid = $('#catalog-grid'), search = $('#catalog-search'), more = $('#catalog-more');
+  const grid = $('#catalog-grid'), more = $('#catalog-more');
   let entries = [], filtered = [], limit = 9, category = 'all', activeIndex = 0, opener = null, loadFailed = false, pendingBooking = null;
   const reveals = 'IntersectionObserver' in window ? new IntersectionObserver(records => records.forEach(record => {
     if(record.isIntersecting){record.target.classList.add('is-revealed');reveals.unobserve(record.target);}
   }),{threshold:.08}) : null;
   function reveal(element){if(reveals){element.classList.add('reveal');reveals.observe(element);}}
   document.querySelectorAll('.section-heading,.artist-portrait,.artist-copy,.faq>div:first-child').forEach(reveal);
-  const normalize = text => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   function curatedOrder(all) {
     const buckets = Object.fromEntries(Object.keys(labels).map(key => [key, all.filter(item => item.category === key)]));
     const result = [], pattern = ['nails','tattoo','pmu','nails','makeup','tattoo','nails','makeup','nails'];
     while (Object.values(buckets).some(bucket => bucket.length)) for (const key of pattern) if(buckets[key].length) result.push(buckets[key].shift());
     return result;
   }
-  function render() {
-    const query = normalize(search.value.trim());
-    filtered = entries.filter(entry => (category === 'all' || entry.category === category || (category === 'beauty' && entry.category==='makeup')) && normalize(`${entry.title} ${entry.alt} ${entry.translations.es.title} ${entry.translations.es.alt} ${t(entry.category,{},'en')} ${t(entry.category,{},'es')}`).includes(query)).map(entry=>I.entry(entry));
+  function render({append=false} = {}) {
+    filtered = entries.filter(entry => category === 'all' || entry.category === category || (category === 'beauty' && entry.category==='makeup')).map(entry=>I.entry(entry));
     const visible = filtered.slice(0,limit);
-    grid.replaceChildren(...visible.map((entry,index) => {
+    const offset = append ? grid.children.length : 0;
+    if (!append) grid.querySelectorAll('.work-card').forEach(card => reveals?.unobserve(card));
+    const cards = visible.slice(offset).map((entry,relativeIndex) => {
+      const index = offset + relativeIndex;
       const article = document.createElement('article'); article.className='work-card';article.style.setProperty('--reveal-order',index%3);
       const button = document.createElement('button'); button.type='button';button.className='work-open';button.setAttribute('aria-label',t('view',{title:entry.title,category:labels[entry.category]}));
       const frame=document.createElement('div');frame.className='work-image';
@@ -85,8 +66,10 @@
       const copy=document.createElement('div'),title=document.createElement('h3'),tag=document.createElement('p');title.textContent=entry.title;tag.textContent=labels[entry.category];copy.append(title,tag);
       const arrow=document.createElement('span');arrow.className='work-arrow';arrow.append(icons.create('arrow-up-right'));arrow.setAttribute('aria-hidden','true');meta.append(copy,arrow);
       button.append(frame,meta);article.append(button);button.addEventListener('click',()=>openWork(index,button));return article;
-    }));
-    grid.querySelectorAll('.work-card').forEach(reveal);
+    });
+    if (append) grid.append(...cards);
+    else grid.replaceChildren(...cards);
+    cards.forEach(reveal);
     $('#catalog-status').textContent = filtered.length ? t('workCount',{visible:visible.length,total:filtered.length})+(category!=='all'?' · '+t(category):'') : t('noResults');
     $('#catalog-empty').hidden = filtered.length !== 0;
     more.hidden = filtered.length <= limit;
@@ -96,11 +79,10 @@
     document.querySelectorAll('[data-filter]').forEach(item=>{item.classList.toggle('is-active',item===button);item.setAttribute('aria-pressed',String(item===button));});
     render();
   }));
-  search.addEventListener('input',()=>{limit=9;render();});
-  more.addEventListener('click',()=>{const old=limit;limit+=9;render();grid.children[old]?.querySelector('button').focus({preventScroll:true});});
+  more.addEventListener('click',()=>{const old=limit;limit+=9;render({append:true});grid.children[old]?.querySelector('button').focus({preventScroll:true});});
   $('#catalog-reset').addEventListener('click',()=>{
     if(loadFailed){loadCatalog();return;}
-    search.value='';category='all';limit=9;
+    category='all';limit=9;
     document.querySelectorAll('[data-filter]').forEach(item=>{item.classList.toggle('is-active',item.dataset.filter==='all');item.setAttribute('aria-pressed',String(item.dataset.filter==='all'));});render();
   });
   function stopMedia() { media.querySelector('video')?.pause();media.replaceChildren(); }
@@ -141,7 +123,7 @@
       const response=await fetch('assets/catalog.json');if(!response.ok)throw new Error('catalog');
       const data=await response.json();entries=curatedOrder(data.entries);loadFailed=false;
       syncEmpty();
-      $('#total-count').textContent=String(entries.length).padStart(2,'0');render();
+      render();
     }catch(error){loadFailed=true;syncEmpty();$('#catalog-empty').hidden=false;}
   }
   function syncEmpty(){
@@ -152,7 +134,7 @@
   }
   document.addEventListener('paca:language',()=>{
     const activeId=dialog.open?filtered[activeIndex]?.id:null;
-    syncLabels();syncMotion();hero.alt=t('hero.'+heroKey);syncEmpty();
+    syncLabels();hero.alt=t('hero.'+heroKey);syncEmpty();
     if(entries.length&&!loadFailed)render();
     if(activeId){activeIndex=Math.max(0,filtered.findIndex(item=>item.id===activeId));displayWork();}
   });

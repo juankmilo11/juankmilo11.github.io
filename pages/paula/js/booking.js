@@ -148,7 +148,7 @@
         const result=withCatalogReference(controls.message.value,selectedReference[I.language],automaticReference,I.language);
         controls.message.value=result.message;automaticReference=result.automatic;announce(result.added?'referenceAdded':'referencePreserved');
       }
-      (document.getElementById('agendar')||form).scrollIntoView({behavior:'auto',block:'start'});controls.name.focus({preventScroll:true});
+      controls.name.focus();
     });
     document.addEventListener('paca:language',()=>{
       Object.values(controls).forEach(control=>control.setCustomValidity(''));

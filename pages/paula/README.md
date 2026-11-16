@@ -5,12 +5,16 @@ en la burbuja PACA del sitio principal. Esta carpeta es la única fuente publica
 No requiere compilación ni backend.
 
 - `index.html` y `css/styles.css`: diseño adaptable de portada, catálogo,
-  servicios, artista, citas y preguntas frecuentes.
+  servicios, artista y preguntas frecuentes. El agendamiento vive en un diálogo
+  independiente, fuera del contenido principal.
 - `assets/catalog.json`: 35 trabajos, categorías y rutas de sus fotografías y
   tres clips. Las tarjetas cargan imágenes de forma diferida; los videos solo
   se cargan al elegirlos en el visor y no se reproducen automáticamente.
-- `js/app.js`: búsqueda sin acentos, filtros, carga progresiva, visor modal con
-  navegación por teclado, portada intercambiable y pausa de animaciones.
+- `js/app.js`: filtros sin contadores, carga progresiva sin reconstruir las
+  tarjetas existentes, visor modal con teclado y portada intercambiable.
+- `js/booking-window.js` y `css/booking-window.css`: subventana de citas con el
+  mismo diseño, idioma y contraste. Todos los accesos de agendamiento la abren;
+  cerrar con el botón o Escape conserva el borrador y devuelve el foco al acceso.
 - `js/booking.js`: validación, agenda manual en hora local de New Jersey, resumen editable y
   copia con alternativa para iframe. «Quiero algo así» preselecciona servicio
   e incorpora una referencia sin borrar la idea escrita.
@@ -23,8 +27,9 @@ confirmación automática, conexión a agenda o envío de formularios a servidor
 No se guardan datos personales en localStorage, cookies ni URLs.
 
 Sin JavaScript, el formulario está deshabilitado y no puede enviar datos por
-GET. Hay un enlace directo a Instagram. La página respeta movimiento reducido,
-permite pausar animaciones y usa un diálogo nativo para el visor de trabajos.
+GET. Los accesos de cita llevan directamente a Instagram si JavaScript no está
+disponible. La página respeta movimiento reducido y usa diálogos nativos para
+el visor de trabajos y el agendamiento.
 
 ## Desarrollo y comprobación
 
@@ -41,9 +46,13 @@ Abrir `http://127.0.0.1:4173/pages/paula/` o la raíz para comprobar la burbuja.
 El puerto se puede cambiar con `PORT`. Servir por HTTP; abrir el HTML como
 `file://` impide que algunos navegadores carguen el JSON del catálogo.
 
-Probar filtros, búsqueda vacía, Más inspiración, fotos/videos, Escape,
-preselección, fechas pasadas, copia/edición y ampliación de ventana en escritorio
-y móvil. Las fuentes Google Fonts tienen alternativas del sistema.
+Probar filtros, Más inspiración, fotos/videos, Escape, devolución del foco,
+todos los accesos de cita, borrador al cerrar y reabrir, preselección, fechas
+pasadas y copia/edición en escritorio y móvil. Las fuentes Google Fonts tienen
+alternativas del sistema. La comprobación real del navegador se ejecuta con
+`node scripts/qa-paca.cjs`; requiere Playwright y Microsoft Edge, o indicar
+`PLAYWRIGHT_MODULE_PATH` y `PACA_BROWSER_CHANNEL`. Las capturas se guardan en
+la carpeta temporal `paca-qa` (configurable con `PACA_QA_OUTPUT`).
 
 La selección, procedencia y regeneración se documentan en
 `projects/PACA/README.md`. Originales e informes completos permanecen locales.
@@ -78,7 +87,8 @@ en el archivo local, sin publicar.
 lunes a viernes, de 07:00 a 19:00, en `America/New_York`; el navegador adapta el
 calendario al horario de verano de New Jersey. Se excluyen fines de semana,
 fechas pasadas, días cerrados y bloques ocupados. La disponibilidad se vuelve
-a consultar antes de preparar la solicitud. Una solicitud no confirma ni
+a consultar al abrir la subventana y antes de preparar la solicitud. Mientras
+está cerrada no se actualizan los horarios cada minuto. Una solicitud no confirma ni
 bloquea una cita. Paula debe confirmarla por Instagram y registrar el bloqueo.
 
 Abrir `/pages/paula/agenda.html` para editar manualmente: agregar bloques o días
@@ -103,8 +113,12 @@ Las fotos opcionales se previsualizan en el dispositivo y deben adjuntarse
 por separado en Instagram: no se suben ni se envían automáticamente.
 
 `js/schedule.js` concentra reglas verificables sin navegador; `js/agenda.js`
-construye calendario y franjas; `js/experience.js` añade progreso de lectura,
-movimiento sutil de tarjetas y transiciones con pausa y movimiento reducido.
+construye calendario y franjas; `js/experience.js` añade progreso de lectura
+con una actualización por fotograma y mide la altura solo al cambiar el contenido.
+Las animaciones permanecen activas mientras PACA está abierto, respetando
+movimiento reducido. Las tarjetas usan un desplazamiento CSS al pasar el cursor;
+las entradas y fundidos animan opacidad y transformaciones, sin inclinación
+calculada en cada movimiento, máscaras animadas ni desenfoque de los diálogos.
 `css/experience.css` contiene la sección editorial de Paula y el nuevo formulario.
 
 Comprobar también `node scripts/test-paca-schedule.cjs` y

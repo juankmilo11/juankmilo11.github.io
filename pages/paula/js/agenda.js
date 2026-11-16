@@ -5,7 +5,7 @@
     const date=form.elements.namedItem('date'),time=form.elements.namedItem('time');
     const month=container.querySelector('#agenda-month'),days=container.querySelector('.calendar-days'),weekdays=container.querySelector('.calendar-weekdays'),times=container.querySelector('.time-slots'),status=container.querySelector('#agenda-status');
     const previous=container.querySelector('#agenda-previous'),next=container.querySelector('#agenda-next'),retry=container.querySelector('#agenda-retry');
-    let config=null,cursor=S.studioNow().date.slice(0,7),request=0;
+    let config=null,cursor=S.studioNow().date.slice(0,7),request=0,pendingLoad=null;
     const locale=()=>I.language==='es'?'es-CO':'en-US';
     const formatDate=value=>new Intl.DateTimeFormat(locale(),{timeZone:'UTC',dateStyle:'full'}).format(new Date(`${value}T12:00:00Z`));
     const labelTime=value=>new Intl.DateTimeFormat(locale(),{timeZone:'UTC',hour:'numeric',minute:'2-digit',hour12:true}).format(new Date(`2000-01-01T${value}:00Z`));
@@ -45,21 +45,25 @@
     previous.addEventListener('click',()=>move(-1));next.addEventListener('click',()=>move(1));
     async function load(){
       const token=++request;retry.hidden=true;container.setAttribute('aria-busy','true');
+      pendingLoad?.abort();
       const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);
+      pendingLoad=controller;
       try{
         const response=await fetch('assets/availability.json',{cache:'no-store',signal:controller.signal});if(!response.ok)throw new Error('Schedule unavailable');
         const data=S.validateConfig(await response.json());if(token!==request)return;config=data;render();
-      }catch(_){config=null;date.value='';time.value='';render();status.textContent=t('agendaError');retry.hidden=false;}
-      finally{clearTimeout(timeout);container.setAttribute('aria-busy','false');}
+      }catch(_){if(token!==request)return;config=null;date.value='';time.value='';render();status.textContent=t('agendaError');retry.hidden=false;}
+      finally{clearTimeout(timeout);if(token===request){pendingLoad=null;container.setAttribute('aria-busy','false');}}
     }
     retry.addEventListener('click',load);
-    document.addEventListener('paca:language',()=>{render();if(!config){status.textContent=t('agendaError');retry.hidden=false;}});
+    document.addEventListener('paca:language',()=>{render();if(!config&&request){status.textContent=t('agendaError');retry.hidden=false;}});
     form.addEventListener('change',event=>{if(['service','nailType','removal'].includes(event.target.name)){time.value='';renderTimes();}});
     // Recheck the clock on tab return so elapsed times cannot be requested.
-    document.addEventListener('visibilitychange',()=>{if(!document.hidden)load();});
-    const timer=setInterval(()=>{if(!document.hidden)renderTimes();},60000);
+    const active=()=>!document.hidden&&(container.closest('dialog')?.open??true);
+    document.addEventListener('visibilitychange',()=>{if(active())load();});
+    document.addEventListener('paca:book',load);
+    const timer=setInterval(()=>{if(active())renderTimes();},60000);
     addEventListener('pagehide',()=>clearInterval(timer),{once:true});
-    render();load();
+    render();if(!container.closest('dialog'))load();
     return {
       refresh:render,
       recheck:load,

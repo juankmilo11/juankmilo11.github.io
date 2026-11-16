@@ -15,7 +15,7 @@ html[data-theme=dark] .artist-portrait img,html[data-theme=dark] .artist-details
 html[data-theme=dark] .calendar-days button:not(:disabled):hover{background:#59364a}
 html[data-theme=dark] .calendar-days button[aria-pressed=true],html[data-theme=dark] .calendar-days button[aria-pressed=true]:hover,html[data-theme=dark] .time-slot[aria-pressed=true]{background:#a5587b;color:#fff;border-color:#df9abc}
 html[data-theme=dark] .calendar-days button:disabled{color:#8b7582}
-html[data-theme=dark] .booking-panel input:not([type=checkbox]),html[data-theme=dark] .booking-panel select,html[data-theme=dark] .booking-panel textarea,html[data-theme=dark] .catalog-search{border-color:#a8788b90}
+html[data-theme=dark] .booking-panel input:not([type=checkbox]),html[data-theme=dark] .booking-panel select,html[data-theme=dark] .booking-panel textarea{border-color:#a8788b90}
 html[data-theme=dark] input::placeholder,html[data-theme=dark] textarea::placeholder{color:#b79daa;opacity:1}
 html[data-theme=dark] select option{background:#30232f;color:var(--ink)}
 html[data-theme=dark] .work-dialog::backdrop{background:#110d13df}
