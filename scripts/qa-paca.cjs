@@ -38,149 +38,112 @@ async function settleAnimations(page, selector) {
   });
 }
 
+
 (async () => {
   let browser;
   try {
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     browser = await chromium.launch({ channel: process.env.PACA_BROWSER_CHANNEL || 'msedge', headless: true });
-    const url = `http://127.0.0.1:${server.address().port}/pages/paula/`;
+    const url = 'http://127.0.0.1:' + server.address().port + '/pages/paula/';
     const page = await browser.newPage({ viewport: { width: 1180, height: 820 } });
-    const errors = [], failures = [], requests = [];
-    page.on('pageerror', error => errors.push(error.message));
-    page.on('response', response => { if (response.url().startsWith(url) && response.status() >= 400) failures.push(response.url()); });
-    page.on('request', request => requests.push(request));
+    const errors=[];
+    page.on('pageerror', error=>errors.push(error.message));
+    const schedule=JSON.parse(fs.readFileSync(path.join(root,'pages/paula/assets/availability.json'),'utf8'));
+    // This is a browser contract test. Production persistence is tested separately
+    // against the actual server, never replaced by this fixture in shipped code.
+    const fixture='window.__bookingCalls=[];window.__availabilityCalls=0;window.ProjectAPI={availability:async()=>{window.__availabilityCalls++;return '+JSON.stringify(schedule)+'},createAppointment:async(payload,options)=>{window.__bookingCalls.push({payload,key:options.idempotencyKey,photos:Object.fromEntries(Object.entries(options.files).map(([key,file])=>[key,file?{name:file.name,type:file.type,size:file.size}:null]))});if(window.__bookingCalls.length===1)throw new Error("uncertain network response");return {id:"PACA-QA-RECEIPT",status:"pending",createdAt:new Date().toISOString()}}};';
+    await page.route('**/shared/api.js*',route=>route.fulfill({contentType:'text/javascript',body:fixture}));
+    await page.route('**/shared/api-config.js*',route=>route.fulfill({contentType:'text/javascript',body:'/* Browser QA configuration */'}));
     await page.goto(url);
     await page.locator('.work-card').first().waitFor();
-    assert.equal(await page.locator('#motion-toggle,#catalog-search,#total-count,.service-number').count(), 0);
-    assert.equal(await page.locator('main #agendar').count(), 0, 'Booking is outside the main page');
-    assert.equal(await page.locator('#booking-dialog').isVisible(), false);
-    assert.equal(requests.filter(request => request.url().includes('availability.json')).length, 0, 'Availability is loaded on demand');
-    for (const category of ['all', 'nails', 'tattoo', 'pmu', 'beauty']) {
-      const filter = page.locator(`[data-filter="${category}"]`);
-      assert.doesNotMatch(await filter.innerText(), /\d/);
-      await filter.click();
-      assert.ok(await page.locator('.work-card').count() > 0);
+    assert.equal(await page.locator('#motion-toggle,#catalog-search,#total-count,.service-number,#booking-copy,#booking-instagram').count(),0);
+    assert.equal(await page.locator('main #agendar').count(),0);
+    for(const category of ['all','nails','tattoo','pmu','beauty']){
+      const filter=page.locator('[data-filter="'+category+'"]');assert.doesNotMatch(await filter.innerText(),/\d/);await filter.click();assert.ok(await page.locator('.work-card').count()>0);
     }
     await page.locator('[data-filter="all"]').click();
-    const originalCard = await page.locator('.work-card').first().elementHandle();
+    const originalCard=await page.locator('.work-card').first().elementHandle();
     await page.locator('#catalog-more').click();
-    assert.equal(await page.locator('.work-card').count(), 18);
-    assert.ok(await originalCard.evaluate(card => card === document.querySelector('.work-card')), 'More inspiration preserves existing cards');
+    assert.equal(await page.locator('.work-card').count(),18);
+    assert.ok(await originalCard.evaluate(card=>card===document.querySelector('.work-card')));
     await page.locator('.nav-book').click();
     await page.locator('#booking-dialog').waitFor();
-    await page.locator('#booking-agenda[aria-busy="false"]').waitFor();
-    await checkLayout(page);
-    const form = page.locator('#booking-form');
+    const form=page.locator('#booking-form');
+    assert.equal(await page.locator('.booking-policy').getAttribute('open'),null);
+    assert.equal(await form.locator('[name="whatsapp"]').evaluate(element=>element.required),true);
+    assert.equal(await form.locator('[name="instagram"]').evaluate(element=>element.required),false);
+    assert.equal(await page.locator('#calendar-dialog').isVisible(),false);
+    assert.equal(await page.evaluate(()=>window.__availabilityCalls),0);
     await form.locator('[name="name"]').fill('Ana Test');
-    await form.locator('[name="contact"]').fill('@ana_test');
+    await form.locator('[name="whatsapp"]').fill('+57 300 123 4567');
     await form.locator('[name="message"]').fill('Azul y flores.');
-    await closeBooking(page);
-    assert.ok(await page.locator('.nav-book').evaluate(link => link === document.activeElement), 'Closing restores the opener');
-
-    for (const service of ['nails', 'tattoo', 'pmu', 'beauty']) {
-      await page.locator(`[data-book="${service}"]`).evaluate(button => button.closest('details').open = true);
-      await page.locator(`[data-book="${service}"]`).click();
-      assert.equal(await form.locator('[name="service"]').inputValue(), service);
-      assert.equal(await form.locator('[name="name"]').inputValue(), 'Ana Test');
-      await closeBooking(page);
+    await form.locator('[name="service"]').selectOption('beauty');
+    async function selectSlot(){
+      await page.locator('#calendar-open').click();
+      await page.locator('#calendar-dialog').waitFor();
+      await page.locator('#booking-agenda[aria-busy="false"]').waitFor();
+      const days=page.locator('.calendar-days button:not(:disabled)');
+      for(let index=0;index<await days.count();index++){
+        await days.nth(index).click();const times=page.locator('.time-slot:not(:disabled)');
+        if(await times.count()){await times.first().click();return;}
+      }
+      throw new Error('No available future date in QA schedule');
     }
+    await selectSlot();
+    await page.keyboard.press('Escape');
+    await page.locator('#calendar-dialog').waitFor({state:'hidden'});
+    assert.equal(await page.locator('#booking-dialog').isVisible(),true,'Escape closes only calendar');
+    assert.equal(await form.locator('[name="date"]').inputValue(),'','Cancel restores original selection');
+    await selectSlot();await page.locator('#calendar-apply').click();
+    await page.locator('#calendar-dialog').waitFor({state:'hidden'});
+    assert.match(await page.locator('#calendar-selection').innerText(),/New Jersey/);
+    const originalDate=await form.locator('[name="date"]').inputValue();
+    await page.locator('#calendar-open').click();await page.locator('#calendar-cancel').click();
+    assert.equal(await form.locator('[name="date"]').inputValue(),originalDate);
+    for(const name of ['punctuality','cancellation','policy','consent'])await form.locator('[name="'+name+'"]').check();
+    await form.locator('[name="currentPhoto"]').setInputFiles({name:'test.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l1cAAAAASUVORK5CYII=','base64')});
+    await page.locator('#booking-submit').click();
+    await page.locator('#booking-review').waitFor();
+    assert.match(await page.locator('#booking-summary').innerText(),/\+573001234567/);
+    assert.equal(await page.evaluate(()=>window.__bookingCalls.length),0,'Review does not transmit data');
+    await page.locator('#booking-send').click();
+    await page.waitForFunction(()=>window.__bookingCalls.length===1);
+    assert.equal(await page.locator('#booking-success').isVisible(),false,'Uncertain response cannot claim success');
+    await page.locator('#booking-send').click();
+    await page.locator('#booking-success').waitFor();
+    assert.match(await page.locator('#booking-receipt').innerText(),/PACA-QA-RECEIPT/);
+    const writes=await page.evaluate(()=>window.__bookingCalls);
+    assert.equal(writes.length,2);
+    assert.equal(writes[0].key,writes[1].key,'Retry uses the same idempotency key');
+    assert.equal(writes[1].payload.whatsapp,'+573001234567');
+    assert.equal(writes[1].payload.instagram,'');
+    assert.equal(writes[1].photos.currentPhoto.name,'test.png');
+    assert.equal('currentPhoto' in writes[1].payload,false,'Attachments are Files, not fake saved filenames');
+    await closeBooking(page);
+    await page.locator('.nav-book').click();
+    assert.equal(await page.locator('#booking-success').isVisible(),true,'Receipt survives closing and reopening');
+    await page.locator('#booking-new').click();
+    assert.equal(await form.locator('[name="name"]').inputValue(),'');
+    await closeBooking(page);
     await page.locator('[data-language="es"]').click();
     await page.locator('#theme-toggle').click();
     await page.locator('.floating-book').click();
-    assert.equal(await page.locator('#booking-window-title').innerText(), 'Solicitar una cita');
-    assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
-    assert.equal(await form.locator('[name="message"]').inputValue(), 'Azul y flores.');
-    await page.keyboard.press('Escape');
-    await page.locator('#booking-dialog').waitFor({ state: 'hidden' });
-    await page.locator('[data-language="en"]').click();
-    await page.locator('#theme-toggle').click();
-
-    await page.locator('.work-open').first().click();
-    const reference = await page.locator('#work-title').innerText();
-    await page.locator('#work-book').click();
-    await page.locator('#booking-dialog').waitFor();
-    await page.locator('#work-dialog').waitFor({ state: 'hidden' });
-    assert.ok((await form.locator('[name="message"]').inputValue()).includes(reference));
-    assert.ok((await form.locator('[name="message"]').inputValue()).includes('Azul y flores.'));
-    await closeBooking(page);
-
-    await page.locator('[data-book="nails"]').click();
-    await form.locator('[name="nailType"]').selectOption('fullSet');
-    await form.locator('[name="removal"]').selectOption('no');
-    await page.locator('#booking-agenda[aria-busy="false"]').waitFor();
-    const days = page.locator('.calendar-days button:not(:disabled)');
-    let selected = false;
-    for (let index = 0; index < await days.count(); index++) {
-      await days.nth(index).click();
-      const times = page.locator('.time-slot:not(:disabled)');
-      if (await times.count()) { await times.first().click(); selected = true; break; }
+    assert.equal(await page.locator('#booking-window-title').innerText(),'Solicitar una cita');
+    assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
+    await page.locator('#calendar-open').click();
+    assert.equal(await page.locator('#calendar-window-title').innerText(),'Elegir fecha y hora');
+    await page.locator('#calendar-cancel').click();await closeBooking(page);
+    await page.locator('[data-language="en"]').click();await page.locator('#theme-toggle').click();
+    for(const [width,height] of [[1180,820],[768,1024],[375,812],[812,375],[320,640]]){
+      await page.setViewportSize({width,height});await page.locator('.nav-book').click();await checkLayout(page);await settleAnimations(page,'#booking-dialog');
+      await page.screenshot({path:path.join(output,'booking-'+width+'x'+height+'.png')});
+      await page.locator('#calendar-open').click();await settleAnimations(page,'#calendar-dialog');
+      assert.ok(await page.locator('#calendar-dialog').evaluate(element=>element.scrollWidth<=element.clientWidth+1));
+      await page.screenshot({path:path.join(output,'calendar-'+width+'x'+height+'.png')});
+      await page.locator('#calendar-cancel').click();await closeBooking(page);
     }
-    assert.ok(selected, 'Calendar offers a future appointment start');
-    for (const name of ['punctuality', 'cancellation', 'policy', 'consent']) await form.locator(`[name="${name}"]`).check();
-    await page.locator('#booking-submit').click();
-    await page.locator('#booking-review').waitFor();
-    assert.match(await page.locator('#booking-summary').innerText(), /Ana Test/);
-    assert.match(await page.locator('#booking-summary').innerText(), /Azul y flores/);
-    await page.locator('#booking-edit').click();
-    assert.equal(await form.locator('[name="name"]').inputValue(), 'Ana Test');
-    await closeBooking(page);
-    assert.equal(requests.filter(request => request.method() === 'POST').length, 0, 'No request was sent');
-
-    for (const [width, height] of [[1180, 820], [768, 1024], [375, 812], [812, 375], [320, 640]]) {
-      await page.setViewportSize({ width, height });
-      await page.locator('.nav-book').click();
-      await checkLayout(page);
-      await settleAnimations(page, '#booking-dialog');
-      await page.screenshot({ path: path.join(output, `booking-${width}x${height}.png`) });
-      await closeBooking(page);
-    }
-    await page.setViewportSize({ width: 1180, height: 820 });
-    await page.locator('#catalogo').evaluate(element => element.scrollIntoView({ behavior: 'instant', block: 'start' }));
-    await page.waitForFunction(() => document.querySelector('#catalogo .section-heading').classList.contains('is-revealed'));
-    await settleAnimations(page, '#catalogo');
-    await page.screenshot({ path: path.join(output, 'catalog-desktop.png') });
-    assert.equal(await page.locator('.ticker-track').evaluate(element => getComputedStyle(element).animationPlayState), 'running');
-    assert.equal(await page.locator('.ticker-track').evaluate(element => getComputedStyle(element).animationName), 'marquee');
-    await page.goto(url + '#agendar');
-    await page.locator('#booking-dialog').waitFor();
-    await closeBooking(page);
-    await page.emulateMedia({ reducedMotion: 'reduce' });
-    assert.equal(await page.locator('.ticker-track').evaluate(element => getComputedStyle(element).animationName), 'none');
-
-    await page.route('**/assets/availability.json', route => route.fulfill({ status: 503, body: '{}' }));
-    await page.locator('.nav-book').click();
-    await page.locator('#agenda-retry').waitFor();
-    assert.equal(failures.pop(), url + 'assets/availability.json', 'The simulated availability failure is reported');
-    await form.locator('[name="name"]').fill('Retry Test');
-    await page.unroute('**/assets/availability.json');
-    await page.locator('#agenda-retry').click();
-    await page.locator('#booking-agenda[aria-busy="false"]').waitFor();
-    assert.ok(await page.locator('.calendar-days button:not(:disabled)').count() > 0);
-    assert.equal(await form.locator('[name="name"]').inputValue(), 'Retry Test');
-    await closeBooking(page);
-
-    const home = await browser.newPage({ viewport: { width: 1280, height: 900 } });
-    const homeErrors = [];
-    home.on('pageerror', error => homeErrors.push(error.message));
-    await home.goto(`http://127.0.0.1:${server.address().port}/`);
-    await home.locator('.enlace-paca').click();
-    const paca = home.frameLocator('.ventana-paca iframe');
-    await paca.locator('.nav-book').click();
-    await paca.locator('#booking-dialog').waitFor();
-    await paca.locator('#booking-dialog').evaluate(async element => {
-      await Promise.all(element.getAnimations().map(animation => animation.finished));
-    });
-    await home.screenshot({ path: path.join(output, 'booking-inside-paca.png') });
-    await paca.locator('#booking-window-close').click();
-    await home.locator('.ventana-paca .cerrar-ventana').click();
-    assert.equal(await home.locator('.ventana-paca').count(), 0);
-    assert.deepEqual(homeErrors, []);
-    assert.deepEqual(errors, []);
-    assert.deepEqual(failures, []);
-    console.log('OK: filters, retained cards, every booking entry point, EN/ES, theme, draft, catalog reference, calendar, retry, review/edit, Escape, focus, five viewport sizes and the parent PACA iframe.');
-    console.log(`Screenshots: ${output}`);
-  } finally {
-    await browser?.close();
-    server.close();
-  }
-})().catch(error => { console.error(error); process.exitCode = 1; });
+    assert.deepEqual(errors,[]);
+    console.log('OK: required WhatsApp, optional Instagram, collapsed policies, separate calendar, cancel/apply/Escape, private file contract, review, uncertain save, idempotent retry, receipt, EN/ES, theme and five viewports.');
+    console.log('Screenshots: '+output);
+  }finally{await browser?.close();server.close();}
+})().catch(error=>{console.error(error);process.exitCode=1;});

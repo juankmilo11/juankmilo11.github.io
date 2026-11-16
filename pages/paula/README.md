@@ -1,135 +1,89 @@
 # PACA · Paula Daniela
 
-Página estática de catálogo y solicitudes de cita en `/pages/paula/`, integrada
-en la burbuja PACA del sitio principal. Esta carpeta es la única fuente publicada.
-No requiere compilación ni backend.
+Catálogo y solicitud de citas en `/pages/paula/`, integrado en la burbuja PACA.
+Esta carpeta contiene el cliente publicado; el servicio en línea y la base de
+datos están documentados en el proyecto de servidor. El catálogo no requiere
+compilación. El agendamiento requiere el servicio configurado en
+`shared/api-config.js`; nunca guarda solicitudes en localStorage como sustituto
+del servidor.
 
-- `index.html` y `css/styles.css`: diseño adaptable de portada, catálogo,
-  servicios, artista y preguntas frecuentes. El agendamiento vive en un diálogo
-  independiente, fuera del contenido principal.
-- `assets/catalog.json`: 35 trabajos, categorías y rutas de sus fotografías y
-  tres clips. Las tarjetas cargan imágenes de forma diferida; los videos solo
-  se cargan al elegirlos en el visor y no se reproducen automáticamente.
-- `js/app.js`: filtros sin contadores, carga progresiva sin reconstruir las
-  tarjetas existentes, visor modal con teclado y portada intercambiable.
-- `js/booking-window.js` y `css/booking-window.css`: subventana de citas con el
-  mismo diseño, idioma y contraste. Todos los accesos de agendamiento la abren;
-  cerrar con el botón o Escape conserva el borrador y devuelve el foco al acceso.
-- `js/booking.js`: validación, agenda manual en hora local de New Jersey, resumen editable y
-  copia con alternativa para iframe. «Quiero algo así» preselecciona servicio
-  e incorpora una referencia sin borrar la idea escrita.
+## Flujo de citas
 
-## Solicitudes de cita
+- Nombre y número de WhatsApp con código de país son obligatorios. Instagram
+  es opcional y se valida como usuario, no como correo ni URL.
+- El botón «Elegir fecha y hora» abre una segunda subventana encima del borrador.
+  «Usar este horario» aplica la elección. Cancelar, cerrar o Escape conserva la
+  elección anterior y devuelve el foco al botón; Escape no cierra el formulario.
+- Las condiciones de la cita se muestran cerradas inicialmente. Los acuerdos
+  siguen siendo obligatorios antes del envío.
+- La persona revisa el resumen y pulsa «Enviar solicitud». Solo se muestra un
+  número de solicitud cuando el servidor confirma la escritura. El estado
+  inicial es pendiente; recibir la solicitud no equivale a confirmar la cita.
+- El contacto y las fotos opcionales se envían con consentimiento. Las fotos
+  JPEG, PNG o WebP admiten hasta 8 MB cada una; se mandan como archivos privados,
+  no como nombres de archivo que aparenten haber sido guardados.
+- Los fallos conservan el borrador y permiten reintentar con la misma clave de
+  idempotencia. El botón se bloquea durante el envío para evitar doble clic.
+  La clave y los datos del borrador viven únicamente mientras la ventana PACA
+  permanece abierta. La persistencia de solicitudes aceptadas está en el servidor.
+- No hay paso de copiar ni enviar por Instagram. El administrador gestiona las
+  solicitudes desde ADMIN; las correcciones posteriores se coordinan con Paula.
 
-El usuario revisa y copia la solicitud, abre Instagram y la envía manualmente
-a `@paulaadaniiela`. Abrir Instagram no envía mensajes. No hay reserva ni
-confirmación automática, conexión a agenda o envío de formularios a servidores.
-No se guardan datos personales en localStorage, cookies ni URLs.
+Cerrar y reabrir la subventana conserva el borrador o el comprobante durante esa
+visita. «Nueva solicitud» limpia el formulario. No se ponen datos de clientes
+ni credenciales en URLs. Sin JavaScript se explica que hay que activarlo para
+solicitar una cita; el formulario no envía datos por GET.
 
-Sin JavaScript, el formulario está deshabilitado y no puede enviar datos por
-GET. Los accesos de cita llevan directamente a Instagram si JavaScript no está
-disponible. La página respeta movimiento reducido y usa diálogos nativos para
-el visor de trabajos y el agendamiento.
+## Archivos
 
-## Desarrollo y comprobación
+- `index.html`, `css/styles.css`: catálogo, servicios, artista y preguntas frecuentes.
+- `assets/catalog.json`: trabajos reales y sus medios. Las fotos se cargan de
+  forma diferida y los videos se piden al elegirlos en el visor.
+- `js/app.js`: filtros, carga progresiva que conserva tarjetas existentes,
+  visor de trabajos y preselección de servicio/referencia.
+- `js/booking.js`: validación, subventana de calendario, revisión, archivos,
+  envío seguro y comprobante del servidor.
+- `js/booking-window.js`, `css/booking-window.css`: ventanas de citas y calendario.
+- `js/agenda.js`: disponibilidad pública del servicio, calendario y franjas.
+- `js/schedule.js`: reglas de horario de New Jersey compartidas con las pruebas.
+- `js/locales.js`, `js/i18n.js`: inglés/español, incluidos mensajes y etiquetas
+  accesibles. Cambiar el idioma conserva datos escritos y selecciones.
+- `js/theme.js`, `css/theme.css`: contraste claro/oscuro de ambas subventanas.
+- `js/experience.js`, `css/experience.css`: efectos de opacidad y transformación,
+  progreso de lectura y entradas. Se respeta movimiento reducido.
+
+## Disponibilidad
+
+El horario usa `America/New_York`, de lunes a viernes de 07:00 a 19:00. La
+consulta en línea se hace al abrir el calendario y antes de revisar la solicitud.
+Si la disponibilidad falla, el cliente muestra un error y ofrece reintentar;
+no presenta el antiguo JSON estático como si fuera disponibilidad en vivo.
+Las citas guardadas y sus cambios se gestionan desde ADMIN. Las comprobaciones
+finales de disponibilidad y contenido corresponden al servidor.
+
+El JSON `assets/availability.json` se conserva como configuración inicial y
+recurso de pruebas, no como base de solicitudes. El antiguo `agenda.html` es
+un editor de ese archivo y no administra los registros guardados en línea.
+
+## Comprobación
 
 Desde la raíz:
 
 ```powershell
-node scripts/serve-static.cjs
-node scripts/check-site.mjs
 node scripts/check-paca.mjs
 node scripts/test-paca-booking.cjs
+node scripts/test-paca-schedule.cjs
+node scripts/test-paca-i18n.cjs
+node scripts/test-paca-theme.cjs
+node scripts/qa-paca.cjs
+node scripts/qa-online.mjs
 ```
 
-Abrir `http://127.0.0.1:4173/pages/paula/` o la raíz para comprobar la burbuja.
-El puerto se puede cambiar con `PORT`. Servir por HTTP; abrir el HTML como
-`file://` impide que algunos navegadores carguen el JSON del catálogo.
-
-Probar filtros, Más inspiración, fotos/videos, Escape, devolución del foco,
-todos los accesos de cita, borrador al cerrar y reabrir, preselección, fechas
-pasadas y copia/edición en escritorio y móvil. Las fuentes Google Fonts tienen
-alternativas del sistema. La comprobación real del navegador se ejecuta con
-`node scripts/qa-paca.cjs`; requiere Playwright y Microsoft Edge, o indicar
-`PLAYWRIGHT_MODULE_PATH` y `PACA_BROWSER_CHANNEL`. Las capturas se guardan en
-la carpeta temporal `paca-qa` (configurable con `PACA_QA_OUTPUT`).
-
-La selección, procedencia y regeneración se documentan en
-`projects/PACA/README.md`. Originales e informes completos permanecen locales.
-
-## Idiomas
-
-El idioma original y predeterminado es inglés, incluso sin JavaScript. El
-selector EN / ES cambia todos los textos de la interfaz, descripciones y títulos
-del catálogo, textos accesibles, validaciones y resumen de cita. La elección se
-recuerda en `localStorage` como `paca-language`; no se guardan datos personales.
-El contenido que escriba el visitante se preserva al cambiar de idioma.
-
-`js/locales.js` contiene el texto estático y los mensajes dinámicos en ambos
-idiomas. `js/i18n.js` conserva los nodos y controles de la página durante la
-traducción. Las entradas del catálogo usan `title` y `alt` en inglés, y
-`translations.es` para español; la selección y su generador conservan esos datos.
-
-## Identidad visual y selección actual
-
-Paleta rosa claro y beige con texto ciruela. `assets/icons.svg` contiene una
-flor propia y los iconos de línea; `js/icons.js` los conserva también en los
-controles dinámicos. Las portadas ocupan todo el ancho y las tarjetas usan un
-marco en arco con encuadre centrado. La pestaña de maquillaje permanente es PMU.
-
-El catálogo y los servicios ya no incluyen trenzas ni coloración de cabello.
-La selección de regeneración también los excluye; los originales se conservan
-en el archivo local, sin publicar.
-
-## Agenda y preparación de citas
-
-`assets/availability.json` es la fuente pública de disponibilidad. El horario es
-lunes a viernes, de 07:00 a 19:00, en `America/New_York`; el navegador adapta el
-calendario al horario de verano de New Jersey. Se excluyen fines de semana,
-fechas pasadas, días cerrados y bloques ocupados. La disponibilidad se vuelve
-a consultar al abrir la subventana y antes de preparar la solicitud. Mientras
-está cerrada no se actualizan los horarios cada minuto. Una solicitud no confirma ni
-bloquea una cita. Paula debe confirmarla por Instagram y registrar el bloqueo.
-
-Abrir `/pages/paula/agenda.html` para editar manualmente: agregar bloques o días
-cerrados, indicar duraciones en minutos y descargar `availability.json`. Publicar
-el archivo descargado en `pages/paula/assets/availability.json` para que todas
-las visitas vean el cambio. El editor no tiene acceso de escritura al servidor;
-no incluye credenciales ni registra nombres, contactos ni otros datos de clientes.
-La agenda inicial no contiene citas ni días bloqueados: hay que registrar las
-citas existentes antes de usarla como referencia de ocupación.
-
-Las duraciones no proporcionadas permanecen en `null`: se muestran horas de
-inicio para solicitar y Paula confirma el tiempo que necesita el diseño. Cuando
-se configuraron duraciones, el calendario exige que el servicio y el retiro
-caben antes de las 19:00 y no se superpongan con otros bloques. Si la clienta
-no sabe si necesita retiro, se reserva el margen extra configurado.
-
-El formulario distingue set completo, relleno y retiro. Exige indicar si hay
-producto que retirar y aceptar el costo y tiempo extra cuando corresponda,
-así como puntualidad, aviso de cancelación y lectura de las condiciones. No
-se han establecido multas ni anticipos sin confirmación del negocio.
-Las fotos opcionales se previsualizan en el dispositivo y deben adjuntarse
-por separado en Instagram: no se suben ni se envían automáticamente.
-
-`js/schedule.js` concentra reglas verificables sin navegador; `js/agenda.js`
-construye calendario y franjas; `js/experience.js` añade progreso de lectura
-con una actualización por fotograma y mide la altura solo al cambiar el contenido.
-Las animaciones permanecen activas mientras PACA está abierto, respetando
-movimiento reducido. Las tarjetas usan un desplazamiento CSS al pasar el cursor;
-las entradas y fundidos animan opacidad y transformaciones, sin inclinación
-calculada en cada movimiento, máscaras animadas ni desenfoque de los diálogos.
-`css/experience.css` contiene la sección editorial de Paula y el nuevo formulario.
-
-Comprobar también `node scripts/test-paca-schedule.cjs` y
-`node scripts/test-paca-i18n.cjs`. Las traducciones incluyen textos alternativos
-de imágenes y conservan los datos escritos al cambiar de idioma.
-
-## Contraste
-
-El selector de sol/luna de la cabecera cambia todo el catálogo, visor, agenda
-y formulario entre día y noche. Cada nueva visita inicia en claro. El idioma
-no altera el contraste elegido; el marco exterior recibe el cambio mediante
-un mensaje validado por origen y por iframe. No hay control de ampliación.
-
-Verificar con `node scripts/test-paca-theme.cjs`.
+Las dos últimas pruebas requieren Playwright y Edge (o `PLAYWRIGHT_MODULE_PATH`
+y `PACA_BROWSER_CHANNEL`). `qa-paca.cjs` usa un servicio simulado explícito para
+comprobar el contrato del navegador sin crear solicitudes reales y guarda
+capturas en la carpeta temporal `paca-qa` (configurable con `PACA_QA_OUTPUT`).
+`qa-online.mjs` conecta el navegador con el Worker real y los adaptadores locales
+de SQLite y R2: comprueba escritura multipart, persistencia tras reabrir la base,
+acceso ADMIN, fotos privadas, edición, conflictos de versión, bloqueo del horario,
+eliminación y cierre de sesión. Usa únicamente datos y contraseñas de prueba.

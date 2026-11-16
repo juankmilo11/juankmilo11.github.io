@@ -27,16 +27,17 @@ Cada sección bajo `pages/` es independiente. PACA carga su propio CSS y JS,
 con catálogo JSON de trabajos reales, filtros sin contadores ni buscador y visor
 de fotos/videos. La agenda y el formulario de solicitudes se encuentran en un
 diálogo independiente (`js/booking-window.js`, `css/booking-window.css`) con
-copia y envío manual por Instagram. Los accesos de cita conservan la selección
+revisión y envío al servidor persistente. Los accesos de cita conservan la selección
 y las referencias del catálogo, y cerrar el diálogo preserva el borrador.
 Los encabezados de secciones y servicios no incluyen números.
 Las animaciones usan CSS con opacidad y transformaciones; no hay control de
 pausa manual ni cálculos de inclinación en cada movimiento del puntero.
-La agenda manual vive en `pages/paula/assets/availability.json`;
-`schedule.js` valida horarios y solapamientos, `agenda.js` construye el calendario
-y `agenda.html` permite preparar un archivo actualizado para publicarlo. Las
-solicitudes no bloquean espacios hasta que Paula confirme la cita y registre
-el horario ocupado. Su ventana
+`schedule.js` valida horarios y `agenda.js` consulta la disponibilidad pública
+del servidor. El calendario tiene su propio diálogo. La configuración inicial
+`assets/availability.json` y su editor antiguo se conservan como referencias,
+pero no constituyen la agenda en vivo. La gestión de solicitudes y horarios
+se hace en ADMIN. Las solicitudes pendientes no bloquean espacios; una
+confirmación guarda su duración y bloquea el intervalo atómicamente. Su ventana
 es más amplia y tiene tamaño fijo adaptable al viewport; el iframe conserva su diseño adaptable.
 `projects/PACA/` documenta la selección y prepara recursos; el archivo original
 y los informes completos se conservan locales y se excluyen de Git. LBDSEGUROS
@@ -44,6 +45,29 @@ conserva la ruta `pages/sura/` y contiene únicamente el GIF de construcción,
 ajustado al ancho y al borde inferior. La antigua ruta de construcción se
 conserva por compatibilidad y ya no tiene burbuja. `pages/fct/index.html` preserva la ruta
 antigua con una redirección.
+
+## Servidor persistente y ADMIN
+
+`projects/services-api/` contiene un Worker ESM, migraciones versionadas y pruebas.
+Sites publica ese servidor y provisiona D1 (`DB`) y R2 (`BUCKET`) según su propio
+`.openai/hosting.json`. GitHub Pages solo sirve los clientes. `shared/api.js`
+conecta ambos por HTTPS; `shared/api-config.js` contiene únicamente el origen
+público. Las operaciones públicas no devuelven registros personales ni fotos.
+
+`pages/admin/` valida el acceso en el servidor, conserva la sesión solo en
+memoria y pide contraseña al abrirse. La portada amplía la ventana únicamente
+con mensajes del iframe ADMIN validando origen y emisor. La base de datos
+almacena hashes de contraseña y sesión, solicitudes y configuración; R2 conserva
+los adjuntos privados. Las ediciones usan versiones; la idempotencia evita
+duplicados incluso tras respuestas de red inciertas. Un registro sin datos
+personales impide recrear solicitudes eliminadas mediante un reintento tardío.
+
+La activación inicial expira y solo funciona una vez. Cada operación ADMIN
+comprueba autorización y la contraseña se elige fuera del código. Hasta
+activar el acceso, el servidor rechaza nuevos envíos. Los datos persistentes
+no se publican en Git ni dependen de la memoria de la aplicación. La operación
+profesional requiere conservar la cuenta y mantener copias independientes;
+ver `projects/services-api/README.md` para límites y procedimientos.
 
 ## FCT
 

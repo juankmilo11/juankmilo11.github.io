@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { studioToday, validDate, validContact, makeSummary, withCatalogReference } = require('../pages/paula/js/booking.js');
+const { studioToday, validDate, validWhatsApp, validInstagram, normalizeWhatsApp, makeSummary, withCatalogReference } = require('../pages/paula/js/booking.js');
 
 test('booking dates use New Jersey time, including daylight saving', () => {
   assert.equal(studioToday(new Date('2026-11-15T02:30:00Z')), '2026-11-14');
@@ -19,18 +19,21 @@ test('only real dates from today onward are accepted', () => {
   assert.equal(validDate('', '2026-11-14'), false);
 });
 
-test('contact accepts email, phone or Instagram and rejects unusable details', () => {
-  for (const value of ['paula@example.com', '+1 (201) 555-0123', '@paulaadaniiela']) assert.equal(validContact(value), true);
-  for (const value of ['', '   ', 'my phone', '123', 'a@b', 'hello@', '@not valid']) assert.equal(validContact(value), false);
+test('WhatsApp requires an international phone number and Instagram is optional', () => {
+  for (const value of ['+1 (201) 555-0123', '+57 300 123 4567']) assert.equal(validWhatsApp(value), true);
+  for (const value of ['', '@anna', 'anna@example.com', '3001234567', '+012345678', '+1 123']) assert.equal(validWhatsApp(value), false);
+  assert.equal(normalizeWhatsApp('+1 (201) 555-0123'), '+12015550123');
+  for (const value of ['', 'anna', '@anna_studio.1']) assert.equal(validInstagram(value), true);
+  for (const value of ['@not valid', 'https://instagram.com/anna', '@', '.']) assert.equal(validInstagram(value), false);
 });
 
 test('request summary preserves the actual choices and makes confirmation explicit', () => {
-  const text = makeSummary({ name: ' Ana ', contact: '@ana', date: '2026-11-15', period: 'afternoon', message: ' Diseño azul ' }, 'Nail art', 'es');
-  assert.match(text, /Nombre: Ana\nContacto: @ana\nServicio: Nail art/);
+  const text = makeSummary({ name: ' Ana ', whatsapp: '+573001234567', instagram: '@ana', date: '2026-11-15', time: '15:00', message: ' Diseño azul ' }, 'Nail art', 'es');
+  assert.match(text, /Nombre: Ana\nWhatsApp: \+573001234567\nInstagram: @ana\nServicio: Nail art/);
   assert.match(text, /domingo, 15 de noviembre de 2026/);
-  assert.match(text, /Franja preferida: Tarde/);
+  assert.match(text, /Hora de inicio solicitada: 15:00/);
   assert.match(text, /Mi idea: Diseño azul/);
-  assert.match(text, /pendiente de confirmar disponibilidad, precio y detalles/);
+  assert.match(text, /sujeta a confirmación por Paula/);
   assert.doesNotMatch(text, /confirmada|reservada/);
 });
 
@@ -59,10 +62,10 @@ test('catalog references never truncate user text or exceed the message limit', 
 });
 
 test('English is the default request language and user text is never translated',()=>{
-  const text=makeSummary({name:'Ana',contact:'@ana',date:'2026-12-02',period:'morning',message:'Me gusta azul.'},'Nails & nail art');
-  assert.match(text,/^Hi, Paula/);assert.match(text,/Wednesday, December 2, 2026/);
-  assert.match(text,/Preferred time of day: Morning/);assert.match(text,/My idea: Me gusta azul\./);
-  assert.match(text,/wait to confirm availability, pricing/);
+  const text=makeSummary({name:'Ana',whatsapp:'+573001234567',instagram:'@ana',date:'2026-12-02',time:'09:00',message:'Me gusta azul.'},'Nails & nail art');
+  assert.match(text,/^Name: Ana/);assert.match(text,/Wednesday, December 2, 2026/);
+  assert.match(text,/Requested start time: 09:00/);assert.match(text,/My idea: Me gusta azul\./);
+  assert.match(text,/subject to confirmation by Paula/);
 });
 test('automatic references can change language without duplicating or changing user text',()=>{
   const first=withCatalogReference('Quiero flores.','French & flowers');

@@ -188,7 +188,7 @@ button { cursor: pointer; font: inherit; }
 .enlaces {
   width: min(100%, 640px);
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: start;
   gap: clamp(10px, 3vw, 32px);
 }
@@ -236,6 +236,10 @@ button { cursor: pointer; font: inherit; }
   filter: drop-shadow(0 3px 7px var(--icon-glow));
 }
 .enlace-paca { --icon-glow: #ed9ab580; }
+.enlace-admin { --icon-glow: #d5af6480; }
+.icono-admin { display: grid; place-items: center; background: #29231a; color: #ffe1a6; font: 700 2rem Georgia, serif; }
+.ventana.ventana-admin { width: min(520px, calc(100vw - 28px)); height: min(620px, calc(100dvh - 32px)); }
+.ventana.ventana-admin.admin-abierto { width: min(1180px, calc(100vw - 28px)); height: min(820px, calc(100dvh - 32px)); }
 .enlace:hover span, .enlace:focus-visible span { background: #095ad5c9; border-color: #9dcaff8c; }
 .enlace-paca:hover span, .enlace-paca:focus-visible span { background: #ed9ab5; border-color: #ffc0dc; color: #452039; text-shadow: 0 1px #ffe3ef; }
 .enlace-fct:hover span, .enlace-fct:focus-visible span { background: #176b3aed; border-color: #a8e8b5; }

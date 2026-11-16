@@ -46,9 +46,9 @@ test('invalid manual data cannot turn into false availability',()=>{
   }
 });
 test('request includes exact time, removal and acknowledgements in both languages',()=>{
-  const data={name:'Ana',contact:'@ana',service:'nails',date:'2026-11-16',time:'09:30',nailType:'fullSet',removal:'yes',removalConsent:true,punctuality:true,cancellation:true,policy:true,duration:150,currentPhoto:'current.jpg',message:'Azul y flores.'};
+  const data={name:'Ana',whatsapp:'+573001234567',instagram:'@ana',service:'nails',date:'2026-11-16',time:'09:30',nailType:'fullSet',removal:'yes',removalConsent:true,punctuality:true,cancellation:true,policy:true,duration:150,currentPhoto:'current.jpg',message:'Azul y flores.'};
   const es=makeSummary(data,'Uñas','es'),en=makeSummary(data,'Nails','en');
-  assert.match(es,/Hora de inicio solicitada: 09:30/);assert.match(es,/Set completo/);assert.match(es,/tiempo adicional y tiene un costo extra/);assert.match(es,/He leído las condiciones/);assert.match(es,/current.jpg/);assert.match(es,/Adjuntaré estas fotos/);
+  assert.match(es,/Hora de inicio solicitada: 09:30/);assert.match(es,/Set completo/);assert.match(es,/tiempo adicional y tiene un costo extra/);assert.match(es,/He leído las condiciones/);assert.match(es,/current.jpg/);assert.doesNotMatch(es,/Instagram message|mensaje de Instagram/);
   assert.match(en,/Requested start time: 09:30/);assert.match(en,/Full set/);assert.match(en,/additional time and costs extra/);assert.match(en,/Azul y flores/);
   const other=makeSummary({...data,service:'pmu'},'PMU','es');assert.doesNotMatch(other,/Servicio de uñas|¿Necesita retiro/);
 });

@@ -268,6 +268,7 @@ function crearVentana(enlace) {
     ventana.classList.add('ventana-paca');
     idiomaVentanaPaca(ventana, 'en');
   }
+  if (enlace.getAttribute('href') === 'pages/admin/index.html') ventana.classList.add('ventana-admin');
   iframe.src = enlace.getAttribute("href");
   document.body.append(ventana);
   ventanasAbiertas.add(ventana);
@@ -402,4 +403,13 @@ window.addEventListener('message', evento => {
   if (evento.origin !== location.origin || evento.data?.type !== 'paca:theme' || !['light','dark'].includes(evento.data.theme)) return;
   const ventana = [...ventanasAbiertas].find(item => item.classList.contains('ventana-paca') && item.querySelector('iframe').contentWindow === evento.source);
   if (ventana) ventana.dataset.theme = evento.data.theme;
+});
+
+window.addEventListener('message', evento => {
+  if (evento.origin !== location.origin || evento.data?.type !== 'admin:authenticated' || typeof evento.data.authenticated !== 'boolean') return;
+  const ventana = [...ventanasAbiertas].find(item => item.classList.contains('ventana-admin') && item.querySelector('iframe').contentWindow === evento.source);
+  if (!ventana) return;
+  ventana.classList.toggle('admin-abierto', evento.data.authenticated);
+  ventana.querySelector('h2').textContent = evento.data.authenticated ? 'ADMIN · Gestión de aplicativos' : 'ADMIN · Acceso privado';
+  centrarVentana(ventana);
 });

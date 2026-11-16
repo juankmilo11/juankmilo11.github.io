@@ -49,3 +49,17 @@
 @media (prefers-reduced-motion: reduce) {
   .booking-dialog[open] { animation: none; }
 }
+
+/* The date picker is a separate modal above the appointment draft. */
+.calendar-dialog{width:min(560px,calc(100vw - 24px));padding:0}
+.calendar-content{padding:24px clamp(14px,4vw,30px)}
+.calendar-content .agenda{margin:0;border:0;background:transparent}
+.calendar-dialog .form-note{font-size:11px;line-height:1.7;margin-bottom:18px}
+.calendar-dialog .time-slots{max-height:240px}
+.calendar-actions{display:flex;align-items:center;gap:18px;position:sticky;bottom:-24px;background:var(--paper);padding:18px 0 8px;border-top:1px solid var(--line);margin-top:18px}
+#calendar-window-close{width:36px;height:36px;border:1px solid var(--line);border-radius:50%;padding:0;background:var(--paper);color:var(--ink);font-size:24px;line-height:1}
+#calendar-selection{font-size:12px;line-height:1.8;margin-bottom:12px}
+.appointment-slot #calendar-open{width:100%;justify-content:center}
+.booking-panel label>small{display:block;font-size:10px;line-height:1.7;font-weight:400;margin-top:8px;color:var(--muted)}
+#booking-success{padding:24px 0}#booking-success h3{font-family:var(--display);font-size:36px}#booking-success p{font-size:13px;line-height:1.8;margin:16px 0}#booking-receipt{overflow-wrap:anywhere;font-weight:600}#booking-send{width:100%}
+@media(max-width:480px){.calendar-actions{flex-wrap:wrap}.calendar-actions .dark-button{flex:1;justify-content:center;font-size:12px}.calendar-content .time-slots{grid-template-columns:repeat(2,minmax(0,1fr))}}

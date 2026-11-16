@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#121a25">
+  <title>ADMIN · Juankmilo</title>
+  <link rel="stylesheet" href="admin.css?v=2026-11-16-online">
+  <script src="../../shared/api-config.js?v=2026-11-16-online" defer></script>
+  <script src="../../shared/api.js?v=2026-11-16-online" defer></script>
+  <script src="admin.js?v=2026-11-16-online" defer></script>
+</head>
+<body>
+  <main id="access" class="access">
+    <div class="access-card">
+      <p class="eyebrow">JUANKMILO / ÁREA PRIVADA</p>
+      <h1>ADMIN</h1>
+      <p id="access-intro">Introduce tu contraseña para gestionar los aplicativos.</p>
+      <form id="login-form">
+        <label>Contraseña<input id="login-password" type="password" autocomplete="current-password" required maxlength="128"></label>
+        <button class="primary" type="submit">Entrar</button>
+      </form>
+      <form id="setup-form" hidden>
+        <label>Nueva contraseña<input id="setup-password" type="password" autocomplete="new-password" required minlength="14" maxlength="128"></label>
+        <label>Repetir contraseña<input id="setup-confirm" type="password" autocomplete="new-password" required minlength="14" maxlength="128"></label>
+        <p class="hint">Usa al menos 14 caracteres. Este enlace solo sirve para activar el acceso una vez.</p>
+        <button class="primary" type="submit">Crear acceso ADMIN</button>
+      </form>
+      <p id="access-status" class="status" role="status" aria-live="polite"></p>
+      <p class="access-note">Los datos solo se cargan después de verificar el acceso en el servidor.</p>
+      <noscript><p>Activa JavaScript para entrar en la administración.</p></noscript>
+    </div>
+  </main>
+
+  <div id="dashboard" class="dashboard" hidden>
+    <header class="topbar">
+      <div><p class="eyebrow">JUANKMILO</p><h1>Administración</h1></div>
+      <div class="top-actions"><button id="password-open" type="button">Contraseña</button><button id="logout" type="button">Cerrar sesión</button></div>
+    </header>
+    <div class="workspace">
+      <nav class="app-nav" aria-label="Aplicativos"><button id="app-paca" class="is-active" type="button" aria-pressed="true"><span>PACA</span><small>Solicitudes y agenda</small></button><button id="app-lbds" type="button" aria-pressed="false"><span>LBDS</span><small>Próximamente</small></button></nav>
+      <main class="content">
+        <section id="paca-panel" aria-labelledby="paca-title">
+          <div class="section-heading"><div><p class="eyebrow">PACA / PAULA DANIELA</p><h2 id="paca-title">Citas y solicitudes</h2><p class="muted">Horarios de New Jersey · America/New_York</p></div><div class="section-actions"><button id="refresh" type="button">Actualizar</button><button id="export" type="button">Exportar respaldo</button></div></div>
+          <div class="tabs" role="tablist" aria-label="Gestión de PACA"><button id="requests-tab" type="button" role="tab" aria-selected="true" aria-controls="requests-panel">Solicitudes</button><button id="schedule-tab" type="button" role="tab" aria-selected="false" aria-controls="schedule-panel" tabindex="-1">Disponibilidad</button></div>
+          <section id="requests-panel" role="tabpanel" aria-labelledby="requests-tab">
+            <form id="filters" class="filters"><label>Estado<select id="filter-status"><option value="">Todos</option><option value="pending">Pendientes</option><option value="confirmed">Confirmadas</option><option value="completed">Completadas</option><option value="cancelled">Canceladas</option></select></label><label class="search-label">Buscar<input id="filter-search" type="search" maxlength="120" placeholder="Nombre, WhatsApp o Instagram"></label><button type="submit">Buscar</button></form>
+            <p class="hint">Las solicitudes pendientes requieren revisión. Confirmar una cita bloquea su horario en el calendario público.</p>
+            <div id="appointments" class="appointments" aria-live="polite"></div>
+            <div class="list-footer"><p id="list-info" class="muted"></p><button id="load-more" type="button" hidden>Cargar más</button></div>
+          </section>
+          <section id="schedule-panel" role="tabpanel" aria-labelledby="schedule-tab" hidden>
+            <form id="schedule-form" class="schedule-form">
+              <div class="card-heading"><h3>Disponibilidad de PACA</h3><p class="muted">Lunes a viernes · 7:00 a. m. a 7:00 p. m. · New Jersey</p></div>
+              <label class="short-field">Días de anticipación disponibles<input id="schedule-horizon" type="number" min="1" max="365" required></label>
+              <fieldset><legend>Duración de los servicios, en minutos</legend><p class="hint">Deja un campo vacío si Paula debe definir la duración antes de confirmar.</p><div id="duration-fields" class="form-grid"></div></fieldset>
+              <label class="short-field">Tiempo adicional de retiro, en minutos<input id="schedule-removal" type="number" min="1" max="720"></label>
+              <label>Días cerrados<textarea id="schedule-closed" rows="4" placeholder="2026-12-25&#10;2027-01-01"></textarea><span class="hint">Una fecha por línea, con formato AAAA-MM-DD.</span></label>
+              <label>Bloqueos manuales<textarea id="schedule-blocked" rows="5" placeholder="2026-12-02 09:00-11:30"></textarea><span class="hint">Un bloqueo por línea: AAAA-MM-DD HH:mm-HH:mm. No incluyas nombres ni datos de clientes.</span></label>
+              <button class="primary" type="submit">Guardar disponibilidad</button>
+            </form>
+          </section>
+        </section>
+        <section id="lbds-panel" class="empty-state" aria-labelledby="lbds-title" hidden><p class="eyebrow">LBDS</p><h2 id="lbds-title">Sin módulo conectado</h2><p>Aquí se incorporará la gestión de LBDS cuando se defina su aplicativo y sus datos.</p></section>
+        <p id="dashboard-status" class="status" role="status" aria-live="polite"></p>
+      </main>
+    </div>
+  </div>
+
+  <dialog id="edit-dialog" aria-labelledby="edit-title">
+    <form id="edit-form" class="dialog-form">
+      <header class="dialog-header"><div><p class="eyebrow">PACA / SOLICITUD</p><h2 id="edit-title">Editar solicitud</h2></div><button class="icon-button" data-close="edit-dialog" type="button" aria-label="Cerrar edición">×</button></header>
+      <p id="edit-id" class="record-id"></p>
+      <div class="form-grid"><label>Nombre<input name="name" required minlength="2" maxlength="80"></label><label>WhatsApp con prefijo internacional<input name="whatsapp" type="tel" required maxlength="16" placeholder="+12015550123" pattern="\+[1-9][0-9]{6,14}"></label><label>Instagram (opcional)<input name="instagram" maxlength="31" placeholder="@usuario"></label><label>Servicio<select name="service" required><option value="nails">Uñas</option><option value="tattoo">Tatuaje</option><option value="pmu">Maquillaje permanente</option><option value="beauty">Maquillaje</option><option value="consultation">Asesoría</option></select></label><label>Fecha en New Jersey<input name="date" type="date" required></label><label>Hora de inicio<input name="time" type="time" required step="1800"></label><label>Estado<select name="status" required><option value="pending">Pendiente</option><option value="confirmed">Confirmada</option><option value="completed">Completada</option><option value="cancelled">Cancelada</option></select></label><label>Duración total, en minutos<input name="durationMinutes" type="number" min="1" max="720"><span class="hint">Incluye el retiro cuando corresponda. Obligatoria para confirmar.</span></label></div>
+      <fieldset id="edit-nail-plan" hidden><legend>Plan de uñas</legend><div class="form-grid"><label>Tipo de servicio<select name="nailType"><option value="">Seleccionar</option><option value="fullSet">Set completo</option><option value="fill">Relleno / mantenimiento</option><option value="removalOnly">Solo retiro</option><option value="nails">Asesoría</option></select></label><label>¿Requiere retiro?<select name="removal"><option value="">Seleccionar</option><option value="yes">Sí</option><option value="no">No</option><option value="unsure">Por confirmar</option></select></label></div><label id="edit-removal-ack" class="checkbox-label"><input name="removalConsent" type="checkbox">La clienta acepta el tiempo y costo adicional del retiro cuando corresponda.</label></fieldset>
+      <section class="request-detail"><h3>Datos de la solicitud</h3><dl id="request-details"></dl><p id="request-message" class="customer-message"></p><div id="attachments" class="attachments"></div></section>
+      <label>Notas internas<textarea name="notes" rows="4" maxlength="2000" placeholder="Seguimiento y acuerdos con la clienta"></textarea></label>
+      <div class="dialog-actions"><button class="danger-outline" id="delete-open" type="button">Eliminar solicitud</button><button class="primary" type="submit">Guardar cambios</button></div><p id="edit-status" class="status" role="status" aria-live="polite"></p>
+    </form>
+  </dialog>
+
+  <dialog id="delete-dialog" class="small-dialog" aria-labelledby="delete-title"><form id="delete-form" class="dialog-form"><header class="dialog-header"><h2 id="delete-title">Eliminar solicitud</h2><button class="icon-button" data-close="delete-dialog" type="button" aria-label="Cancelar eliminación">×</button></header><p id="delete-description"></p><p class="hint">Se eliminarán la solicitud y sus fotos. Esta acción no se puede deshacer.</p><div class="dialog-actions"><button data-close="delete-dialog" type="button">Conservar solicitud</button><button class="danger" type="submit">Eliminar definitivamente</button></div><p id="delete-status" class="status" role="status" aria-live="polite"></p></form></dialog>
+  <dialog id="photo-dialog" aria-label="Foto adjunta"><div class="photo-shell"><button class="icon-button" data-close="photo-dialog" type="button" aria-label="Cerrar foto">×</button><img id="private-photo" alt="Foto adjunta a la solicitud"></div></dialog>
+  <dialog id="password-dialog" class="small-dialog" aria-labelledby="password-title"><form id="password-form" class="dialog-form"><header class="dialog-header"><h2 id="password-title">Cambiar contraseña</h2><button class="icon-button" data-close="password-dialog" type="button" aria-label="Cerrar cambio de contraseña">×</button></header><label>Contraseña actual<input name="currentPassword" type="password" autocomplete="current-password" required maxlength="128"></label><label>Nueva contraseña<input name="newPassword" type="password" autocomplete="new-password" required minlength="14" maxlength="128"></label><label>Repetir nueva contraseña<input name="confirmPassword" type="password" autocomplete="new-password" required minlength="14" maxlength="128"></label><p class="hint">Mínimo 14 caracteres. Al guardar se cerrarán todas las sesiones.</p><button class="primary" type="submit">Actualizar contraseña</button><p id="password-status" class="status" role="status" aria-live="polite"></p></form></dialog>
+</body>
+</html>

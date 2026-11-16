@@ -12,10 +12,13 @@
     const changed=()=>form.dispatchEvent(new Event('input',{bubbles:true}));
     function renderTimes() {
       times.replaceChildren();
+      const apply=document.getElementById('calendar-apply');
+      if(apply)apply.disabled=true;
       if(!config){status.textContent=t('agendaLoading');return;}
       if(!date.value){status.textContent=t('agendaPickDate');return;}
       const list=S.slots(date.value,config,details());
       if(time.value&&!list.some(slot=>slot.available&&slot.time===time.value)){time.value='';changed();}
+      if(apply)apply.disabled=!list.some(slot=>slot.available&&slot.time===time.value);
       status.textContent=!list.some(slot=>slot.available)?t('agendaNoTimes'):t(S.serviceDuration(config,details())?'agendaKnownDuration':'agendaVariableDuration',{date:formatDate(date.value),minutes:S.serviceDuration(config,details())});
       for(const slot of list){
         const button=document.createElement('button');button.type='button';button.className='time-slot';button.textContent=labelTime(slot.time);button.disabled=!slot.available;button.setAttribute('aria-pressed',String(slot.time===time.value));
@@ -49,8 +52,7 @@
       const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);
       pendingLoad=controller;
       try{
-        const response=await fetch('assets/availability.json',{cache:'no-store',signal:controller.signal});if(!response.ok)throw new Error('Schedule unavailable');
-        const data=S.validateConfig(await response.json());if(token!==request)return;config=data;render();
+        const data=S.validateConfig(await window.ProjectAPI.availability({signal:controller.signal}));if(token!==request)return;config=data;render();
       }catch(_){if(token!==request)return;config=null;date.value='';time.value='';render();status.textContent=t('agendaError');retry.hidden=false;}
       finally{clearTimeout(timeout);if(token===request){pendingLoad=null;container.setAttribute('aria-busy','false');}}
     }
@@ -60,7 +62,7 @@
     // Recheck the clock on tab return so elapsed times cannot be requested.
     const active=()=>!document.hidden&&(container.closest('dialog')?.open??true);
     document.addEventListener('visibilitychange',()=>{if(active())load();});
-    document.addEventListener('paca:book',load);
+    document.addEventListener('paca:calendar-open',load);
     const timer=setInterval(()=>{if(active())renderTimes();},60000);
     addEventListener('pagehide',()=>clearInterval(timer),{once:true});
     render();if(!container.closest('dialog'))load();

@@ -4,9 +4,10 @@
   if(root)root.initPacaBooking=api.initPacaBooking;
 })(typeof window!=='undefined'?window:null,function(locales){
   'use strict';
-  const INSTAGRAM='https://www.instagram.com/paulaadaniiela/';
-  const PERIODS={morning:'morning',afternoon:'afternoon',flexible:'flexible',manana:'morning',tarde:'afternoon'};
   const translate=(key,language='en',values={})=>locales[language][key].replace(/\{(\w+)\}/g,(_,name)=>String(values[name]??''));
+  const normalizeWhatsApp=value=>String(value??'').trim().replace(/[\s().-]/g,'');
+  const validWhatsApp=value=>/^\+[1-9]\d{7,14}$/.test(normalizeWhatsApp(value));
+  const validInstagram=value=>!String(value??'').trim()||/^@?[A-Za-z0-9_](?:[A-Za-z0-9._]{0,28}[A-Za-z0-9_])?$/.test(String(value).trim());
   function studioToday(now=new Date()){
     const parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now);
     const value=type=>parts.find(part=>part.type===type).value;
@@ -17,22 +18,17 @@
     const date=new Date(`${value}T12:00:00Z`);
     return Number.isFinite(date.getTime())&&date.toISOString().slice(0,10)===value&&value>=minimum;
   }
-  function validContact(value){
-    const contact=value.trim();
-    if(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact))return true;
-    if(/^@[A-Za-z0-9._]{1,30}$/.test(contact))return true;
-    return /^[+\d\s().-]+$/.test(contact)&&contact.replace(/\D/g,'').length>=7&&contact.replace(/\D/g,'').length<=15;
-  }
   function makeSummary(data,title,language='en'){
     const t=key=>translate(key,language);
-    const formatted=new Intl.DateTimeFormat(language==='es'?'es-CO':'en-US',{timeZone:'UTC',weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date(`${data.date}T12:00:00Z`));
-    return [t('hello'),'',`${t('summaryName')}: ${data.name.trim()}`,`${t('summaryContact')}: ${data.contact.trim()}`,`${t('summaryService')}: ${title}`,`${t('summaryDate')}: ${formatted}`,...(data.time?[`${t('summaryTime')}: ${data.time} · New Jersey (America/New_York)`]:[`${t('summaryPeriod')}: ${t(PERIODS[data.period])}`]),
-      ...(data.service==='nails'?[`${t('summaryNailType')}: ${t('nail.'+data.nailType)}`,`${t('summaryRemoval')}: ${t('removal.'+data.removal)}`,...(data.removalConsent?[t('summaryRemovalConsent')]:[])]:[]),
+    const formatted=new Intl.DateTimeFormat(language==='es'?'es-CO':'en-US',{timeZone:'UTC',dateStyle:'full'}).format(new Date(`${data.date}T12:00:00Z`));
+    return [`${t('summaryName')}: ${data.name.trim()}`,`${t('summaryWhatsApp')}: ${normalizeWhatsApp(data.whatsapp)}`,
+      ...(data.instagram?.trim()?[`Instagram: ${data.instagram.trim()}`]:[]),`${t('summaryService')}: ${title}`,`${t('summaryDate')}: ${formatted}`,`${t('summaryTime')}: ${data.time} · New Jersey (America/New_York)`,
+      ...(data.service==='nails'?[`${t('summaryNailType')}: ${t('nail.'+data.nailType)}`,`${t('summaryRemoval')}: ${t('removal.'+data.removal)}`]:[]),
       ...(data.duration?[`${t('summaryDuration')}: ${data.duration} min`]:[]),
+      ...(data.service==='nails'&&data.removalConsent?[t('summaryRemovalConsent')]:[]),
       ...(data.punctuality&&data.cancellation&&data.policy?[t('summaryPolicy')]:[]),
-      ...(data.currentPhoto?[`${t('summaryCurrentPhoto')}: ${data.currentPhoto}`]:[]),
-      ...(data.inspirationPhoto?[`${t('summaryInspirationPhoto')}: ${data.inspirationPhoto}`]:[]),
-      ...(data.currentPhoto||data.inspirationPhoto?[t('summaryAttachPhotos')]:[]),...(data.message.trim()?[`${t('summaryIdea')}: ${data.message.trim()}`]:[]),'',t('pending')].join('\n');
+      ...(data.currentPhoto?[`${t('summaryCurrentPhoto')}: ${data.currentPhoto}`]:[]),...(data.inspirationPhoto?[`${t('summaryInspirationPhoto')}: ${data.inspirationPhoto}`]:[]),
+      ...(data.message.trim()?[`${t('summaryIdea')}: ${data.message.trim()}`]:[]),'',t('pending')].join('\n');
   }
   function withCatalogReference(message,reference,previousAutomatic='',language='en'){
     if(typeof reference!=='string'||!reference.trim())return {message,automatic:previousAutomatic,added:false};
@@ -40,9 +36,7 @@
     if(previousAutomatic){
       const at=text.indexOf(previousAutomatic),end=at+previousAutomatic.length;
       if(at>=0&&(at===0||text[at-1]==='\n')&&(end===text.length||text[end]==='\n')){
-        let start=at;
-        if(text.slice(Math.max(0,at-2),at)==='\n\n')start-=2;
-        else if(at>0&&text[at-1]==='\n')start-=1;
+        let start=at;if(text.slice(Math.max(0,at-2),at)==='\n\n')start-=2;else if(at>0&&text[at-1]==='\n')start-=1;
         text=text.slice(0,start)+text.slice(end);
       }
     }
@@ -54,57 +48,72 @@
   }
   function initPacaBooking(){
     const form=document.getElementById('booking-form');if(!form||form.dataset.bookingReady)return;
-    const fields=document.getElementById('booking-fields'),review=document.getElementById('booking-review'),summary=document.getElementById('booking-summary'),copy=document.getElementById('booking-copy'),edit=document.getElementById('booking-edit'),instagram=document.getElementById('booking-instagram'),status=document.getElementById('booking-status');
-    if(![fields,review,summary,copy,edit,instagram,status].every(Boolean))return;
-    const I=window.PacaI18n,t=I.t;
-    const copyLabel=key=>window.PacaIcons.label(copy,t(key),'arrow-up-right');
-    const controls=Object.fromEntries(['name','contact','service','date','time','nailType','removal','removalConsent','punctuality','cancellation','policy','currentPhoto','inspirationPhoto','message','consent'].map(name=>[name,form.elements.namedItem(name)]));
-    if(!Object.values(controls).every(Boolean))return;
+    const $=id=>document.getElementById(id),I=window.PacaI18n,t=I.t;
+    const fields=$('booking-fields'),review=$('booking-review'),summary=$('booking-summary'),send=$('booking-send'),edit=$('booking-edit'),status=$('booking-status'),success=$('booking-success');
+    const names=['name','whatsapp','instagram','service','date','time','nailType','removal','removalConsent','punctuality','cancellation','policy','currentPhoto','inspirationPhoto','message','consent'];
+    const controls=Object.fromEntries(names.map(name=>[name,form.elements.namedItem(name)]));
+    if(![fields,review,summary,send,edit,status,success,...Object.values(controls)].every(Boolean))return;
     const serviceIds=new Set([...controls.service.options].map(option=>option.value).filter(Boolean));
-    ['name','contact','service','punctuality','cancellation','policy','consent'].forEach(name=>{controls[name].required=true;});
-    controls.name.maxLength=80;controls.contact.maxLength=120;controls.message.maxLength=700;
-    instagram.href=INSTAGRAM;instagram.target='_blank';instagram.rel='noopener noreferrer';
-    // Run our localized validation before showing browser validity messages.
     form.noValidate=true;
-    let currentSummary='',copied=false,automaticReference='',selectedReference=null,statusKey='';
-    const announce=key=>{statusKey=key;status.textContent=key?t(key):'';};
+    let currentSummary='',automaticReference='',selectedReference=null,statusKey='',saving=false,savedReceipt=null,pendingPayload=null,idempotencyKey=null,requestSignature='';
+    const announce=(key,values={})=>{statusKey=key;status.textContent=key?t(key,values):'';};
     const details=()=>({service:controls.service.value,nailType:controls.nailType.value,removal:controls.removal.value});
-    const agenda=window.createPacaAgenda(document.getElementById('booking-agenda'),form,details);
+    const agenda=window.createPacaAgenda($('booking-agenda'),form,details);
     const values=()=>({...Object.fromEntries(Object.entries(controls).map(([name,control])=>[name,control.type==='checkbox'?control.checked:control.value])),duration:agenda.duration(),currentPhoto:controls.currentPhoto.files?.[0]?.name||'',inspirationPhoto:controls.inspirationPhoto.files?.[0]?.name||''});
+    const calendar=$('calendar-dialog'),openCalendar=$('calendar-open');
+    let calendarPrevious=null,calendarApplied=false;
+    function syncSlot(){
+      $('calendar-selection').textContent=controls.date.value&&controls.time.value?new Intl.DateTimeFormat(I.language==='es'?'es-CO':'en-US',{timeZone:'UTC',dateStyle:'full'}).format(new Date(`${controls.date.value}T12:00:00Z`))+` · ${controls.time.value} · New Jersey`:t('noSlot');
+    }
+    function showCalendar(){
+      if(calendar.open)return;
+      calendarPrevious={date:controls.date.value,time:controls.time.value};calendarApplied=false;
+      calendar.showModal();calendar.scrollTop=0;
+      document.dispatchEvent(new CustomEvent('paca:calendar-open'));
+    }
+    openCalendar.addEventListener('click',showCalendar);
+    for(const id of ['calendar-window-close','calendar-cancel'])$(id).addEventListener('click',()=>calendar.close());
+    calendar.addEventListener('cancel',event=>event.stopPropagation());
+    calendar.addEventListener('close',()=>{
+      if(!calendarApplied&&calendarPrevious){controls.date.value=calendarPrevious.date;controls.time.value=calendarPrevious.time;agenda.refresh();}
+      syncSlot();openCalendar.focus({preventScroll:true});
+    });
+    $('calendar-apply').addEventListener('click',()=>{
+      if(!agenda.valid()){agenda.focus();return;}
+      calendarApplied=true;calendar.close();form.dispatchEvent(new Event('input',{bubbles:true}));syncSlot();
+    });
     function syncNails(){
-      const nails=controls.service.value==='nails';document.getElementById('nail-plan').hidden=!nails;
+      const nails=controls.service.value==='nails';$('nail-plan').hidden=!nails;
       controls.nailType.required=nails;controls.removal.required=nails;
       if(controls.nailType.value==='removalOnly'){controls.removal.value='yes';controls.removal.disabled=true;}else controls.removal.disabled=false;
       const extra=nails&&['yes','unsure'].includes(controls.removal.value);
-      document.getElementById('removal-ack').hidden=!extra;controls.removalConsent.required=extra;
+      $('removal-ack').hidden=!extra;controls.removalConsent.required=extra;
       if(!extra)controls.removalConsent.checked=false;
     }
-    form.addEventListener('change',event=>{if(['service','nailType','removal'].includes(event.target.name))syncNails();});
+    form.addEventListener('change',event=>{if(['service','nailType','removal'].includes(event.target.name)){syncNails();syncSlot();}});
     const previews=new Map();
     for(const [name,id] of [['currentPhoto','current-photo-preview'],['inspirationPhoto','inspiration-photo-preview']]){
-      const input=controls[name],preview=document.getElementById(id);
+      const input=controls[name],preview=$(id);
       input.addEventListener('change',()=>{
         if(previews.has(name)){URL.revokeObjectURL(previews.get(name));previews.delete(name);}
-        preview.hidden=true;preview.removeAttribute('src');input.setCustomValidity('');
-        const file=input.files?.[0];if(!file)return;
+        preview.hidden=true;preview.removeAttribute('src');input.setCustomValidity('');const file=input.files?.[0];if(!file)return;
         if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>8*1024*1024){input.setCustomValidity(t('invalidPhoto'));input.reportValidity();return;}
         const url=URL.createObjectURL(file);previews.set(name,url);preview.src=url;preview.hidden=false;
       });
     }
     addEventListener('pagehide',()=>previews.forEach(url=>URL.revokeObjectURL(url)),{once:true});
-    syncNails();
     function refreshSummary(){currentSummary=makeSummary(values(),t(controls.service.value),I.language);summary.textContent=currentSummary;}
     function resetReview({focus=false}={}){
-      review.hidden=true;fields.hidden=false;currentSummary='';summary.textContent='';copied=false;copyLabel('copy');announce('');
-      if(focus)controls.name.focus({preventScroll:true});
+      if(saving)return;
+      review.hidden=true;fields.hidden=false;success.hidden=true;currentSummary='';summary.textContent='';announce('');
+      if(focus)controls.name.focus();
     }
     function validate(){
-      const today=studioToday();
       Object.values(controls).forEach(control=>control.setCustomValidity(''));
       if(controls.name.value.trim().length<2||controls.name.value.length>80)controls.name.setCustomValidity(t('invalidName'));
-      if(!validContact(controls.contact.value)||controls.contact.value.length>120)controls.contact.setCustomValidity(t('invalidContact'));
+      if(!validWhatsApp(controls.whatsapp.value))controls.whatsapp.setCustomValidity(t('invalidWhatsApp'));
+      if(!validInstagram(controls.instagram.value))controls.instagram.setCustomValidity(t('invalidInstagram'));
       if(!serviceIds.has(controls.service.value))controls.service.setCustomValidity(t('invalidService'));
-      if(!validDate(controls.date.value,today)||!agenda.valid()){announce('invalidSlot');agenda.refresh();agenda.focus();return false;}
       if(controls.service.value==='nails'){
         if(!['fullSet','fill','removalOnly','nails'].includes(controls.nailType.value))controls.nailType.setCustomValidity(t('invalidNailType'));
         if(!['yes','no','unsure'].includes(controls.removal.value))controls.removal.setCustomValidity(t('invalidRemoval'));
@@ -114,34 +123,53 @@
       for(const key of ['currentPhoto','inspirationPhoto']){const file=controls[key].files?.[0];if(file&&(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>8*1024*1024))controls[key].setCustomValidity(t('invalidPhoto'));}
       if(controls.message.value.length>700)controls.message.setCustomValidity(t('invalidMessage'));
       if(!controls.consent.checked)controls.consent.setCustomValidity(t('invalidConsent'));
-      return form.reportValidity();
+      if(!form.reportValidity())return false;
+      if(!validDate(controls.date.value)||!agenda.valid()){announce('invalidSlot');showCalendar();return false;}
+      return true;
+    }
+    function requestPayload(){
+      const data=values();delete data.currentPhoto;delete data.inspirationPhoto;delete data.duration;
+      data.whatsapp=normalizeWhatsApp(data.whatsapp);data.instagram=data.instagram.trim()?('@'+data.instagram.trim().replace(/^@/,'')):'';
+      data.name=data.name.trim();data.message=data.message.trim();data.language=I.language;data.reference=selectedReference;
+      if(data.service!=='nails'){data.nailType='';data.removal='';data.removalConsent=false;}
+      return data;
     }
     form.addEventListener('submit',async event=>{
-      event.preventDefault();const submit=document.getElementById('booking-submit');if(submit.disabled)return;
-      submit.disabled=true;
+      event.preventDefault();const submit=$('booking-submit');if(submit.disabled||saving)return;submit.disabled=true;
       try{
         await agenda.recheck();if(!validate())return;
-        refreshSummary();fields.hidden=true;review.hidden=false;announce('prepared');
-        document.getElementById('booking-review-title')?.focus({preventScroll:true});review.scrollIntoView({behavior:'auto',block:'start'});
+        const payload=requestPayload();
+        const files=['currentPhoto','inspirationPhoto'].map(name=>{const file=controls[name].files?.[0];return file?{name:file.name,size:file.size,type:file.type,lastModified:file.lastModified}:null;});
+        const serialized=JSON.stringify({payload,files});
+        if(!pendingPayload||requestSignature!==serialized){pendingPayload=payload;requestSignature=serialized;idempotencyKey=crypto.randomUUID();}
+        refreshSummary();fields.hidden=true;review.hidden=false;success.hidden=true;announce('prepared');
+        $('booking-review-title').focus();review.scrollIntoView({behavior:'auto',block:'start'});
       }finally{submit.disabled=false;}
     });
-    function changed(event){event.target.setCustomValidity?.('');if(currentSummary)resetReview();}
+    function changed(event){event.target.setCustomValidity?.('');if(currentSummary&&!saving)resetReview();}
     form.addEventListener('input',changed);form.addEventListener('change',changed);
     edit.addEventListener('click',()=>resetReview({focus:true}));
-    copy.addEventListener('click',async()=>{
-      if(!currentSummary)return;const textToCopy=currentSummary;let ok=false;
-      try{if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(textToCopy);ok=true;}}catch(_){/* Clipboard access may be denied in iframes. */}
-      if(!ok){
-        const buffer=document.createElement('textarea');buffer.value=textToCopy;buffer.style.cssText='position:fixed;left:-9999px;top:0';buffer.setAttribute('aria-hidden','true');document.body.appendChild(buffer);buffer.select();
-        try{ok=document.execCommand('copy');}catch(_){}buffer.remove();copy.focus({preventScroll:true});
-      }
-      if(currentSummary!==textToCopy)return;
-      copied=ok;copyLabel(ok?'copied':'copyRetry');announce(ok?'copySuccess':'copyFailure');
+    function syncReceipt(){
+      $('booking-receipt').textContent=savedReceipt?t('requestReceipt',{id:savedReceipt.id}):'';
+    }
+    send.addEventListener('click',async()=>{
+      if(!pendingPayload||!idempotencyKey||saving)return;
+      saving=true;send.disabled=true;edit.disabled=true;send.textContent=t('saving');announce('saving');
+      try{
+        const receipt=await window.ProjectAPI.createAppointment(pendingPayload,{idempotencyKey,files:{currentPhoto:controls.currentPhoto.files?.[0]||null,inspirationPhoto:controls.inspirationPhoto.files?.[0]||null}});
+        if(!receipt||typeof receipt.id!=='string'||!receipt.id)throw new Error('Invalid receipt');
+        savedReceipt=receipt;review.hidden=true;fields.hidden=true;success.hidden=false;syncReceipt();announce('saved');
+        $('booking-success-title').focus();success.scrollIntoView({behavior:'auto',block:'start'});
+      }catch(error){announce(error?.status===409?'slotConflict':'saveFailed');}
+      finally{saving=false;send.disabled=false;edit.disabled=false;send.textContent=t('sendRequest');}
     });
-    instagram.addEventListener('click',()=>announce(copied?'instagramCopied':'instagramUncopied'));
+    $('booking-new').addEventListener('click',()=>{savedReceipt=null;pendingPayload=null;idempotencyKey=null;form.reset();controls.name.focus();});
     document.addEventListener('paca:book',event=>{
+      if(saving)return;
+      if(savedReceipt){success.hidden=false;fields.hidden=true;review.hidden=true;syncReceipt();return;}
+      if(currentSummary&&pendingPayload&&!event.detail?.service&&!event.detail?.reference){review.hidden=false;fields.hidden=true;return;}
       resetReview();const id=event.detail?.service;
-      if(serviceIds.has(id)){controls.service.value=id;controls.service.setCustomValidity('');syncNails();agenda.refresh();}
+      if(serviceIds.has(id)){controls.service.value=id;controls.service.setCustomValidity('');syncNails();agenda.refresh();syncSlot();}
       const reference=event.detail?.reference;
       if(reference){
         selectedReference=typeof reference==='string'?{en:reference,es:reference}:reference;
@@ -152,26 +180,19 @@
     });
     document.addEventListener('paca:language',()=>{
       Object.values(controls).forEach(control=>control.setCustomValidity(''));
-      // Translate only the exact reference line inserted by the catalog.
-      // User-written text, including any edits to that line, stays intact.
       if(selectedReference&&automaticReference&&controls.message.value.split('\n').includes(automaticReference)){
-        const result=withCatalogReference(controls.message.value,selectedReference[I.language],automaticReference,I.language);
-        controls.message.value=result.message;automaticReference=result.automatic;
+        const result=withCatalogReference(controls.message.value,selectedReference[I.language],automaticReference,I.language);controls.message.value=result.message;automaticReference=result.automatic;
       }
-      if(currentSummary){refreshSummary();copied=false;copyLabel('copy');announce('prepared');}
-      else {copyLabel('copy');if(statusKey)announce(statusKey);}
+      if(currentSummary)refreshSummary();
+      send.textContent=t(saving?'saving':'sendRequest');syncSlot();syncReceipt();if(statusKey)announce(statusKey);
     });
     form.addEventListener('reset',()=>{
-      resetReview();automaticReference='';selectedReference=null;
+      resetReview();automaticReference='';selectedReference=null;pendingPayload=null;idempotencyKey=null;requestSignature='';
       Object.values(controls).forEach(control=>control.setCustomValidity(''));
-      queueMicrotask(()=>{
-        agenda.clear();syncNails();
-        previews.forEach(url=>URL.revokeObjectURL(url));previews.clear();
-        document.querySelectorAll('.reference-preview').forEach(img=>{img.hidden=true;img.removeAttribute('src');});
-      });
+      queueMicrotask(()=>{agenda.clear();syncNails();syncSlot();previews.forEach(url=>URL.revokeObjectURL(url));previews.clear();document.querySelectorAll('.reference-preview').forEach(img=>{img.hidden=true;img.removeAttribute('src');});});
     });
-    form.dataset.bookingReady='true';document.getElementById('booking-submit').disabled=false;
+    syncNails();syncSlot();form.dataset.bookingReady='true';$('booking-submit').disabled=false;
     return {reset:resetReview};
   }
-  return {initPacaBooking,studioToday,validDate,validContact,makeSummary,withCatalogReference};
+  return {initPacaBooking,studioToday,validDate,validWhatsApp,validInstagram,normalizeWhatsApp,makeSummary,withCatalogReference};
 });
