@@ -68,6 +68,16 @@ async function settleAnimations(page, selector) {
     await page.locator('#catalog-more').click();
     assert.equal(await page.locator('.work-card').count(),18);
     assert.ok(await originalCard.evaluate(card=>card===document.querySelector('.work-card')));
+    await page.locator('.artist-portrait').scrollIntoViewIfNeeded();
+    await page.waitForFunction(()=>getComputedStyle(document.querySelector('.artist-portrait img')).animationPlayState==='running');
+    const portraitTime=await page.locator('.artist-portrait img').evaluate(el=>el.getAnimations()[0].currentTime);
+    await page.waitForFunction(time=>document.querySelector('.artist-portrait img').getAnimations()[0].currentTime>time+100,portraitTime);
+    await page.screenshot({path:path.join(output,'artist-motion.png')});
+    await page.emulateMedia({reducedMotion:'reduce'});
+    assert.equal(await page.locator('.artist-portrait img').evaluate(el=>getComputedStyle(el).animationName),'none');
+    await page.emulateMedia({reducedMotion:'no-preference'});
+    await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));
+    await page.waitForFunction(()=>getComputedStyle(document.querySelector('.artist-portrait img')).animationPlayState==='paused');
     await page.locator('.nav-book').click();
     await page.locator('#booking-dialog').waitFor();
     const form=page.locator('#booking-form');
@@ -144,6 +154,10 @@ async function settleAnimations(page, selector) {
     await page.locator('#calendar-open').click();
     assert.equal(await page.locator('#calendar-apply').isDisabled(),true,'Cannot apply stale availability while reloading');
     assert.equal(await page.locator('.calendar-days button:not([disabled])').count(),0,'Stale dates are disabled during refresh');
+    await page.evaluate(()=>window.PacaI18n.setLanguage('es'));
+    assert.equal(await page.locator('#agenda-retry').isVisible(),false,'Changing language during a pending refresh must not report a failure');
+    assert.doesNotMatch(await page.locator('#agenda-status').innerText(),/No pudimos|error/i);
+    await page.evaluate(()=>window.PacaI18n.setLanguage('en'));
     await page.locator('#booking-agenda[aria-busy="false"]').waitFor();
     await page.locator('#calendar-apply').click();await page.evaluate(()=>window.__availabilityDelay=0);
     for(const name of ['punctuality','cancellation','policy','consent'])await form.locator('[name="'+name+'"]').check();

@@ -27,4 +27,16 @@
   addEventListener('scroll', schedule, { passive: true });
   addEventListener('resize', measure);
   measure();
+
+  // Animate only the visible portrait; no per-frame JavaScript or layout reads.
+  const portrait=document.querySelector('.artist-portrait');
+  if(portrait && 'IntersectionObserver' in window){
+    const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+    let visible=false;
+    const sync=()=>portrait.classList.toggle('is-animated',visible&&!document.hidden&&!reduced.matches);
+    const observer=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;sync();},{threshold:0.15});
+    observer.observe(portrait);
+    document.addEventListener('visibilitychange',sync);
+    reduced.addEventListener('change',sync);
+  }
 })();

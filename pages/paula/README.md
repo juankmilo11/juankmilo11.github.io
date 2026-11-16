@@ -53,7 +53,9 @@ solicitar una cita; el formulario no envía datos por GET.
   accesibles. Cambiar el idioma conserva datos escritos y selecciones.
 - `js/theme.js`, `css/theme.css`: contraste claro/oscuro de ambas subventanas.
 - `js/experience.js`, `css/experience.css`: efectos de opacidad y transformación,
-  progreso de lectura y entradas. Se respeta movimiento reducido.
+  progreso de lectura y entradas. El retrato de THE ARTIST tiene una flotación
+  suave y el sello una oscilación: usan solo transformaciones CSS y se pausan
+  fuera de pantalla, al ocultar la pestaña o con movimiento reducido.
 
 ## Disponibilidad
 

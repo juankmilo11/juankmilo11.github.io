@@ -8,7 +8,6 @@ const enlaces = [...document.querySelectorAll(".enlace")];
 const navegacion = document.querySelector(".enlaces");
 
 const fondosGif = [
-  "img/fondos/gif2.gif",
   "img/fondos/gif3.gif",
   "img/fondos/gif4.gif",
   "img/fondos/gif6.gif",
@@ -109,7 +108,7 @@ function elegirSiguienteGif() {
       [colaFondos[i], colaFondos[j]] = [colaFondos[j], colaFondos[i]];
     }
     // Visit every background before reshuffling, without adjacent repeats.
-    if (colaFondos[0] === ultimoGifElegido) {
+    if (colaFondos.length > 1 && colaFondos[0] === ultimoGifElegido) {
       [colaFondos[0], colaFondos[1]] = [colaFondos[1], colaFondos[0]];
     }
   }

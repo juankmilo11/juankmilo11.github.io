@@ -13,7 +13,7 @@ lentos o fallidos. El Yin Yang también permanece deshabilitado al iniciar,
 para que no reinicie el efecto. Después cambia su velocidad y anima el título; si btn_1 activó el color
 manual, retoma los GIF. Las ventanas se abren únicamente desde las burbujas. Las ventanas
 se reutilizan por sección y se centran al abrirse o restaurarse, conservando el
-arrastre manual. PACA utiliza un marco rosa con el mismo estilo XP. Los seis GIF se precargan y decodifican de uno en
+arrastre manual. PACA utiliza un marco rosa con el mismo estilo XP. Los cinco GIF se precargan y decodifican de uno en
 uno, con una cola aleatoria sin repeticiones por ciclo y una transición oscura
 de un segundo, un segundo de aclarado y cinco segundos de visualización.
 El botón btn_1 mantiene el color manual hasta que el Yin Yang reactive los GIF.

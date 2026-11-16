@@ -58,7 +58,7 @@
       finally{clearTimeout(timeout);if(token===request){pendingLoad=null;container.setAttribute('aria-busy','false');}}
     }
     retry.addEventListener('click',load);
-    document.addEventListener('paca:language',()=>{render();if(!config&&request){status.textContent=t('agendaError');retry.hidden=false;}});
+    document.addEventListener('paca:language',()=>{render();if(!config&&request&&!pendingLoad){status.textContent=t('agendaError');retry.hidden=false;}});
     form.addEventListener('change',event=>{if(['service','nailType','removal'].includes(event.target.name)){time.value='';renderTimes();}});
     // Recheck the clock on tab return so elapsed times cannot be requested.
     const active=()=>!document.hidden&&(container.closest('dialog')?.open??true);

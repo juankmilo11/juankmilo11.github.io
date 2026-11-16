@@ -26,13 +26,13 @@ en GitHub ni en archivos del navegador.
 
 ## Desarrollo local
 
-Para las páginas estáticas, servir **la raíz del repositorio** con Python 3:
+Para las páginas estáticas, servir **la raíz del repositorio** con Node.js:
 
 ```powershell
-python -m http.server 8000
+node scripts/serve-static.cjs
 ```
 
-Abrir `http://localhost:8000/`. Así funcionan las rutas absolutas de FCT.
+Abrir `http://127.0.0.1:4173/`. Así funcionan las rutas absolutas de FCT.
 PACA se edita en `pages/paula/`; ya no requiere sincronización manual.
 
 Para el juego se necesita Node.js compatible con el Vite fijado en su lockfile:
@@ -52,7 +52,7 @@ Desde la raíz:
 
 ```powershell
 node scripts/check-site.mjs
-node --test scripts/tests/home.test.cjs
+node --test scripts/tests/*.test.cjs
 node scripts/check-paca.mjs
 node scripts/test-paca-booking.cjs
 node --test projects/services-api/tests/worker.test.mjs
@@ -76,7 +76,7 @@ bloqueadas, incluido el Yin Yang. Después recuperan la interacción con ratón,
 teclado y apertura de FCT en otra pestaña. El plazo comienza al ejecutar el
 script diferido; no depende del evento `load` ni se prolonga si falla un GIF.
 
-La portada inicia sin ventanas y alterna los seis GIF en orden aleatorio sin
+La portada inicia sin ventanas y alterna los cinco GIF en orden aleatorio sin
 repeticiones por ciclo: un segundo de oscurecimiento (o hasta terminar la carga),
 un segundo para aclarar y cinco segundos de imagen. El control btn_1 combina la bandera de Colombia y el símbolo de luz; el color
 manual permanece activo hasta pulsar el Yin Yang. Este retoma los GIF, cambia

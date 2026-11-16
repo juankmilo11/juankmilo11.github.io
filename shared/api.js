@@ -30,7 +30,7 @@
         throw error;
       }
       if (response.status === 204) return null;
-      return responseType === 'blob' ? response.blob() : response.json();
+      return await (responseType === 'blob' ? response.blob() : response.json());
     } catch (error) {
       if (error.status || error.name === 'AbortError') throw error;
       throw Object.assign(new Error('No hay conexión con el servicio. Tus datos siguen en el formulario; puedes reintentar.'), { code: 'network_error', cause: error });

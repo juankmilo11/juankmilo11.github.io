@@ -203,15 +203,15 @@ test('loading the homepage starts GIFs without opening windows or choosing a ran
   await page.advance(15000);
   assert.equal(page.windows().length, 0);
   assert.ok(page.images.length >= 2, 'GIF rotation should keep loading subsequent backgrounds');
-  for (const image of page.images) assert.match(image.src, /^img\/fondos\/gif[234679]\.gif$/);
+  for (const image of page.images) assert.ok(fs.existsSync(path.join(root,image.src)), 'Only request available backgrounds');
 });
 
-test('the six configured backgrounds exactly match the GIFs on disk', () => {
+test('the configured backgrounds exactly match the GIFs on disk', () => {
   const page = browser();
   const configured = Array.from(page.read('fondosGif')).sort();
   const actual = fs.readdirSync(path.join(root, 'img/fondos'))
     .filter(name => name.endsWith('.gif')).map(name => `img/fondos/${name}`).sort();
-  assert.equal(configured.length, 6);
+  assert.ok(configured.length > 0);
   assert.deepEqual(configured, actual);
 });
 
@@ -287,17 +287,24 @@ test('backgrounds are loaded before swapping and retain one second of blackout p
   assert.equal(page.document.body.classList.contains('fondo-oscurecido'), false);
 });
 
-test('one shuffled rotation visits all six GIFs and never immediately repeats across cycles', async () => {
+test('one shuffled rotation visits every GIF and never immediately repeats across cycles', async () => {
   const page = browser();
+  const count=page.read('fondosGif.length');
   await page.advance(1000);
   const shown = [shownGif(page)];
-  for (let index = 1; index < 13; index++) {
+  for (let index = 1; index < count*2+1; index++) {
     await page.advance(7000);
     shown.push(shownGif(page));
   }
-  assert.equal(new Set(shown.slice(0, 6)).size, 6);
-  assert.equal(new Set(shown.slice(6, 12)).size, 6);
+  assert.equal(new Set(shown.slice(0, count)).size, count);
+  assert.equal(new Set(shown.slice(count, count*2)).size, count);
   for (let index = 1; index < shown.length; index++) assert.notEqual(shown[index], shown[index - 1]);
+});
+
+test('the rotation remains valid if only one GIF is retained later',()=>{
+  const page=browser();
+  page.read('fondosGif.splice(1);colaFondos=[];ultimoGifElegido=0');
+  for(let i=0;i<4;i++)assert.equal(page.read('elegirSiguienteGif()'),0);
 });
 
 test('color mode persists until Yin Yang resumes GIFs without opening windows', async () => {

@@ -62,3 +62,9 @@
 @media(hover:hover) and (pointer:fine){.work-open:hover{transform:translateY(-3px)}}
 
 .service-estimate{font-size:12px;line-height:1.7;color:var(--muted);margin:12px 0;max-width:48em}.work-meta .service-estimate{font-size:10px;line-height:1.5;letter-spacing:0;text-transform:none}
+
+/* Portrait motion uses only compositor transforms and pauses outside its viewport. */
+.artist-portrait img{animation:portrait-float 8s ease-in-out infinite;animation-play-state:paused}.artist-seal{animation:portrait-seal 8s ease-in-out infinite;animation-play-state:paused}.artist-portrait.is-animated img,.artist-portrait.is-animated .artist-seal{animation-play-state:running}
+@keyframes portrait-float{0%,100%{transform:translateY(0) rotate(-.5deg)}50%{transform:translateY(-7px) rotate(.5deg)}}
+@keyframes portrait-seal{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+@media(prefers-reduced-motion:reduce){.artist-portrait img,.artist-seal{animation:none;transform:none}}
