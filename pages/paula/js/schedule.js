@@ -30,10 +30,24 @@
   }
   function serviceDuration(config, details={}) {
     const key=details.service==='nails' ? details.nailType || 'nails' : details.service;
-    const base=config.durationMinutes[key];
-    const extraRemoval=['yes','unsure'].includes(details.removal) && key!=='removalOnly';
-    if(!base || (extraRemoval && !config.removalMinutes)) return null;
-    return base + (extraRemoval ? config.removalMinutes : 0);
+    const base=config.durationMinutes[key]??config.estimates?.[key]?.maxMinutes;
+    const extraRemoval=details.service==='nails' && ['yes','unsure'].includes(details.removal) && key!=='removalOnly';
+    const removal=config.removalMinutes??config.estimates?.removalExtra?.maxMinutes;
+    if(!base || (extraRemoval && !removal)) return null;
+    return base + (extraRemoval ? removal : 0);
+  }
+  function estimate(config, details={}) {
+    const key=details.service==='nails' ? details.nailType || 'nails' : details.service;
+    const base=config?.estimates?.[key];if(!base)return null;
+    const result={...base};
+    const extra=details.service==='nails'&&['yes','unsure'].includes(details.removal)&&key!=='removalOnly'?config.estimates.removalExtra:null;
+    if(extra)for(const name of ['minMinutes','maxMinutes','minPrice','maxPrice'])result[name]+=extra[name];
+    return result;
+  }
+  function formatEstimate(config, details, language='en') {
+    const value=estimate(config,details);if(!value)return '';
+    const price=n=>new Intl.NumberFormat(language==='es'?'es-CO':'en-US',{maximumFractionDigits:2}).format(n);
+    return `${language==='es'?'Estimado':'Estimate'}: ${value.minMinutes}–${value.maxMinutes} min · USD $${price(value.minPrice)}–$${price(value.maxPrice)}. ${language==='es'?'Paula confirma tiempo y precio final.':'Paula confirms final time and price.'}`;
   }
   function dayOpen(date, config, now=new Date()) {
     const today=studioNow(now).date;
@@ -51,5 +65,5 @@
     }
     return result;
   }
-  return {ZONE,minutes,timeString,studioNow,validDate,addDays,validateConfig,serviceDuration,dayOpen,slots};
+  return {ZONE,minutes,timeString,studioNow,validDate,addDays,validateConfig,serviceDuration,estimate,formatEstimate,dayOpen,slots};
 });

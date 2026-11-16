@@ -51,7 +51,7 @@ async function settleAnimations(page, selector) {
     const schedule=JSON.parse(fs.readFileSync(path.join(root,'pages/paula/assets/availability.json'),'utf8'));
     // This is a browser contract test. Production persistence is tested separately
     // against the actual server, never replaced by this fixture in shipped code.
-    const fixture='window.__bookingCalls=[];window.__availabilityCalls=0;window.ProjectAPI={availability:async()=>{window.__availabilityCalls++;return '+JSON.stringify(schedule)+'},createAppointment:async(payload,options)=>{window.__bookingCalls.push({payload,key:options.idempotencyKey,photos:Object.fromEntries(Object.entries(options.files).map(([key,file])=>[key,file?{name:file.name,type:file.type,size:file.size}:null]))});if(window.__bookingCalls.length===1)throw new Error("uncertain network response");return {id:"PACA-QA-RECEIPT",status:"pending",createdAt:new Date().toISOString()}}};';
+    const fixture='window.__bookingCalls=[];window.__availabilityCalls=0;window.__availabilityDelay=0;window.ProjectAPI={availability:async()=>{window.__availabilityCalls++;if(window.__availabilityDelay)await new Promise(resolve=>setTimeout(resolve,window.__availabilityDelay));return '+JSON.stringify(schedule)+'},createAppointment:async(payload,options)=>{window.__bookingCalls.push({payload,key:options.idempotencyKey,photos:Object.fromEntries(Object.entries(options.files).map(([key,file])=>[key,file?{name:file.name,type:file.type,size:file.size}:null]))});if(window.__bookingCalls.length===1)throw new Error("uncertain network response");return {id:"PACA-QA-RECEIPT",status:"pending",createdAt:new Date().toISOString()}}};';
     await page.route('**/shared/api.js*',route=>route.fulfill({contentType:'text/javascript',body:fixture}));
     await page.route('**/shared/api-config.js*',route=>route.fulfill({contentType:'text/javascript',body:'/* Browser QA configuration */'}));
     await page.goto(url);
@@ -75,7 +75,7 @@ async function settleAnimations(page, selector) {
     assert.equal(await form.locator('[name="whatsapp"]').evaluate(element=>element.required),true);
     assert.equal(await form.locator('[name="instagram"]').evaluate(element=>element.required),false);
     assert.equal(await page.locator('#calendar-dialog').isVisible(),false);
-    assert.equal(await page.evaluate(()=>window.__availabilityCalls),0);
+    assert.equal(await page.evaluate(()=>window.__availabilityCalls),1,'Catalog loads current estimates before opening the calendar');
     await form.locator('[name="name"]').fill('Ana Test');
     assert.equal(await form.locator('[name="countryCode"]').inputValue(),'+1');
     assert.deepEqual(await form.locator('[name="countryCode"] option').evaluateAll(options=>options.map(option=>option.value)),['+1','+57']);
@@ -140,6 +140,12 @@ async function settleAnimations(page, selector) {
     const reads=await page.evaluate(()=>window.__availabilityCalls);
     await selectSlot();await page.locator('#calendar-apply').click();
     assert.ok(await page.evaluate(()=>window.__availabilityCalls)>reads,'New calendar selection refreshes availability');
+    await page.evaluate(()=>window.__availabilityDelay=500);
+    await page.locator('#calendar-open').click();
+    assert.equal(await page.locator('#calendar-apply').isDisabled(),true,'Cannot apply stale availability while reloading');
+    assert.equal(await page.locator('.calendar-days button:not([disabled])').count(),0,'Stale dates are disabled during refresh');
+    await page.locator('#booking-agenda[aria-busy="false"]').waitFor();
+    await page.locator('#calendar-apply').click();await page.evaluate(()=>window.__availabilityDelay=0);
     for(const name of ['punctuality','cancellation','policy','consent'])await form.locator('[name="'+name+'"]').check();
     await page.locator('#booking-submit').click();await page.locator('#booking-review').waitFor();
     await page.locator('#booking-send').click();await page.locator('#booking-success').waitFor();

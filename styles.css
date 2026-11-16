@@ -173,7 +173,7 @@ button { cursor: pointer; font: inherit; }
   height: 100%;
   user-select: none;
   pointer-events: none;
-  opacity: 0.38;
+  opacity: 0.48;
   animation: rotacion_continua var(--rotation-speed) linear infinite;
 }
 .yin-yang .yin { fill: var(--yin-color, #fff); transition: fill 180ms ease; }
@@ -188,7 +188,7 @@ button { cursor: pointer; font: inherit; }
 .enlaces {
   width: min(100%, 640px);
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: start;
   gap: clamp(10px, 3vw, 32px);
 }
@@ -236,9 +236,9 @@ button { cursor: pointer; font: inherit; }
   filter: drop-shadow(0 3px 7px var(--icon-glow));
 }
 .enlace-paca { --icon-glow: #ed9ab580; }
-.enlace-admin { --icon-glow: #d5af6480; }
-.enlace-admin .icono_imagen { object-fit: contain; border: 0; background: transparent; box-shadow: none; opacity: 0.55; filter: drop-shadow(0 3px 4px #0009); transition: opacity 180ms ease, transform 180ms ease, filter 180ms ease; }
-.enlace-admin:hover .icono_imagen, .enlace-admin:focus-visible .icono_imagen { box-shadow: none; opacity: 0.75; filter: drop-shadow(0 3px 7px #d5af6480); }
+.enlace-admin { --icon-glow: #d5af6480; position: fixed; right: max(20px, env(safe-area-inset-right)); bottom: max(20px, env(safe-area-inset-bottom)); z-index: 3; }
+.enlace-admin .icono_imagen { object-fit: contain; border: 0; background: transparent; box-shadow: none; opacity: 0.35; filter: drop-shadow(0 3px 4px #0009); transition: opacity 180ms ease, transform 180ms ease, filter 180ms ease; }
+.enlace-admin:hover .icono_imagen, .enlace-admin:focus-visible .icono_imagen { box-shadow: none; opacity: 0.55; filter: drop-shadow(0 3px 7px #d5af6480); }
 .ventana.ventana-admin { width: min(520px, calc(100vw - 28px)); height: min(620px, calc(100dvh - 32px)); }
 .ventana.ventana-admin.admin-abierto { width: min(1180px, calc(100vw - 28px)); height: min(820px, calc(100dvh - 32px)); }
 .ventana.ventana-admin { border-color: #ed862f; box-shadow: inset 1px 0 #ffcc94, 0 10px 30px #0008, 0 1px 2px #000b; }
@@ -248,6 +248,7 @@ button { cursor: pointer; font: inherit; }
 .enlace:hover span, .enlace:focus-visible span { background: #095ad5c9; border-color: #9dcaff8c; }
 .enlace-paca:hover span, .enlace-paca:focus-visible span { background: #ed9ab5; border-color: #ffc0dc; color: #452039; text-shadow: 0 1px #ffe3ef; }
 .enlace-fct:hover span, .enlace-fct:focus-visible span { background: #176b3aed; border-color: #a8e8b5; }
+.enlace-admin span, .enlace-admin:hover span, .enlace-admin:focus-visible span { background: #b9510bc9; border-color: #ffbf7b8c; }
 .enlace-fct .icono_imagen {
   object-fit: contain;
   image-rendering: pixelated;
@@ -269,7 +270,7 @@ button { cursor: pointer; font: inherit; }
 /* Allow the longer credit and social links to wrap independently. */
 .footer {
   min-height: 58px;
-  padding: 12px 20px max(14px, env(safe-area-inset-bottom));
+  padding: 12px calc(clamp(58px, 9vw, 80px) + 40px) max(14px, env(safe-area-inset-bottom)) 20px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -298,6 +299,7 @@ button { cursor: pointer; font: inherit; }
 
 /* Luna-style frames, beveled controls and glossy blue title bars. */
 .ventana {
+  opacity: 0.94;
   position: fixed;
   z-index: 10;
   top: 50%;

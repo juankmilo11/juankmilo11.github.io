@@ -56,6 +56,7 @@
     items = [];
     selected = null;
     schedule = null;
+    previewConfig=null;$('#preview-days').replaceChildren();$('#preview-times').replaceChildren();$('#preview-status').textContent='';
     nextCursor = null;
     $('#appointments').replaceChildren();
     $('#request-details').replaceChildren();
@@ -379,10 +380,10 @@
       schedule = result;
       const config = result.config;
       $('#schedule-horizon').value = config.horizonDays;
-      $('#schedule-removal').value = config.removalMinutes ?? '';
-      for (const key of Object.keys(durationLabels)) $(`[data-duration="${key}"]`).value = config.durationMinutes[key] ?? '';
+      for (const key of Object.keys(estimateLabels)) for (const part of estimateParts) $(`[data-estimate="${key}"][data-part="${part.key}"]`).value = config.estimates?.[key]?.[part.key] ?? '';
       $('#schedule-closed').value = config.closedDates.join('\n');
       $('#schedule-blocked').value = config.blocked.map(block => `${block.date} ${block.start}-${block.end}`).join('\n');
+      scheduleState(false);
       if (!$('#schedule-panel').hidden && !$('#paca-panel').hidden) announce('#dashboard-status', successMessage, successMessage ? 'success' : '');
       return true;
     } catch (error) { if (marker === scheduleRequest && !$('#schedule-panel').hidden && !$('#paca-panel').hidden) report('#dashboard-status', error); return false; }
@@ -393,36 +394,70 @@
       }
     }
   }
-  for (const [key, label] of Object.entries(durationLabels)) {
-    const element = document.createElement('label');
-    element.textContent = label;
-    const input = document.createElement('input');
-    input.type = 'number'; input.min = '1'; input.max = '720'; input.dataset.duration = key;
-    element.append(input);
-    $('#duration-fields').append(element);
+  const estimateLabels={...durationLabels,removalExtra:'Retiro adicional'};
+  const estimateParts=[{key:'minMinutes',label:'Desde (min)',min:1,max:720,step:1},{key:'maxMinutes',label:'Hasta (min)',min:1,max:720,step:1},{key:'minPrice',label:'Desde (USD)',min:0,max:10000,step:0.01},{key:'maxPrice',label:'Hasta (USD)',min:0,max:10000,step:0.01}];
+  for (const [key, name] of Object.entries(estimateLabels)) {
+    const group=document.createElement('fieldset');group.className='estimate-row';group.append(textElement('legend',name));
+    for(const part of estimateParts){const label=textElement('label',part.label),input=document.createElement('input');Object.assign(input,{type:'number',min:part.min,max:part.max,step:part.step,required:true});input.dataset.estimate=key;input.dataset.part=part.key;input.setAttribute('aria-label',`${name}: ${part.label}`);label.append(input);group.append(label);}
+    $('#duration-fields').append(group);
+    if(key!=='removalExtra'){const option=document.createElement('option');option.value=key;option.textContent=name;$('#preview-service').append(option);}
   }
+  function scheduleState(dirty){
+    $('#schedule-state').textContent=dirty?'Cambios sin guardar. Visualiza la agenda y guarda para aplicarlos.':`${schedule?.config.closedDates.length||0} días cerrados y ${schedule?.config.blocked.length||0} bloqueos manuales guardados.`;
+  }
+  $('#schedule-form').addEventListener('input',()=>scheduleState(true));
   const lines = value => value.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
   const realDate = value => /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value + 'T12:00:00Z')) && new Date(value + 'T12:00:00Z').toISOString().slice(0, 10) === value;
+  function draftConfig(){
+    const config={...schedule.config,horizonDays:Number($('#schedule-horizon').value),durationMinutes:{},removalMinutes:null,estimates:{},currency:'USD'};
+    for(const key of Object.keys(durationLabels))config.durationMinutes[key]=null;
+    for(const key of Object.keys(estimateLabels)){
+      const value={};for(const part of estimateParts)value[part.key]=Number($(`[data-estimate="${key}"][data-part="${part.key}"]`).value);
+      if(value.minMinutes>value.maxMinutes||value.minPrice>value.maxPrice)throw new Error(`Revisa ${estimateLabels[key]}: el mínimo no puede superar al máximo.`);
+      config.estimates[key]=value;
+    }
+    config.closedDates=[...new Set(lines($('#schedule-closed').value))];
+    if(!config.closedDates.every(realDate))throw new Error('Revisa los días cerrados. Usa fechas reales con formato AAAA-MM-DD.');
+    config.blocked=lines($('#schedule-blocked').value).map(line=>{
+      const match=/^(\d{4}-\d{2}-\d{2})\s+((?:[01]\d|2[0-3]):[0-5]\d)-((?:[01]\d|2[0-3]):[0-5]\d)$/.exec(line);
+      if(!match||!realDate(match[1])||match[2]>=match[3])throw new Error('Revisa los bloqueos: AAAA-MM-DD HH:mm-HH:mm, con la hora final después de la inicial.');
+      return {date:match[1],start:match[2],end:match[3]};
+    });return config;
+  }
   $('#schedule-form').addEventListener('submit', event => {
     event.preventDefault();
     if (!schedule) return;
     withBusy(event.currentTarget, async () => {
       try {
-        const config = { ...schedule.config, horizonDays: Number($('#schedule-horizon').value), durationMinutes: {}, removalMinutes: $('#schedule-removal').value ? Number($('#schedule-removal').value) : null };
-        for (const key of Object.keys(durationLabels)) config.durationMinutes[key] = $(`[data-duration="${key}"]`).value ? Number($(`[data-duration="${key}"]`).value) : null;
-        config.closedDates = [...new Set(lines($('#schedule-closed').value))];
-        if (!config.closedDates.every(realDate)) throw new Error('Revisa los días cerrados. Usa fechas reales con formato AAAA-MM-DD.');
-        config.blocked = lines($('#schedule-blocked').value).map(line => {
-          const match = /^(\d{4}-\d{2}-\d{2})\s+((?:[01]\d|2[0-3]):[0-5]\d)-((?:[01]\d|2[0-3]):[0-5]\d)$/.exec(line);
-          if (!match || !realDate(match[1]) || match[2] >= match[3]) throw new Error('Revisa los bloqueos: AAAA-MM-DD HH:mm-HH:mm, con la hora final después de la inicial.');
-          return { date: match[1], start: match[2], end: match[3] };
-        });
+        const config = draftConfig();
         announce('#dashboard-status', 'Guardando disponibilidad…');
         schedule = await api('/api/admin/schedule', { method: 'PUT', body: { config, version: schedule.version } });
+        scheduleState(false);
         announce('#dashboard-status', 'Disponibilidad guardada. Las nuevas visitas usarán estos horarios.', 'success');
       } catch (error) { report('#dashboard-status', error); }
     });
   });
+  let previewConfig=null,previewCursor='',previewDate='';
+  function renderPreview(){
+    const S=window.PacaSchedule,config=previewConfig;if(!config)return;
+    const today=S.studioNow().date,key=$('#preview-service').value,details={service:Object.hasOwn(serviceLabels,key)?key:'nails',nailType:key,removal:'no'};
+    $('#preview-month').textContent=new Intl.DateTimeFormat('es-CO',{timeZone:'UTC',month:'long',year:'numeric'}).format(new Date(`${previewCursor}-01T12:00:00Z`));
+    $('#preview-previous').disabled=previewCursor<=today.slice(0,7);$('#preview-next').disabled=previewCursor>=S.addDays(today,config.horizonDays).slice(0,7);
+    const days=$('#preview-days');days.replaceChildren();const first=new Date(`${previewCursor}-01T12:00:00Z`),offset=(first.getUTCDay()+6)%7,count=new Date(Date.UTC(first.getUTCFullYear(),first.getUTCMonth()+1,0)).getUTCDate();
+    for(let i=0;i<offset;i++)days.append(document.createElement('span'));
+    for(let i=1;i<=count;i++){const date=`${previewCursor}-${String(i).padStart(2,'0')}`,button=textElement('button',String(i));button.type='button';button.disabled=!S.dayOpen(date,config);button.setAttribute('aria-label',`${date}${config.closedDates.includes(date)?' · Día cerrado':''}`);button.setAttribute('aria-pressed',String(date===previewDate));button.addEventListener('click',()=>{previewDate=date;renderPreview();});days.append(button);}
+    const times=$('#preview-times');times.replaceChildren();const slots=previewDate?S.slots(previewDate,config,details):[];
+    $('#preview-status').textContent=previewDate?`${previewDate} · ${S.formatEstimate(config,details,'es')} ${slots.filter(s=>s.available).length} horas de inicio disponibles.`:'Selecciona un día para ver las horas de inicio disponibles.';
+    for(const slot of slots){const label=textElement('span',`${slot.time}${slot.available?'':' · Ocupado'}`);label.className=slot.available?'preview-slot':'preview-slot is-busy';times.append(label);}
+  }
+  $('#schedule-preview').addEventListener('click',async event=>{
+    if(!schedule||!$('#schedule-form').reportValidity())return;
+    const button=event.currentTarget;button.disabled=true;
+    try{previewConfig=window.PacaSchedule.validateConfig(await api('/api/admin/schedule/preview',{method:'POST',body:{config:draftConfig()}}));previewCursor=window.PacaSchedule.studioNow().date.slice(0,7);previewDate='';renderPreview();$('#schedule-preview-dialog').showModal();}
+    catch(error){report('#dashboard-status',error);}finally{button.disabled=false;}
+  });
+  $('#preview-service').addEventListener('change',renderPreview);
+  for(const [id,delta] of [['preview-previous',-1],['preview-next',1]])$('#'+id).addEventListener('click',()=>{const date=new Date(`${previewCursor}-01T12:00:00Z`);date.setUTCMonth(date.getUTCMonth()+delta);previewCursor=date.toISOString().slice(0,7);previewDate='';renderPreview();});
   async function chooseTab(name) {
     const requests = name === 'requests';
     $('#requests-panel').hidden = !requests;
@@ -431,7 +466,7 @@
       $(`#${key}-tab`).setAttribute('aria-selected', String(active));
       $(`#${key}-tab`).tabIndex = active ? 0 : -1;
     }
-    if (!requests) await loadSchedule();
+    if (!requests && !schedule) await loadSchedule();
   }
   $('#requests-tab').addEventListener('click', () => chooseTab('requests'));
   $('#schedule-tab').addEventListener('click', () => chooseTab('schedule'));

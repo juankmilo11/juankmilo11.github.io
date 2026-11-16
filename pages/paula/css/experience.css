@@ -60,3 +60,5 @@
 
 /* Subtle card motion stays in CSS, without pointer-by-pointer layout work. */
 @media(hover:hover) and (pointer:fine){.work-open:hover{transform:translateY(-3px)}}
+
+.service-estimate{font-size:12px;line-height:1.7;color:var(--muted);margin:12px 0;max-width:48em}.work-meta .service-estimate{font-size:10px;line-height:1.5;letter-spacing:0;text-transform:none}

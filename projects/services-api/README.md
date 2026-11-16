@@ -49,7 +49,8 @@ ni ruta de lectura anónima de solicitudes o fotografías.
 
 - Una solicitud nueva tiene estado `pending`: pide atención y no confirma una
   cita. ADMIN revisa el trabajo, fija su duración real y la confirma. Una
-  duración no configurada permanece desconocida; no se inventan minutos.
+  duración toma inicialmente el máximo del rango estimado para ofrecer espacios suficientes.
+  Paula puede ajustar la duración real al confirmar.
 - Las confirmaciones bloquean su intervalo. Triggers de SQLite rechazan de
   forma atómica confirmaciones solapadas, incluso con dos operaciones simultáneas.
 - El calendario público recibe únicamente fechas y franjas ocupadas, nunca
@@ -101,7 +102,8 @@ Las operaciones públicas son `GET /api/availability` y
 ADMIN utiliza `POST /api/admin/setup`, `POST /api/admin/login`,
 `POST /api/admin/logout`, `POST /api/admin/password`,
 `GET /api/admin/appointments`, `GET/PATCH/DELETE /api/admin/appointments/:id`,
-`GET /api/admin/attachments/:id`, `GET/PUT /api/admin/schedule` y
+`GET /api/admin/attachments/:id`, `GET/PUT /api/admin/schedule`,
+`POST /api/admin/schedule/preview` y
 `GET /api/admin/export`. Las rutas privadas requieren `Authorization: Bearer`.
 `GET /health` informa únicamente estado técnico del servicio, sin datos privados.
 
@@ -110,3 +112,24 @@ se importa en producción. Las pruebas incluyen conservación al reabrir SQLite,
 activación y caducidad, autorización y límites, idempotencia, prevención de
 solapamientos simultáneos, versiones, fotos privadas, reintento de borrado,
 exportación sin secretos y revocación por cambio de contraseña.
+
+## Rangos y vista previa de disponibilidad
+
+Los nueve rangos iniciales están versionados en `worker/initial-estimates.json`.
+Son sugerencias orientativas autorizadas para arrancar, no tarifas confirmadas
+de Paula ni promedios de mercado. ADMIN permite editar mínimo y máximo de
+minutos y precio USD por servicio, incluido el retiro adicional. Los valores
+se validan en el servidor y se conservan con la configuración en D1.
+
+Al leer una configuración anterior se añaden solo los rangos ausentes; se
+conservan sus días cerrados, bloqueos y plazo. Al guardar desde la interfaz,
+los rangos reemplazan las duraciones simples anteriores. El calendario y el
+servidor usan el máximo del rango; el retiro se suma solo para uñas y una sola
+vez. La duración real de una cita confirmada sigue siendo editable.
+
+La vista previa privada valida el borrador y combina sus bloqueos con citas
+confirmadas, sin guardar ni exponer datos personales. Los ejemplos grises de
+los campos no son cierres guardados. El aviso indica qué está guardado y qué
+es un cambio pendiente. La migración 0002 comprueba atómicamente la versión
+de disponibilidad y las citas confirmadas al insertar una solicitud, para
+rechazar cambios concurrentes durante la subida de fotos.

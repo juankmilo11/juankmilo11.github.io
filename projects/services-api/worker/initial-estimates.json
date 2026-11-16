@@ -1,0 +1,56 @@
+{
+  "fullSet": {
+    "minMinutes": 90,
+    "maxMinutes": 150,
+    "minPrice": 50,
+    "maxPrice": 90
+  },
+  "fill": {
+    "minMinutes": 60,
+    "maxMinutes": 90,
+    "minPrice": 35,
+    "maxPrice": 65
+  },
+  "removalOnly": {
+    "minMinutes": 20,
+    "maxMinutes": 40,
+    "minPrice": 10,
+    "maxPrice": 25
+  },
+  "nails": {
+    "minMinutes": 45,
+    "maxMinutes": 150,
+    "minPrice": 30,
+    "maxPrice": 90
+  },
+  "tattoo": {
+    "minMinutes": 60,
+    "maxMinutes": 180,
+    "minPrice": 100,
+    "maxPrice": 350
+  },
+  "pmu": {
+    "minMinutes": 120,
+    "maxMinutes": 180,
+    "minPrice": 250,
+    "maxPrice": 500
+  },
+  "beauty": {
+    "minMinutes": 45,
+    "maxMinutes": 90,
+    "minPrice": 80,
+    "maxPrice": 150
+  },
+  "consultation": {
+    "minMinutes": 15,
+    "maxMinutes": 30,
+    "minPrice": 0,
+    "maxPrice": 25
+  },
+  "removalExtra": {
+    "minMinutes": 15,
+    "maxMinutes": 30,
+    "minPrice": 10,
+    "maxPrice": 20
+  }
+}

@@ -4,6 +4,11 @@
   const $ = selector => document.querySelector(selector);
   const I = window.PacaI18n, t = I.t, icons = window.PacaIcons;
   const labels = {};
+  let estimateConfig=null;
+  function updateEstimates(){document.querySelectorAll('[data-service-estimate]').forEach(node=>{node.textContent=window.PacaSchedule.formatEstimate(estimateConfig,{service:node.dataset.serviceEstimate},I.language);node.hidden=!node.textContent;});}
+  document.querySelectorAll('.service [data-book]').forEach(button=>{const node=document.createElement('p');node.className='service-estimate';node.dataset.serviceEstimate=button.dataset.book;button.before(node);});
+  document.addEventListener('paca:availability',event=>{estimateConfig=event.detail.config;updateEstimates();});
+  window.ProjectAPI.availability().then(config=>document.dispatchEvent(new CustomEvent('paca:availability',{detail:{config}}))).catch(()=>{});
   const syncLabels=()=>['nails','tattoo','pmu','makeup'].forEach(key=>{labels[key]=t(key);});
   syncLabels();
   window.initPacaBooking();
@@ -64,12 +69,14 @@
       if(entry.video){const badge=document.createElement('span');badge.className='work-badge';icons.label(badge,t('videoBadge'),'play');frame.append(badge);}
       const meta=document.createElement('div');meta.className='work-meta';
       const copy=document.createElement('div'),title=document.createElement('h3'),tag=document.createElement('p');title.textContent=entry.title;tag.textContent=labels[entry.category];copy.append(title,tag);
+      const estimate=document.createElement('p');estimate.className='service-estimate';estimate.dataset.serviceEstimate=entry.category==='makeup'?'beauty':entry.category;copy.append(estimate);
       const arrow=document.createElement('span');arrow.className='work-arrow';arrow.append(icons.create('arrow-up-right'));arrow.setAttribute('aria-hidden','true');meta.append(copy,arrow);
       button.append(frame,meta);article.append(button);button.addEventListener('click',()=>openWork(index,button));return article;
     });
     if (append) grid.append(...cards);
     else grid.replaceChildren(...cards);
     cards.forEach(reveal);
+    updateEstimates();
     $('#catalog-status').textContent = filtered.length ? t('workCount',{visible:visible.length,total:filtered.length})+(category!=='all'?' · '+t(category):'') : t('noResults');
     $('#catalog-empty').hidden = filtered.length !== 0;
     more.hidden = filtered.length <= limit;
@@ -91,6 +98,7 @@
     stopMedia();
     const img=document.createElement('img');img.src=entry.src;img.alt=entry.alt;img.width=entry.width;img.height=entry.height;media.append(img);
     $('#work-category').textContent=labels[entry.category];$('#work-title').textContent=entry.title;$('#work-description').textContent=entry.alt;
+    $('#work-estimate').dataset.serviceEstimate=entry.category==='makeup'?'beauty':entry.category;updateEstimates();
     $('#work-count').textContent=`${activeIndex+1} / ${filtered.length}`;
     const old=$('#work-video');if(old)old.remove();
     if(entry.video){
@@ -135,6 +143,7 @@
   document.addEventListener('paca:language',()=>{
     const activeId=dialog.open?filtered[activeIndex]?.id:null;
     syncLabels();hero.alt=t('hero.'+heroKey);syncEmpty();
+    updateEstimates();
     if(entries.length&&!loadFailed)render();
     if(activeId){activeIndex=Math.max(0,filtered.findIndex(item=>item.id===activeId));displayWork();}
   });

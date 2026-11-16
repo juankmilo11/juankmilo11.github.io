@@ -1,3 +1,4 @@
+import INITIAL_ESTIMATES from './initial-estimates.json' with { type: 'json' };
 const ZONE = 'America/New_York';
 const SERVICES = new Set(['nails', 'tattoo', 'pmu', 'beauty', 'consultation']);
 const STATUSES = new Set(['pending', 'confirmed', 'completed', 'cancelled']);
@@ -36,6 +37,14 @@ const timeString = value => `${String(Math.floor(value / 60)).padStart(2,'0')}:$
 function validDate(value) { if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return false; const date = new Date(`${value}T12:00:00Z`); return Number.isFinite(date.getTime()) && date.toISOString().slice(0,10) === value; }
 function studioNow() { const parts = new Intl.DateTimeFormat('en-CA', { timeZone: ZONE, year: 'numeric', month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23' }).formatToParts(new Date()); const get = type => parts.find(part=>part.type===type).value; return { date: `${get('year')}-${get('month')}-${get('day')}`, minute: Number(get('hour'))*60+Number(get('minute')) }; }
 const addDays = (date, count) => { const result = new Date(`${date}T12:00:00Z`); result.setUTCDate(result.getUTCDate()+count); return result.toISOString().slice(0,10); };
+function validateEstimates(values) {
+  if(!values||typeof values!=='object'||Array.isArray(values))fail(400,'invalid_estimates');
+  const result={};for(const key of Object.keys(INITIAL_ESTIMATES)){
+    const item=values[key];if(!item||!['minMinutes','maxMinutes','minPrice','maxPrice'].every(k=>Number.isFinite(item[k])))fail(400,'invalid_estimates');
+    if(!Number.isInteger(item.minMinutes)||!Number.isInteger(item.maxMinutes)||item.minMinutes<1||item.maxMinutes>720||item.minMinutes>item.maxMinutes||item.minPrice<0||item.maxPrice>10000||item.minPrice>item.maxPrice||![item.minPrice,item.maxPrice].every(n=>Math.abs(n*100-Math.round(n*100))<1e-7))fail(400,'invalid_estimates');
+    result[key]={minMinutes:item.minMinutes,maxMinutes:item.maxMinutes,minPrice:item.minPrice,maxPrice:item.maxPrice};
+  }return result;
+}
 function validateConfig(config) {
   if (config?.version !== 1 || config.timeZone !== ZONE || config.open !== '07:00' || config.close !== '19:00' || JSON.stringify(config.weekdays) !== '[1,2,3,4,5]' || config.slotMinutes !== 30 || !Number.isInteger(config.horizonDays) || config.horizonDays < 1 || config.horizonDays > 365 || !config.durationMinutes || Array.isArray(config.durationMinutes) || !Array.isArray(config.blocked) || !Array.isArray(config.closedDates) || config.blocked.length > 3000 || config.closedDates.length > 366) fail(400,'invalid_schedule');
   const clean = structuredClone(DEFAULT_CONFIG); clean.horizonDays = config.horizonDays;
@@ -45,7 +54,7 @@ function validateConfig(config) {
   clean.closedDates = [...new Set(config.closedDates)];
   if (clean.closedDates.some(date => !validDate(date))) fail(400,'invalid_closed_date');
   clean.blocked = config.blocked.map(block => { if (!validDate(block.date) || !Number.isFinite(minutes(block.start)) || !Number.isFinite(minutes(block.end)) || minutes(block.start) >= minutes(block.end)) fail(400,'invalid_block'); return { date:block.date, start:block.start, end:block.end }; });
-  clean.updatedAt = new Date().toISOString(); return clean;
+  clean.estimates=validateEstimates(config.estimates??INITIAL_ESTIMATES); clean.currency='USD'; clean.updatedAt = new Date().toISOString(); return clean;
 }
 function cleanText(value, maximum, required=false) { if (typeof value !== 'string' || value.length > maximum || /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(value)) fail(400,'invalid_input'); const result=value.trim(); if(required&&!result)fail(400,'required_field'); return result; }
 function validatePayload(data) {
@@ -58,7 +67,7 @@ function validatePayload(data) {
   if(data.reference)result.reference={en:cleanText(data.reference.en,180,true),es:cleanText(data.reference.es,180,true)};
   return result;
 }
-function serviceDuration(config, data) { const key=data.service==='nails'?data.nailType||'nails':data.service; const base=config.durationMinutes[key]; if(!base)return null; const extra=['yes','unsure'].includes(data.removal)&&key!=='removalOnly'; if(extra&&!config.removalMinutes)return null; return base+(extra?config.removalMinutes:0); }
+function serviceDuration(config, data) { const key=data.service==='nails'?data.nailType||'nails':data.service; const base=config.durationMinutes[key]??config.estimates?.[key]?.maxMinutes; if(!base)return null; const extra=data.service==='nails'&&['yes','unsure'].includes(data.removal)&&key!=='removalOnly'; const removal=config.removalMinutes??config.estimates?.removalExtra?.maxMinutes;if(extra&&!removal)return null; return base+(extra?removal:0); }
 function validateSlot(data,config,duration,allowPast=false) {
   const now=studioNow(), start=minutes(data.time), span=duration||config.slotMinutes;
   if(!allowPast && (data.date<now.date || data.date>addDays(now.date,config.horizonDays) || (data.date===now.date&&start<=now.minute))) fail(409,'slot_unavailable');
@@ -68,6 +77,7 @@ async function schedule(env, includeConfirmed=false) {
   const row=await env.DB.prepare("SELECT config,version FROM settings WHERE id='schedule'").first();
   const config=row?JSON.parse(row.config):structuredClone(DEFAULT_CONFIG);
   if(includeConfirmed) { const now=studioNow(); const rows=await env.DB.prepare("SELECT date,time,end_minute FROM appointments WHERE status='confirmed' AND date>=? AND date<=?").bind(now.date,addDays(now.date,config.horizonDays)).all(); for(const item of rows.results) config.blocked.push({date:item.date,start:item.time,end:timeString(item.end_minute)}); }
+  config.estimates=validateEstimates(config.estimates??INITIAL_ESTIMATES); config.currency='USD';
   return {config,version:row?.version||0};
 }
 async function rate(env, request, kind, limit, durationMs, extra='') {
@@ -153,11 +163,11 @@ async function submit(request,env) {
   const existing=await env.DB.prepare('SELECT id,status,created_at,request_hash FROM appointments WHERE idempotency_hash=?').bind(keyHash).first();
   if(existing){if(existing.request_hash!==requestHash)fail(409,'idempotency_conflict');return response(summary(existing));}
   await rate(env,request,'submit-phone',5,3600000,payload.whatsapp);
-  const {config}=await schedule(env,true),duration=serviceDuration(config,payload);validateSlot(payload,config,duration);
+  const {config,version:availabilityVersion}=await schedule(env,true),duration=serviceDuration(config,payload);validateSlot(payload,config,duration);
   const id=crypto.randomUUID(),createdAt=new Date().toISOString(),stored=[];
   try{
     for(const file of files){if(!env.BUCKET)fail(503,'file_storage_unavailable');const attachmentId=crypto.randomUUID(),objectKey=`appointments/${id}/${attachmentId}`;await env.BUCKET.put(objectKey,file.bytes,{httpMetadata:{contentType:file.type}});stored.push({...file,id:attachmentId,objectKey});}
-    const statements=[env.DB.prepare('INSERT INTO appointments(id,name,whatsapp,instagram,service,date,time,start_minute,end_minute,duration_minutes,payload,created_at,updated_at,idempotency_hash,request_hash) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(id,payload.name,payload.whatsapp,payload.instagram,payload.service,payload.date,payload.time,minutes(payload.time),duration?minutes(payload.time)+duration:null,duration,JSON.stringify(payload),createdAt,createdAt,keyHash,requestHash)];
+    const statements=[env.DB.prepare('INSERT INTO appointments(id,name,whatsapp,instagram,service,date,time,start_minute,end_minute,duration_minutes,payload,created_at,updated_at,idempotency_hash,request_hash,availability_version) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(id,payload.name,payload.whatsapp,payload.instagram,payload.service,payload.date,payload.time,minutes(payload.time),duration?minutes(payload.time)+duration:null,duration,JSON.stringify(payload),createdAt,createdAt,keyHash,requestHash,availabilityVersion)];
     statements.push(env.DB.prepare('INSERT INTO request_receipts(key_hash,request_hash,appointment_id,created_at) VALUES(?,?,?,?)').bind(keyHash,requestHash,id,createdAt));
     for(const file of stored)statements.push(env.DB.prepare('INSERT INTO attachments(id,appointment_id,object_key,name,type,size,field) VALUES(?,?,?,?,?,?,?)').bind(file.id,id,file.objectKey,file.name,file.type,file.size,file.field));
     await env.DB.batch(statements);
@@ -166,6 +176,7 @@ async function submit(request,env) {
     for(const file of stored){try{await env.BUCKET.delete(file.objectKey);}catch{await env.DB.prepare('INSERT OR IGNORE INTO object_deletions(object_key,created_at) VALUES(?,?)').bind(file.objectKey,new Date().toISOString()).run();}}
     const duplicate=await env.DB.prepare('SELECT id,status,created_at,request_hash FROM appointments WHERE idempotency_hash=?').bind(keyHash).first();
     if(duplicate){if(duplicate.request_hash!==requestHash)fail(409,'idempotency_conflict');return response(summary(duplicate));}
+    if(String(error.message).includes('slot_unavailable'))fail(409,'slot_unavailable');
     throw error;
   }
 }
@@ -205,6 +216,11 @@ async function route(request,env,url) {
   if(path==='/api/admin/password'&&request.method==='POST'){
     await rate(env,request,'password',5,900000);const data=await jsonBody(request),stored=await adminHash(env);if(!await verifyPassword(data.currentPassword,stored))fail(401,'invalid_credentials');if(!validPassword(data.newPassword))fail(400,'weak_password');const encoded=await passwordHash(data.newPassword);
     await env.DB.batch([env.DB.prepare('INSERT INTO administrators(id,password_hash,updated_at) VALUES(1,?,?) ON CONFLICT(id) DO UPDATE SET password_hash=excluded.password_hash,updated_at=excluded.updated_at').bind(encoded,new Date().toISOString()),env.DB.prepare('DELETE FROM sessions')]);return response({ok:true});
+  }
+  if(path==='/api/admin/schedule/preview'&&request.method==='POST'){
+    const data=await jsonBody(request,200000),config=validateConfig(data.config),now=studioNow();
+    const rows=await env.DB.prepare("SELECT date,time,end_minute FROM appointments WHERE status='confirmed' AND date>=? AND date<=?").bind(now.date,addDays(now.date,config.horizonDays)).all();
+    return response({...config,blocked:[...config.blocked,...rows.results.map(item=>({date:item.date,start:item.time,end:timeString(item.end_minute)}))]});
   }
   if(path==='/api/admin/schedule'&&request.method==='GET')return response(await schedule(env));
   if(path==='/api/admin/schedule'&&request.method==='PUT'){

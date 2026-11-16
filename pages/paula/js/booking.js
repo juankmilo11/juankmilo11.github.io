@@ -28,6 +28,7 @@
       ...(data.instagram?.trim()?[`Instagram: ${data.instagram.trim()}`]:[]),`${t('summaryService')}: ${title}`,`${t('summaryDate')}: ${formatted}`,`${t('summaryTime')}: ${data.time} · New Jersey (New York)`,
       ...(data.service==='nails'?[`${t('summaryNailType')}: ${t('nail.'+data.nailType)}`,`${t('summaryRemoval')}: ${t('removal.'+data.removal)}`]:[]),
       ...(data.duration?[`${t('summaryDuration')}: ${data.duration} min`]:[]),
+      ...(data.estimate?[data.estimate]:[]),
       ...(data.service==='nails'&&data.removalConsent?[t('summaryRemovalConsent')]:[]),
       ...(data.punctuality&&data.cancellation&&data.policy?[t('summaryPolicy')]:[]),
       ...(data.currentPhoto?[`${t('summaryCurrentPhoto')}: ${data.currentPhoto}`]:[]),...(data.inspirationPhoto?[`${t('summaryInspirationPhoto')}: ${data.inspirationPhoto}`]:[]),
@@ -62,6 +63,11 @@
     const announce=(key,values={})=>{statusKey=key;status.textContent=key?t(key,values):'';};
     const details=()=>({service:controls.service.value,nailType:controls.nailType.value,removal:controls.removal.value});
     const agenda=window.createPacaAgenda($('booking-agenda'),form,details);
+    let estimateConfig=null;
+    const estimate=()=>window.PacaSchedule.formatEstimate(estimateConfig,details(),I.language);
+    function syncEstimate(){$('booking-estimate').textContent=estimate();$('booking-estimate').hidden=!estimate();}
+    document.addEventListener('paca:availability',event=>{estimateConfig=event.detail.config;syncEstimate();});
+    document.addEventListener('paca:language',syncEstimate);
     const values=()=>({...Object.fromEntries(Object.entries(controls).map(([name,control])=>[name,control.type==='checkbox'?control.checked:control.value])),whatsapp:composeWhatsApp(controls.whatsapp.value,controls.countryCode.value),duration:agenda.duration(),currentPhoto:controls.currentPhoto.files?.[0]?.name||'',inspirationPhoto:controls.inspirationPhoto.files?.[0]?.name||''});
     const calendar=$('calendar-dialog'),openCalendar=$('calendar-open');
     let calendarPrevious=null,calendarApplied=false;
@@ -92,6 +98,7 @@
       const extra=nails&&['yes','unsure'].includes(controls.removal.value);
       $('removal-ack').hidden=!extra;controls.removalConsent.required=extra;
       if(!extra)controls.removalConsent.checked=false;
+      syncEstimate();
     }
     form.addEventListener('change',event=>{if(['service','nailType','removal'].includes(event.target.name)){syncNails();syncSlot();}});
     const previews=new Map();
@@ -105,7 +112,7 @@
       });
     }
     addEventListener('pagehide',()=>previews.forEach(url=>URL.revokeObjectURL(url)),{once:true});
-    function refreshSummary(){currentSummary=makeSummary(values(),t(controls.service.value),I.language);summary.textContent=currentSummary;}
+    function refreshSummary(){currentSummary=makeSummary({...values(),estimate:estimate()},t(controls.service.value),I.language);summary.textContent=currentSummary;}
     function resetReview({focus=false}={}){
       if(saving)return;
       review.hidden=true;fields.hidden=false;success.hidden=true;currentSummary='';summary.textContent='';announce('');

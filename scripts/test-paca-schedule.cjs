@@ -35,6 +35,7 @@ test('busy intervals block overlapping services and allow adjacent appointments'
 });
 test('unconfigured durations remain subject to confirmation instead of inventing service times',()=>{
   const c=config();c.durationMinutes.fullSet=null;c.removalMinutes=null;
+  delete c.estimates;
   const list=S.slots('2026-11-16',c,{service:'nails',nailType:'fullSet',removal:'yes'},now);
   assert.equal(list[0].duration,null);assert.equal(list[0].end,null);
   c.durationMinutes.fullSet=120;assert.equal(S.serviceDuration(c,{service:'nails',nailType:'fullSet',removal:'yes'}),null);
@@ -44,6 +45,15 @@ test('invalid manual data cannot turn into false availability',()=>{
   for(const change of [c=>c.timeZone='UTC',c=>c.open='06:00',c=>c.weekdays.push(6),c=>c.blocked.push({date:'2026-11-16',start:'12:00',end:'11:00'}),c=>c.durationMinutes.fullSet=-20]){
     const c=config();change(c);assert.throws(()=>S.validateConfig(c));
   }
+});
+test('estimate ranges add removal once and reserve the maximum duration',()=>{
+  const c=config(),details={service:'nails',nailType:'fullSet',removal:'yes'};
+  assert.deepEqual(S.estimate(c,details),{minMinutes:105,maxMinutes:180,minPrice:60,maxPrice:110});
+  assert.equal(S.serviceDuration(c,details),180);
+  assert.equal(S.serviceDuration(c,{...details,nailType:'removalOnly'}),40);
+  assert.equal(S.serviceDuration(c,{...details,service:'beauty'}),90,'Hidden nail choices cannot add removal to another service');
+  assert.match(S.formatEstimate(c,details,'es'),/105–180 min · USD \$60–\$110/);
+  const times=S.slots('2026-11-16',c,details,now);assert.equal(times.at(-1).end,'19:00');assert.equal(times.at(-1).time,'16:00');
 });
 test('request includes exact time, removal and acknowledgements in both languages',()=>{
   const data={name:'Ana',whatsapp:'+573001234567',instagram:'@ana',service:'nails',date:'2026-11-16',time:'09:30',nailType:'fullSet',removal:'yes',removalConsent:true,punctuality:true,cancellation:true,policy:true,duration:150,currentPhoto:'current.jpg',message:'Azul y flores.'};

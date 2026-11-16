@@ -48,11 +48,12 @@
     previous.addEventListener('click',()=>move(-1));next.addEventListener('click',()=>move(1));
     async function load(){
       const token=++request;retry.hidden=true;container.setAttribute('aria-busy','true');
+      config=null;render();
       pendingLoad?.abort();
       const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);
       pendingLoad=controller;
       try{
-        const data=S.validateConfig(await window.ProjectAPI.availability({signal:controller.signal}));if(token!==request)return;config=data;render();
+        const data=S.validateConfig(await window.ProjectAPI.availability({signal:controller.signal}));if(token!==request)return;config=data;render();document.dispatchEvent(new CustomEvent('paca:availability',{detail:{config:data}}));
       }catch(_){if(token!==request)return;config=null;date.value='';time.value='';render();status.textContent=t('agendaError');retry.hidden=false;}
       finally{clearTimeout(timeout);if(token===request){pendingLoad=null;container.setAttribute('aria-busy','false');}}
     }

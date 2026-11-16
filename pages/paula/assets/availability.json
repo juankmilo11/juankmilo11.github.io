@@ -4,11 +4,83 @@
   "updatedAt": "2026-11-15",
   "open": "07:00",
   "close": "19:00",
-  "weekdays": [1, 2, 3, 4, 5],
+  "weekdays": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
   "slotMinutes": 30,
   "horizonDays": 60,
-  "durationMinutes": {"fullSet": null, "fill": null, "removalOnly": null, "nails": null, "tattoo": null, "pmu": null, "beauty": null, "consultation": null},
+  "durationMinutes": {
+    "fullSet": null,
+    "fill": null,
+    "removalOnly": null,
+    "nails": null,
+    "tattoo": null,
+    "pmu": null,
+    "beauty": null,
+    "consultation": null
+  },
   "removalMinutes": null,
   "closedDates": [],
-  "blocked": []
+  "blocked": [],
+  "estimates": {
+    "fullSet": {
+      "minMinutes": 90,
+      "maxMinutes": 150,
+      "minPrice": 50,
+      "maxPrice": 90
+    },
+    "fill": {
+      "minMinutes": 60,
+      "maxMinutes": 90,
+      "minPrice": 35,
+      "maxPrice": 65
+    },
+    "removalOnly": {
+      "minMinutes": 20,
+      "maxMinutes": 40,
+      "minPrice": 10,
+      "maxPrice": 25
+    },
+    "nails": {
+      "minMinutes": 45,
+      "maxMinutes": 150,
+      "minPrice": 30,
+      "maxPrice": 90
+    },
+    "tattoo": {
+      "minMinutes": 60,
+      "maxMinutes": 180,
+      "minPrice": 100,
+      "maxPrice": 350
+    },
+    "pmu": {
+      "minMinutes": 120,
+      "maxMinutes": 180,
+      "minPrice": 250,
+      "maxPrice": 500
+    },
+    "beauty": {
+      "minMinutes": 45,
+      "maxMinutes": 90,
+      "minPrice": 80,
+      "maxPrice": 150
+    },
+    "consultation": {
+      "minMinutes": 15,
+      "maxMinutes": 30,
+      "minPrice": 0,
+      "maxPrice": 25
+    },
+    "removalExtra": {
+      "minMinutes": 15,
+      "maxMinutes": 30,
+      "minPrice": 10,
+      "maxPrice": 20
+    }
+  },
+  "currency": "USD"
 }

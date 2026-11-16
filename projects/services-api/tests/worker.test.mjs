@@ -147,3 +147,50 @@ test('search escapes wildcards instead of interpreting user text as SQL',async()
   const environment=env(),token=await login(environment);await create(environment,{...payload(),name:'Ana % literal'});await create(environment,{...payload(),whatsapp:'+12015550124',name:'Different'});
   const found=await call(environment,'/api/admin/appointments?q=%25','GET',null,{token});assert.equal(found.status,200);assert.equal(found.value.items.length,1);assert.equal(found.value.items[0].name,'Ana % literal');environment.DB.close();
 });
+
+
+test('editable ranges persist, preview includes confirmed time without saving, and saved closures reject requests',async()=>{
+  const environment=env(),token=await login(environment),data=payload();
+  const created=await create(environment,data);
+  await call(environment,'/api/admin/appointments/'+created.value.id,'PATCH',{version:1,status:'confirmed',durationMinutes:60},{token});
+  const original=await call(environment,'/api/admin/schedule','GET',null,{token}),config=structuredClone(original.value.config);
+  assert.equal(config.estimates.fullSet.maxMinutes,150);assert.equal(config.currency,'USD');
+  config.closedDates=[data.date];config.estimates.fullSet={minMinutes:80,maxMinutes:140,minPrice:45,maxPrice:95};
+  const preview=await call(environment,'/api/admin/schedule/preview','POST',{config},{token});
+  assert.equal(preview.status,200);assert.deepEqual(preview.value.closedDates,[data.date]);
+  assert.ok(preview.value.blocked.some(b=>b.date===data.date&&b.start==='09:00'&&b.end==='10:00'));
+  assert.deepEqual((await call(environment,'/api/admin/schedule','GET',null,{token})).value.config.closedDates,[],'Preview never saves');
+  const invalid=structuredClone(config);invalid.estimates.fullSet.minMinutes=141;
+  assert.equal((await call(environment,'/api/admin/schedule','PUT',{config:invalid,version:0},{token})).value.error.code,'invalid_estimates');
+  invalid.estimates.fullSet={minMinutes:80,maxMinutes:140,minPrice:95,maxPrice:45};
+  assert.equal((await call(environment,'/api/admin/schedule/preview','POST',{config:invalid},{token})).status,400);
+  const save=await call(environment,'/api/admin/schedule','PUT',{config,version:original.value.version},{token});assert.equal(save.status,200);
+  const publicConfig=(await call(environment,'/api/availability')).value;assert.deepEqual(publicConfig.estimates.fullSet,config.estimates.fullSet);
+  assert.equal((await create(environment,{...data,time:'13:00'})).value.error.code,'slot_unavailable','Saved closed days enforced on server');
+  config.closedDates=[];config.blocked=[{date:data.date,start:'13:00',end:'13:30'}];
+  await call(environment,'/api/admin/schedule','PUT',{config,version:save.value.version},{token});
+  assert.equal((await create(environment,{...data,time:'12:00'})).status,409,'Maximum duration overlapping a manual block is rejected');
+  environment.DB.close();
+});
+
+test('availability changes and newly confirmed appointments during photo upload reject atomically and remove uploaded photos',async()=>{
+  for(const mode of ['closed','confirmed']){
+    const environment=env(),token=await login(environment),data=payload();
+    const pending=await create(environment,data);
+    const original=environment.BUCKET.put.bind(environment.BUCKET);
+    environment.BUCKET.put=async(...args)=>{
+      await original(...args);
+      if(mode==='closed'){
+        const config=(await call(environment,'/api/admin/schedule','GET',null,{token})).value;
+        config.config.closedDates=[data.date];
+        assert.equal((await call(environment,'/api/admin/schedule','PUT',config,{token})).status,200);
+      }else assert.equal((await call(environment,'/api/admin/appointments/'+pending.value.id,'PATCH',{version:1,status:'confirmed',durationMinutes:60},{token})).status,200);
+    };
+    const form=new FormData();form.set('payload',JSON.stringify(data));
+    form.set('currentPhoto',new Blob([Uint8Array.from([0xff,0xd8,0xff,0xe0,0,0,0,0,0,0,0,0])],{type:'image/jpeg'}),'current.jpg');
+    const result=await call(environment,'/api/appointments','POST',form,{key:crypto.randomUUID()});
+    assert.equal(result.status,409,mode);assert.equal(result.value.error.code,'slot_unavailable');
+    assert.equal(environment.BUCKET.objects.size,0);assert.equal((await environment.DB.prepare('SELECT COUNT(*) AS n FROM appointments').first()).n,1);
+    environment.DB.close();
+  }
+});

@@ -148,6 +148,36 @@ try {
   assert.equal((await env.DB.prepare('SELECT COUNT(*) AS total FROM appointments').first()).total, 0);
   assert.equal((await env.DB.prepare('SELECT COUNT(*) AS total FROM attachments').first()).total, 0);
   assert.equal(env.BUCKET.objects.size, 0, 'Deleting also removes the private photo');
+  await a.page.locator('#schedule-tab').click();
+  await a.page.locator('#schedule-form:not([aria-busy])').waitFor();
+  assert.equal(await a.page.locator('#dashboard .topbar h1').innerText(),'ADMIN');
+  await a.page.locator('[data-estimate="fullSet"][data-part="minMinutes"]').fill('75');
+  await a.page.locator('[data-estimate="fullSet"][data-part="maxMinutes"]').fill('135');
+  await a.page.locator('[data-estimate="fullSet"][data-part="minPrice"]').fill('45');
+  await a.page.locator('[data-estimate="fullSet"][data-part="maxPrice"]').fill('85');
+  await a.page.locator('#schedule-closed').fill(date);
+  await a.page.locator('#schedule-preview').click();
+  await a.page.locator('#schedule-preview-dialog[open]').waitFor();
+  for(let i=0;i<12&&!(await a.page.locator(`#preview-days button[aria-label^="${date}"]`).count());i++)await a.page.locator('#preview-next').click();
+  assert.equal(await a.page.locator(`#preview-days button[aria-label^="${date}"]`).isDisabled(),true);
+  assert.equal((await (await fetch(origin+'/api/availability')).json()).closedDates.includes(date),false,'Preview does not save draft closure');
+  await a.page.screenshot({path:path.join(output,'agenda-preview.png')});
+  await a.page.locator('[data-close="schedule-preview-dialog"]').click();
+  for(const width of [1180,768,375,320]){
+    await a.page.setViewportSize({width,height:820});
+    assert.ok(await a.page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Range editor fits '+width);
+  }
+  await a.page.screenshot({path:path.join(output,'availability-mobile.png')});
+  await a.page.locator('#schedule-form [type="submit"]').click();
+  await a.page.getByText('Disponibilidad guardada. Las nuevas visitas usarán estos horarios.',{exact:true}).waitFor();
+  const updated=(await (await fetch(origin+'/api/availability')).json());assert.ok(updated.closedDates.includes(date));assert.equal(updated.estimates.fullSet.maxMinutes,135);
+  assert.equal((await fetch(origin+'/api/appointments',{method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':crypto.randomUUID()},body:JSON.stringify(overlapPayload)})).status,409,'Saved closure rejects real submissions');
+  const catalog=await browser.newPage();await catalog.goto(origin+'/pages/paula/');
+  await catalog.locator('.work-card .service-estimate').first().waitFor();
+  assert.match(await catalog.locator('.work-card .service-estimate').first().innerText(),/USD/);
+  await catalog.locator('.nav-book').click();await catalog.locator('#booking-form [name="service"]').selectOption('nails');
+  await catalog.locator('#booking-form [name="nailType"]').selectOption('fullSet');await catalog.locator('#booking-form [name="removal"]').selectOption('no');
+  assert.match(await catalog.locator('#booking-estimate').innerText(),/75–135 min · USD \$45–\$85/);
   await a.page.locator('#logout').click();
   await a.page.locator('#access').waitFor();
   assert.equal((await fetch(origin + '/api/admin/appointments', { headers: { Authorization: 'Bearer ' + a.token } })).status, 401);
