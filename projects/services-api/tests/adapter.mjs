@@ -6,8 +6,11 @@ export class D1Database {
     this.sqlite = new DatabaseSync(filename);
     this.sqlite.exec('PRAGMA foreign_keys=ON;');
     if (migrate) {
-      const sql = readFileSync(fileURLToPath(new URL('../drizzle/0000_persistent_appointments.sql', import.meta.url)), 'utf8');
-      this.sqlite.exec(sql);
+      const journal = JSON.parse(readFileSync(new URL('../drizzle/meta/_journal.json', import.meta.url), 'utf8'));
+      for (const entry of journal.entries) {
+        const sql = readFileSync(fileURLToPath(new URL('../drizzle/' + entry.tag + '.sql', import.meta.url)), 'utf8');
+        this.sqlite.exec(sql);
+      }
     }
   }
   prepare(sql) {

@@ -1,5 +1,15 @@
 # JK
 
+La pantalla de acceso muestra ADMIN dentro de la ventana JK. Actualizar
+confirma el éxito solo después de recibir los datos; Cancelar descarta el
+borrador de edición sin enviar cambios. Los controles Estado y Duración se
+alinean por su borde superior y tienen la misma altura.
+
+Las fotos identificadas se muestran como Current e Inspiration. Las nuevas
+solicitudes conservan el tipo de archivo; en las antiguas solo se recupera
+cuando su huella original demuestra la correspondencia. Si no puede probarse,
+se muestra Foto adjunta para evitar intercambiar fotografías por su orden.
+
 Panel JK del sitio para gestionar los aplicativos. PACA incluye solicitudes,
 edición, confirmación de horarios, eliminación, fotos privadas y disponibilidad.
 LBDS muestra un espacio pendiente de integración; no inventa registros.

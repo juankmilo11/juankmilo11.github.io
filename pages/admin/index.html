@@ -8,16 +8,16 @@
   <meta name="theme-color" content="#121a25">
   <title>JK · Juankmilo</title>
   <link rel="icon" type="image/webp" href="../../img/jk-icon.webp">
-  <link rel="stylesheet" href="admin.css?v=2026-11-16-online">
+  <link rel="stylesheet" href="admin.css?v=2026-11-16-polish">
   <script src="../../shared/api-config.js?v=2026-11-16-online" defer></script>
   <script src="../../shared/api.js?v=2026-11-16-online" defer></script>
-  <script src="admin.js?v=2026-11-16-jk" defer></script>
+  <script src="admin.js?v=2026-11-16-polish" defer></script>
 </head>
 <body>
   <main id="access" class="access">
     <div class="access-card">
       <p class="eyebrow">JUANKMILO</p>
-      <h1>JK</h1>
+      <h1>ADMIN</h1>
       <p id="access-intro">Introduce la contraseña</p>
       <form id="login-form">
         <label>Contraseña<input id="login-password" type="password" autocomplete="current-password" required maxlength="128"></label>
@@ -38,7 +38,7 @@
   <div id="dashboard" class="dashboard" hidden>
     <header class="topbar">
       <div><p class="eyebrow">JUANKMILO</p><h1>JK</h1></div>
-      <div class="top-actions"><button id="password-open" type="button">Gestionar contraseña</button><button id="logout" type="button">Cerrar sesión</button></div>
+      <div class="top-actions"><button id="password-open" type="button">Gestionar contraseña</button><button id="logout" type="button">Cerrar</button></div>
     </header>
     <div class="workspace">
       <nav class="app-nav" aria-label="Aplicativos"><button id="app-paca" class="is-active" type="button" aria-pressed="true"><span>PACA</span><small>Solicitudes y agenda</small></button><button id="app-lbds" type="button" aria-pressed="false"><span>LBDS</span><small>Próximamente</small></button></nav>
@@ -78,7 +78,7 @@
       <fieldset id="edit-nail-plan" hidden><legend>Plan de uñas</legend><div class="form-grid"><label>Tipo de servicio<select name="nailType"><option value="">Seleccionar</option><option value="fullSet">Set completo</option><option value="fill">Relleno / mantenimiento</option><option value="removalOnly">Solo retiro</option><option value="nails">Asesoría</option></select></label><label>¿Requiere retiro?<select name="removal"><option value="">Seleccionar</option><option value="yes">Sí</option><option value="no">No</option><option value="unsure">Por confirmar</option></select></label></div><label id="edit-removal-ack" class="checkbox-label"><input name="removalConsent" type="checkbox">La clienta acepta el tiempo y costo adicional del retiro cuando corresponda.</label></fieldset>
       <section class="request-detail"><h3>Datos de la solicitud</h3><dl id="request-details"></dl><p id="request-message" class="customer-message"></p><div id="attachments" class="attachments"></div></section>
       <label>Notas internas<textarea name="notes" rows="4" maxlength="2000" placeholder="Seguimiento y acuerdos con la clienta"></textarea></label>
-      <div class="dialog-actions"><button class="danger-outline" id="delete-open" type="button">Eliminar solicitud</button><button class="primary" type="submit">Guardar cambios</button></div><p id="edit-status" class="status" role="status" aria-live="polite"></p>
+      <div class="dialog-actions"><button class="danger-outline" id="delete-open" type="button">Eliminar solicitud</button><button data-close="edit-dialog" type="button">Cancelar</button><button class="primary" type="submit">Guardar cambios</button></div><p id="edit-status" class="status" role="status" aria-live="polite"></p>
     </form>
   </dialog>
 

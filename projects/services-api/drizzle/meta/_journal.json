@@ -1,5 +1,20 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "entries": [{ "idx": 0, "version": "6", "when": 1794800000000, "tag": "0000_persistent_appointments", "breakpoints": true }]
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1794800000000,
+      "tag": "0000_persistent_appointments",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1794819299899,
+      "tag": "0001_attachment_fields",
+      "breakpoints": true
+    }
+  ]
 }

@@ -8,7 +8,7 @@
   const removalLabels = { yes: 'Sí', no: 'No', unsure: 'Por confirmar con foto' };
   let token = null, expirationTimer = null, epoch = 0;
   let items = [], nextCursor = null, selected = null, schedule = null;
-  let listRequest = 0, scheduleRequest = 0, photoURL = null;
+  let listRequest = 0, scheduleRequest = 0, refreshRequest = 0, photoURL = null;
   let activationToken = new URLSearchParams(location.hash.slice(1)).get('activate');
   if (activationToken) history.replaceState(null, '', location.pathname + location.search);
 
@@ -49,6 +49,7 @@
     epoch++;
     listRequest++;
     scheduleRequest++;
+    refreshRequest++;
     clearTimeout(expirationTimer);
     document.querySelectorAll('dialog[open]').forEach(dialog => dialog.close());
     clearPhoto();
@@ -69,6 +70,9 @@
     $('#login-form').reset();
     announce('#access-status', message, message ? 'error' : '');
     announce('#dashboard-status');
+    $('#refresh').disabled = false;
+    $('#refresh').textContent = 'Actualizar';
+    $('#refresh').removeAttribute('aria-busy');
     notifyParent(false);
     $('#login-password').focus({ preventScroll: true });
   }
@@ -118,7 +122,7 @@
       meta.append(textElement('span', `${formatDate(item.date)} · ${item.time}`), textElement('span', serviceLabels[item.service] || item.service));
       if (item.durationMinutes) meta.append(textElement('span', `${item.durationMinutes} min`));
       content.append(meta, textElement('p', [item.whatsapp, item.instagram].filter(Boolean).join(' · '), 'appointment-contact'));
-      const button = textElement('button', 'Ver y gestionar', 'appointment-action');
+      const button = textElement('button', 'Ver', 'appointment-action');
       button.type = 'button';
       button.addEventListener('click', () => openItem(item));
       card.append(content, button);
@@ -133,7 +137,7 @@
     $('#list-info').textContent = items.length ? `${items.length} solicitud${items.length === 1 ? '' : 'es'} cargada${items.length === 1 ? '' : 's'}` : '';
     $('#load-more').hidden = !nextCursor;
   }
-  async function loadItems({ append = false } = {}) {
+  async function loadItems({ append = false, successMessage = '' } = {}) {
     const marker = ++listRequest;
     const query = new URLSearchParams();
     const state = $('#filter-status').value, search = $('#filter-search').value.trim();
@@ -145,13 +149,14 @@
     announce('#dashboard-status', 'Cargando solicitudes…');
     try {
       const result = await api('/api/admin/appointments' + (query.size ? '?' + query : ''));
-      if (marker !== listRequest) return;
+      if (marker !== listRequest) return false;
       if (!Array.isArray(result.items)) throw new Error('El servidor no devolvió una lista válida.');
       items = append ? [...items, ...result.items.filter(item => !items.some(old => old.id === item.id))] : result.items;
       nextCursor = result.nextCursor || null;
       renderItems();
-      announce('#dashboard-status');
-    } catch (error) { if (marker === listRequest) report('#dashboard-status', error); }
+      if (!$('#requests-panel').hidden && !$('#paca-panel').hidden) announce('#dashboard-status', successMessage, successMessage ? 'success' : '');
+      return true;
+    } catch (error) { if (marker === listRequest && !$('#requests-panel').hidden && !$('#paca-panel').hidden) report('#dashboard-status', error); return false; }
     finally {
       if (marker === listRequest) {
         $('#appointments').removeAttribute('aria-busy');
@@ -176,7 +181,19 @@
     $('#edit-removal-ack').hidden = !extra;
     field('removalConsent').required = extra;
   }
-  function openItem(item) {
+  let itemRequest = 0;
+  async function openItem(item) {
+    const marker = ++itemRequest;
+    announce('#dashboard-status', 'Cargando solicitud…');
+    try {
+      const latest = await api('/api/admin/appointments/' + encodeURIComponent(item.id));
+      if (marker !== itemRequest) return;
+      if (latest?.id !== item.id) throw new Error('El servidor no devolvió la solicitud.');
+      showItem(latest);
+      announce('#dashboard-status');
+    } catch (error) { if (marker === itemRequest) report('#dashboard-status', error); }
+  }
+  function showItem(item) {
     selected = item;
     for (const name of ['name', 'whatsapp', 'instagram', 'service', 'date', 'time', 'status', 'notes', 'durationMinutes']) field(name).value = item[name] ?? '';
     field('nailType').value = item.nailType || '';
@@ -193,8 +210,9 @@
     detail('Referencia del catálogo', typeof item.reference === 'string' ? item.reference : item.reference?.es || item.reference?.en);
     detail('Condiciones aceptadas', item.punctuality && item.cancellation && item.policy && item.consent ? 'Sí' : 'Revisar solicitud original');
     $('#request-message').textContent = item.message || 'La clienta no añadió una idea o comentario.';
-    const attachments = (item.attachments || []).map((attachment, index) => {
-      const button = textElement('button', `Ver foto ${index + 1}${attachment.name ? ' · ' + attachment.name : ''}`);
+    const attachments = (item.attachments || []).map(attachment => {
+      const label = attachment.field === 'currentPhoto' ? 'Current' : attachment.field === 'inspirationPhoto' ? 'Inspiration' : 'Foto adjunta';
+      const button = textElement('button', label);
       button.type = 'button';
       button.addEventListener('click', () => viewPhoto(attachment, button));
       return button;
@@ -204,9 +222,11 @@
     $('#edit-dialog').showModal();
   }
   async function viewPhoto(attachment, button) {
+    const item = selected;
     button.disabled = true;
     try {
       const blob = await api('/api/admin/attachments/' + encodeURIComponent(attachment.id), { responseType: 'blob' });
+      if (!$('#edit-dialog').open || selected !== item) return;
       if (!(blob instanceof Blob) || !['image/jpeg', 'image/png', 'image/webp'].includes(blob.type)) throw new Error('El archivo no es una imagen compatible.');
       clearPhoto();
       photoURL = URL.createObjectURL(blob);
@@ -273,8 +293,23 @@
   });
   $('#filters').addEventListener('submit', event => { event.preventDefault(); loadItems(); });
   $('#filter-status').addEventListener('change', () => loadItems());
-  $('#refresh').addEventListener('click', () => {
-    if ($('#schedule-panel').hidden) loadItems(); else loadSchedule();
+  $('#refresh').addEventListener('click', async event => {
+    const button = event.currentTarget;
+    if (button.disabled) return;
+    const marker = ++refreshRequest;
+    button.disabled = true;
+    button.textContent = 'Actualizando…';
+    button.setAttribute('aria-busy', 'true');
+    try {
+      if ($('#schedule-panel').hidden) await loadItems({ successMessage: 'Solicitudes actualizadas.' });
+      else await loadSchedule({ successMessage: 'Disponibilidad actualizada.' });
+    } finally {
+      if (marker === refreshRequest) {
+        button.disabled = false;
+        button.textContent = 'Actualizar';
+        button.removeAttribute('aria-busy');
+      }
+    }
   });
   $('#load-more').addEventListener('click', () => loadItems({ append: true }));
   field('status').addEventListener('change', updateDurationRequirement);
@@ -324,17 +359,22 @@
   });
   document.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => document.getElementById(button.dataset.close).close()));
   $('#photo-dialog').addEventListener('close', clearPhoto);
-  $('#edit-dialog').addEventListener('close', () => { selected = null; });
+  $('#edit-dialog').addEventListener('close', () => {
+    selected = null;
+    $('#edit-form').reset();
+    for (const control of $('#edit-form').elements) control.setCustomValidity?.('');
+    announce('#edit-status');
+  });
   $('#password-dialog').addEventListener('close', () => $('#password-form').reset());
 
-  async function loadSchedule() {
+  async function loadSchedule({ successMessage = '' } = {}) {
     const marker = ++scheduleRequest;
     $('#schedule-form').setAttribute('aria-busy', 'true');
     $('#schedule-form [type="submit"]').disabled = true;
     announce('#dashboard-status', 'Cargando disponibilidad…');
     try {
       const result = await api('/api/admin/schedule');
-      if (marker !== scheduleRequest) return;
+      if (marker !== scheduleRequest) return false;
       if (!result.config || !Number.isInteger(result.version)) throw new Error('El servidor no devolvió la disponibilidad válida.');
       schedule = result;
       const config = result.config;
@@ -343,8 +383,9 @@
       for (const key of Object.keys(durationLabels)) $(`[data-duration="${key}"]`).value = config.durationMinutes[key] ?? '';
       $('#schedule-closed').value = config.closedDates.join('\n');
       $('#schedule-blocked').value = config.blocked.map(block => `${block.date} ${block.start}-${block.end}`).join('\n');
-      announce('#dashboard-status');
-    } catch (error) { if (marker === scheduleRequest) report('#dashboard-status', error); }
+      if (!$('#schedule-panel').hidden && !$('#paca-panel').hidden) announce('#dashboard-status', successMessage, successMessage ? 'success' : '');
+      return true;
+    } catch (error) { if (marker === scheduleRequest && !$('#schedule-panel').hidden && !$('#paca-panel').hidden) report('#dashboard-status', error); return false; }
     finally {
       if (marker === scheduleRequest) {
         $('#schedule-form').removeAttribute('aria-busy');

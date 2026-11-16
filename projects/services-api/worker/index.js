@@ -102,9 +102,45 @@ async function readSubmission(request) {
   return {payload:validatePayload(payload),files};
 }
 const summary = row => ({id:row.id,status:row.status,createdAt:row.created_at});
-async function appointment(env,row) {
-  const files=await env.DB.prepare('SELECT id,name,type,size FROM attachments WHERE appointment_id=? ORDER BY id').bind(row.id).all();
-  return {...JSON.parse(row.payload),id:row.id,name:row.name,whatsapp:row.whatsapp,instagram:row.instagram,service:row.service,date:row.date,time:row.time,durationMinutes:row.duration_minutes,status:row.status,notes:row.notes,version:row.version,createdAt:row.created_at,updatedAt:row.updated_at,attachments:files.results};
+async function resolveLegacyFields(env,row,files) {
+  if (!env.BUCKET || !files.length || files.length > 2 || files.every(file=>file.field)) return files;
+  try {
+    // Old records omitted the upload field. The original request fingerprint
+    // includes each file digest and field, so recover only a unique exact match.
+    // UUID order, file names and upload times are not reliable evidence.
+    const digests = [];
+    for (const file of files) {
+      if (file.size > MAX_FILE) return files;
+      const object = await env.BUCKET.get(file.object_key);
+      if (!object) return files;
+      const bytes = await body(new Response(object.body), MAX_FILE);
+      digests.push(await hash(bytes));
+    }
+    const choices = files.length === 1
+      ? [['currentPhoto'], ['inspirationPhoto']]
+      : [['currentPhoto','inspirationPhoto'], ['inspirationPhoto','currentPhoto']];
+    const matches = [];
+    for (const fields of choices) {
+      if (files.some((file,index)=>file.field && file.field!==fields[index])) continue;
+      const fingerprintFiles = fields.map((field,index)=>({field,digest:digests[index]}))
+        .sort((a,b)=>(a.field==='currentPhoto'?0:1)-(b.field==='currentPhoto'?0:1));
+      const fingerprint = await hash(JSON.stringify([JSON.parse(row.payload),fingerprintFiles]));
+      if (equal(fingerprint,row.request_hash)) matches.push(fields);
+    }
+    if (matches.length !== 1) return files;
+    await env.DB.batch(files.filter(file=>!file.field).map(file=>{
+      const index=files.indexOf(file);
+      return env.DB.prepare('UPDATE attachments SET field=? WHERE id=? AND appointment_id=? AND field IS NULL')
+        .bind(matches[0][index],file.id,row.id);
+    }));
+    return files.map((file,index)=>({...file,field:matches[0][index]}));
+  } catch { return files; }
+}
+async function appointment(env,row,{resolveLegacy=false}={}) {
+  const result=await env.DB.prepare('SELECT id,name,type,size,field,object_key FROM attachments WHERE appointment_id=? ORDER BY id').bind(row.id).all();
+  const files=resolveLegacy?await resolveLegacyFields(env,row,result.results):result.results;
+  const attachments=files.map(({id,name,type,size,field})=>({id,name,type,size,field:field||null}));
+  return {...JSON.parse(row.payload),id:row.id,name:row.name,whatsapp:row.whatsapp,instagram:row.instagram,service:row.service,date:row.date,time:row.time,durationMinutes:row.duration_minutes,status:row.status,notes:row.notes,version:row.version,createdAt:row.created_at,updatedAt:row.updated_at,attachments};
 }
 async function submit(request,env) {
   if(!await adminHash(env))fail(503,'setup_required');
@@ -123,7 +159,7 @@ async function submit(request,env) {
     for(const file of files){if(!env.BUCKET)fail(503,'file_storage_unavailable');const attachmentId=crypto.randomUUID(),objectKey=`appointments/${id}/${attachmentId}`;await env.BUCKET.put(objectKey,file.bytes,{httpMetadata:{contentType:file.type}});stored.push({...file,id:attachmentId,objectKey});}
     const statements=[env.DB.prepare('INSERT INTO appointments(id,name,whatsapp,instagram,service,date,time,start_minute,end_minute,duration_minutes,payload,created_at,updated_at,idempotency_hash,request_hash) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(id,payload.name,payload.whatsapp,payload.instagram,payload.service,payload.date,payload.time,minutes(payload.time),duration?minutes(payload.time)+duration:null,duration,JSON.stringify(payload),createdAt,createdAt,keyHash,requestHash)];
     statements.push(env.DB.prepare('INSERT INTO request_receipts(key_hash,request_hash,appointment_id,created_at) VALUES(?,?,?,?)').bind(keyHash,requestHash,id,createdAt));
-    for(const file of stored)statements.push(env.DB.prepare('INSERT INTO attachments(id,appointment_id,object_key,name,type,size) VALUES(?,?,?,?,?,?)').bind(file.id,id,file.objectKey,file.name,file.type,file.size));
+    for(const file of stored)statements.push(env.DB.prepare('INSERT INTO attachments(id,appointment_id,object_key,name,type,size,field) VALUES(?,?,?,?,?,?,?)').bind(file.id,id,file.objectKey,file.name,file.type,file.size,file.field));
     await env.DB.batch(statements);
     return response({id,status:'pending',createdAt},201);
   }catch(error){
@@ -194,7 +230,7 @@ async function route(request,env,url) {
   const match=/^\/api\/admin\/appointments\/([a-f0-9-]{36})$/.exec(path);
   if(match){
     const row=await env.DB.prepare('SELECT * FROM appointments WHERE id=?').bind(match[1]).first();if(!row)fail(404,'not_found');
-    if(request.method==='GET')return response(await appointment(env,row));
+    if(request.method==='GET')return response(await appointment(env,row,{resolveLegacy:true}));
     if(request.method==='DELETE'){
       const version=Number(url.searchParams.get('version'));if(!Number.isInteger(version)||version<1)fail(400,'version_required');if(version!==row.version)fail(409,'version_conflict');
       const deleted=await env.DB.prepare('DELETE FROM appointments WHERE id=? AND version=? RETURNING id').bind(row.id,version).first();if(!deleted)fail(409,'version_conflict');
