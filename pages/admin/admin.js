@@ -240,7 +240,7 @@
   if (activationToken) {
     $('#login-form').hidden = true;
     $('#setup-form').hidden = false;
-    $('#access-intro').textContent = 'Crea la contraseña para activar el acceso privado a ADMIN.';
+    $('#access-intro').textContent = 'Crea la contraseña para activar JK.';
   }
   $('#setup-form').addEventListener('submit', event => {
     event.preventDefault();
@@ -255,7 +255,7 @@
         $('#setup-form').reset();
         $('#setup-form').hidden = true;
         $('#login-form').hidden = false;
-        $('#access-intro').textContent = 'Introduce tu contraseña para gestionar los aplicativos.';
+        $('#access-intro').textContent = 'Introduce la contraseña';
         announce('#access-status', 'Acceso activado. Ya puedes entrar con tu contraseña.', 'success');
         $('#login-password').focus();
       } catch (error) { announce('#access-status', describe(error), 'error'); }

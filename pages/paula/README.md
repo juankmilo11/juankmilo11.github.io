@@ -9,8 +9,9 @@ del servidor.
 
 ## Flujo de citas
 
-- Nombre y número de WhatsApp con código de país son obligatorios. Instagram
-  es opcional y se valida como usuario, no como correo ni URL.
+- Nombre y número de WhatsApp son obligatorios. El selector admite solo EE. UU.
+  (+1), predeterminado, y Colombia (+57); la persona escribe los 10 dígitos
+  nacionales. Instagram es opcional y se valida como usuario, no como correo ni URL.
 - El botón «Elegir fecha y hora» abre una segunda subventana encima del borrador.
   «Usar este horario» aplica la elección. Cancelar, cerrar o Escape conserva la
   elección anterior y devuelve el foco al botón; Escape no cierra el formulario.
@@ -27,10 +28,12 @@ del servidor.
   La clave y los datos del borrador viven únicamente mientras la ventana PACA
   permanece abierta. La persistencia de solicitudes aceptadas está en el servidor.
 - No hay paso de copiar ni enviar por Instagram. El administrador gestiona las
-  solicitudes desde ADMIN; las correcciones posteriores se coordinan con Paula.
+  solicitudes desde JK; las correcciones posteriores se coordinan con Paula.
 
-Cerrar y reabrir la subventana conserva el borrador o el comprobante durante esa
-visita. «Nueva solicitud» limpia el formulario. No se ponen datos de clientes
+Cerrar y reabrir la subventana conserva un borrador sin enviar durante esa
+visita. Tras guardar, «Salir» cierra la subventana; cualquier cierre de un
+comprobante limpia el formulario, archivos, horario y clave de envío para la
+siguiente solicitud. No se ponen datos de clientes
 ni credenciales en URLs. Sin JavaScript se explica que hay que activarlo para
 solicitar una cita; el formulario no envía datos por GET.
 
@@ -58,7 +61,7 @@ El horario usa `America/New_York`, de lunes a viernes de 07:00 a 19:00. La
 consulta en línea se hace al abrir el calendario y antes de revisar la solicitud.
 Si la disponibilidad falla, el cliente muestra un error y ofrece reintentar;
 no presenta el antiguo JSON estático como si fuera disponibilidad en vivo.
-Las citas guardadas y sus cambios se gestionan desde ADMIN. Las comprobaciones
+Las citas guardadas y sus cambios se gestionan desde JK. Las comprobaciones
 finales de disponibilidad y contenido corresponden al servidor.
 
 El JSON `assets/availability.json` se conserva como configuración inicial y

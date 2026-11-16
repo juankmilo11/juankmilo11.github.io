@@ -6,18 +6,19 @@
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex,nofollow">
   <meta name="theme-color" content="#121a25">
-  <title>ADMIN · Juankmilo</title>
+  <title>JK · Juankmilo</title>
+  <link rel="icon" type="image/webp" href="../../img/jk-icon.webp">
   <link rel="stylesheet" href="admin.css?v=2026-11-16-online">
   <script src="../../shared/api-config.js?v=2026-11-16-online" defer></script>
   <script src="../../shared/api.js?v=2026-11-16-online" defer></script>
-  <script src="admin.js?v=2026-11-16-online" defer></script>
+  <script src="admin.js?v=2026-11-16-jk" defer></script>
 </head>
 <body>
   <main id="access" class="access">
     <div class="access-card">
-      <p class="eyebrow">JUANKMILO / ÁREA PRIVADA</p>
-      <h1>ADMIN</h1>
-      <p id="access-intro">Introduce tu contraseña para gestionar los aplicativos.</p>
+      <p class="eyebrow">JUANKMILO</p>
+      <h1>JK</h1>
+      <p id="access-intro">Introduce la contraseña</p>
       <form id="login-form">
         <label>Contraseña<input id="login-password" type="password" autocomplete="current-password" required maxlength="128"></label>
         <button class="primary" type="submit">Entrar</button>
@@ -26,24 +27,24 @@
         <label>Nueva contraseña<input id="setup-password" type="password" autocomplete="new-password" required minlength="14" maxlength="128"></label>
         <label>Repetir contraseña<input id="setup-confirm" type="password" autocomplete="new-password" required minlength="14" maxlength="128"></label>
         <p class="hint">Usa al menos 14 caracteres. Este enlace solo sirve para activar el acceso una vez.</p>
-        <button class="primary" type="submit">Crear acceso ADMIN</button>
+        <button class="primary" type="submit">Crear acceso JK</button>
       </form>
       <p id="access-status" class="status" role="status" aria-live="polite"></p>
-      <p class="access-note">Los datos solo se cargan después de verificar el acceso en el servidor.</p>
+      <p class="access-note">Verificar acceso en el servidor.</p>
       <noscript><p>Activa JavaScript para entrar en la administración.</p></noscript>
     </div>
   </main>
 
   <div id="dashboard" class="dashboard" hidden>
     <header class="topbar">
-      <div><p class="eyebrow">JUANKMILO</p><h1>Administración</h1></div>
-      <div class="top-actions"><button id="password-open" type="button">Contraseña</button><button id="logout" type="button">Cerrar sesión</button></div>
+      <div><p class="eyebrow">JUANKMILO</p><h1>JK</h1></div>
+      <div class="top-actions"><button id="password-open" type="button">Gestionar contraseña</button><button id="logout" type="button">Cerrar sesión</button></div>
     </header>
     <div class="workspace">
       <nav class="app-nav" aria-label="Aplicativos"><button id="app-paca" class="is-active" type="button" aria-pressed="true"><span>PACA</span><small>Solicitudes y agenda</small></button><button id="app-lbds" type="button" aria-pressed="false"><span>LBDS</span><small>Próximamente</small></button></nav>
       <main class="content">
         <section id="paca-panel" aria-labelledby="paca-title">
-          <div class="section-heading"><div><p class="eyebrow">PACA / PAULA DANIELA</p><h2 id="paca-title">Citas y solicitudes</h2><p class="muted">Horarios de New Jersey · America/New_York</p></div><div class="section-actions"><button id="refresh" type="button">Actualizar</button><button id="export" type="button">Exportar respaldo</button></div></div>
+          <div class="section-heading"><div><p class="eyebrow">PACA / PAULA DANIELA</p><h2 id="paca-title">Citas y solicitudes</h2><p class="muted">Horarios de New Jersey · New York</p></div><div class="section-actions"><button id="refresh" type="button">Actualizar</button><button id="export" type="button">Exportar respaldo</button></div></div>
           <div class="tabs" role="tablist" aria-label="Gestión de PACA"><button id="requests-tab" type="button" role="tab" aria-selected="true" aria-controls="requests-panel">Solicitudes</button><button id="schedule-tab" type="button" role="tab" aria-selected="false" aria-controls="schedule-panel" tabindex="-1">Disponibilidad</button></div>
           <section id="requests-panel" role="tabpanel" aria-labelledby="requests-tab">
             <form id="filters" class="filters"><label>Estado<select id="filter-status"><option value="">Todos</option><option value="pending">Pendientes</option><option value="confirmed">Confirmadas</option><option value="completed">Completadas</option><option value="cancelled">Canceladas</option></select></label><label class="search-label">Buscar<input id="filter-search" type="search" maxlength="120" placeholder="Nombre, WhatsApp o Instagram"></label><button type="submit">Buscar</button></form>

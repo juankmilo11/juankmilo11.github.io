@@ -237,7 +237,8 @@ button { cursor: pointer; font: inherit; }
 }
 .enlace-paca { --icon-glow: #ed9ab580; }
 .enlace-admin { --icon-glow: #d5af6480; }
-.icono-admin { display: grid; place-items: center; background: #29231a; color: #ffe1a6; font: 700 2rem Georgia, serif; }
+.enlace-admin .icono_imagen { object-fit: contain; border: 0; background: transparent; box-shadow: none; filter: drop-shadow(0 3px 4px #0009); }
+.enlace-admin:hover .icono_imagen, .enlace-admin:focus-visible .icono_imagen { box-shadow: none; filter: drop-shadow(0 3px 7px #d5af6480); }
 .ventana.ventana-admin { width: min(520px, calc(100vw - 28px)); height: min(620px, calc(100dvh - 32px)); }
 .ventana.ventana-admin.admin-abierto { width: min(1180px, calc(100vw - 28px)); height: min(820px, calc(100dvh - 32px)); }
 .enlace:hover span, .enlace:focus-visible span { background: #095ad5c9; border-color: #9dcaff8c; }

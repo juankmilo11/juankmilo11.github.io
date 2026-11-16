@@ -146,7 +146,7 @@ function browser({ imageDelay = 0, imageFailure = false, reducedMotion = false }
     ['pages/sura/index.html', 'LBDSEGUROS', '#8ecae6'],
     ['pages/paula/index.html', 'PACA | Paula Daniela · Beauty Studio', '#ed9ab5'],
     ['/FCT/', 'FCT: Fantasy Chess: Tactics', '#176b3a'],
-    ['pages/admin/index.html', 'ADMIN · Acceso privado', '#d5af64']
+    ['pages/admin/index.html', 'JK', '#d5af64']
   ].map(([href, name, color], index) => {
     const link = new Element('a', 'enlace');
     link.setAttribute('href', href);
@@ -514,12 +514,13 @@ test('windows stay within the viewport after resize and titlebar dragging', asyn
   assert.equal(parseFloat(popup.style.left), 0, 'Released pointers must not keep dragging');
 });
 
-test('ADMIN opens the password gate and only its own iframe can change the window state', async () => {
+test('JK opens the password gate and only its own iframe can change the window state', async () => {
   const page = browser();
   await page.advance(5000);
   page.links[3].dispatch('click');
   const popup = page.windows()[0], frame = popup.querySelector('iframe');
   assert.ok(popup.classList.contains('ventana-admin'));
+  assert.equal(popup.querySelector('h2').textContent, 'JK');
   assert.equal(popup.classList.contains('admin-abierto'), false);
   const message = { origin: 'http://localhost:8000', source: frame.contentWindow, data: { type: 'admin:authenticated', authenticated: true } };
   page.window.dispatch('message', { ...message, origin: 'https://other.example' });
@@ -527,6 +528,8 @@ test('ADMIN opens the password gate and only its own iframe can change the windo
   assert.equal(popup.classList.contains('admin-abierto'), false);
   page.window.dispatch('message', message);
   assert.ok(popup.classList.contains('admin-abierto'));
+  assert.equal(popup.querySelector('h2').textContent, 'JK');
   page.window.dispatch('message', { ...message, data: { type: 'admin:authenticated', authenticated: false } });
   assert.equal(popup.classList.contains('admin-abierto'), false);
+  assert.equal(popup.querySelector('h2').textContent, 'JK');
 });

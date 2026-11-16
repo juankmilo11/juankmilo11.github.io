@@ -410,6 +410,6 @@ window.addEventListener('message', evento => {
   const ventana = [...ventanasAbiertas].find(item => item.classList.contains('ventana-admin') && item.querySelector('iframe').contentWindow === evento.source);
   if (!ventana) return;
   ventana.classList.toggle('admin-abierto', evento.data.authenticated);
-  ventana.querySelector('h2').textContent = evento.data.authenticated ? 'ADMIN · Gestión de aplicativos' : 'ADMIN · Acceso privado';
+  ventana.querySelector('h2').textContent = 'JK';
   centrarVentana(ventana);
 });

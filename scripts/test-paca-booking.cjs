@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { studioToday, validDate, validWhatsApp, validInstagram, normalizeWhatsApp, makeSummary, withCatalogReference } = require('../pages/paula/js/booking.js');
+const { studioToday, validDate, validWhatsApp, validNationalWhatsApp, composeWhatsApp, validInstagram, normalizeWhatsApp, makeSummary, withCatalogReference } = require('../pages/paula/js/booking.js');
 
 test('booking dates use New Jersey time, including daylight saving', () => {
   assert.equal(studioToday(new Date('2026-11-15T02:30:00Z')), '2026-11-14');
@@ -32,9 +32,20 @@ test('request summary preserves the actual choices and makes confirmation explic
   assert.match(text, /Nombre: Ana\nWhatsApp: \+573001234567\nInstagram: @ana\nServicio: Nail art/);
   assert.match(text, /domingo, 15 de noviembre de 2026/);
   assert.match(text, /Hora de inicio solicitada: 15:00/);
+  assert.match(text, /New Jersey \(New York\)/);
+  assert.doesNotMatch(text, /America\/New_York/);
   assert.match(text, /Mi idea: Diseño azul/);
   assert.match(text, /sujeta a confirmación por Paula/);
   assert.doesNotMatch(text, /confirmada|reservada/);
+});
+
+test('the two country choices combine ten national digits into the stored international number', () => {
+  assert.equal(composeWhatsApp('201 555 0123', '+1'), '+12015550123');
+  assert.equal(composeWhatsApp('300 123 4567', '+57'), '+573001234567');
+  for (const [number, code] of [['300123456', '+57'], ['30012345678', '+57'], ['+573001234567', '+57'], ['2015550123', '+44'], ['', '+1']]) {
+    assert.equal(validNationalWhatsApp(number, code), false);
+    assert.equal(composeWhatsApp(number, code), '');
+  }
 });
 
 test('catalog references preserve the idea and replace previous automatic references', () => {

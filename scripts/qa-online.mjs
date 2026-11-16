@@ -58,7 +58,7 @@ try {
   await visitor.locator('.nav-book').click();
   const form = visitor.locator('#booking-form');
   await form.locator('[name="name"]').fill('Online QA Visitor');
-  await form.locator('[name="whatsapp"]').fill('+1 202 555 0123');
+  await form.locator('[name="whatsapp"]').fill('202 555 0123');
   await form.locator('[name="instagram"]').fill('@online_qa');
   await form.locator('[name="service"]').selectOption('beauty');
   await form.locator('[name="message"]').fill('Synthetic integration test.');

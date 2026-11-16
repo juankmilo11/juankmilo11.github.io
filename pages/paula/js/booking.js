@@ -7,6 +7,9 @@
   const translate=(key,language='en',values={})=>locales[language][key].replace(/\{(\w+)\}/g,(_,name)=>String(values[name]??''));
   const normalizeWhatsApp=value=>String(value??'').trim().replace(/[\s().-]/g,'');
   const validWhatsApp=value=>/^\+[1-9]\d{7,14}$/.test(normalizeWhatsApp(value));
+  const nationalWhatsApp=value=>String(value??'').trim().replace(/[\s().-]/g,'');
+  const validNationalWhatsApp=(value,countryCode)=>['+1','+57'].includes(countryCode)&&/^\d{10}$/.test(nationalWhatsApp(value));
+  const composeWhatsApp=(value,countryCode)=>validNationalWhatsApp(value,countryCode)?countryCode+nationalWhatsApp(value):'';
   const validInstagram=value=>!String(value??'').trim()||/^@?[A-Za-z0-9_](?:[A-Za-z0-9._]{0,28}[A-Za-z0-9_])?$/.test(String(value).trim());
   function studioToday(now=new Date()){
     const parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now);
@@ -22,7 +25,7 @@
     const t=key=>translate(key,language);
     const formatted=new Intl.DateTimeFormat(language==='es'?'es-CO':'en-US',{timeZone:'UTC',dateStyle:'full'}).format(new Date(`${data.date}T12:00:00Z`));
     return [`${t('summaryName')}: ${data.name.trim()}`,`${t('summaryWhatsApp')}: ${normalizeWhatsApp(data.whatsapp)}`,
-      ...(data.instagram?.trim()?[`Instagram: ${data.instagram.trim()}`]:[]),`${t('summaryService')}: ${title}`,`${t('summaryDate')}: ${formatted}`,`${t('summaryTime')}: ${data.time} · New Jersey (America/New_York)`,
+      ...(data.instagram?.trim()?[`Instagram: ${data.instagram.trim()}`]:[]),`${t('summaryService')}: ${title}`,`${t('summaryDate')}: ${formatted}`,`${t('summaryTime')}: ${data.time} · New Jersey (New York)`,
       ...(data.service==='nails'?[`${t('summaryNailType')}: ${t('nail.'+data.nailType)}`,`${t('summaryRemoval')}: ${t('removal.'+data.removal)}`]:[]),
       ...(data.duration?[`${t('summaryDuration')}: ${data.duration} min`]:[]),
       ...(data.service==='nails'&&data.removalConsent?[t('summaryRemovalConsent')]:[]),
@@ -50,7 +53,7 @@
     const form=document.getElementById('booking-form');if(!form||form.dataset.bookingReady)return;
     const $=id=>document.getElementById(id),I=window.PacaI18n,t=I.t;
     const fields=$('booking-fields'),review=$('booking-review'),summary=$('booking-summary'),send=$('booking-send'),edit=$('booking-edit'),status=$('booking-status'),success=$('booking-success');
-    const names=['name','whatsapp','instagram','service','date','time','nailType','removal','removalConsent','punctuality','cancellation','policy','currentPhoto','inspirationPhoto','message','consent'];
+    const names=['name','countryCode','whatsapp','instagram','service','date','time','nailType','removal','removalConsent','punctuality','cancellation','policy','currentPhoto','inspirationPhoto','message','consent'];
     const controls=Object.fromEntries(names.map(name=>[name,form.elements.namedItem(name)]));
     if(![fields,review,summary,send,edit,status,success,...Object.values(controls)].every(Boolean))return;
     const serviceIds=new Set([...controls.service.options].map(option=>option.value).filter(Boolean));
@@ -59,7 +62,7 @@
     const announce=(key,values={})=>{statusKey=key;status.textContent=key?t(key,values):'';};
     const details=()=>({service:controls.service.value,nailType:controls.nailType.value,removal:controls.removal.value});
     const agenda=window.createPacaAgenda($('booking-agenda'),form,details);
-    const values=()=>({...Object.fromEntries(Object.entries(controls).map(([name,control])=>[name,control.type==='checkbox'?control.checked:control.value])),duration:agenda.duration(),currentPhoto:controls.currentPhoto.files?.[0]?.name||'',inspirationPhoto:controls.inspirationPhoto.files?.[0]?.name||''});
+    const values=()=>({...Object.fromEntries(Object.entries(controls).map(([name,control])=>[name,control.type==='checkbox'?control.checked:control.value])),whatsapp:composeWhatsApp(controls.whatsapp.value,controls.countryCode.value),duration:agenda.duration(),currentPhoto:controls.currentPhoto.files?.[0]?.name||'',inspirationPhoto:controls.inspirationPhoto.files?.[0]?.name||''});
     const calendar=$('calendar-dialog'),openCalendar=$('calendar-open');
     let calendarPrevious=null,calendarApplied=false;
     function syncSlot(){
@@ -111,7 +114,7 @@
     function validate(){
       Object.values(controls).forEach(control=>control.setCustomValidity(''));
       if(controls.name.value.trim().length<2||controls.name.value.length>80)controls.name.setCustomValidity(t('invalidName'));
-      if(!validWhatsApp(controls.whatsapp.value))controls.whatsapp.setCustomValidity(t('invalidWhatsApp'));
+      if(!validNationalWhatsApp(controls.whatsapp.value,controls.countryCode.value))controls.whatsapp.setCustomValidity(t('invalidWhatsApp'));
       if(!validInstagram(controls.instagram.value))controls.instagram.setCustomValidity(t('invalidInstagram'));
       if(!serviceIds.has(controls.service.value))controls.service.setCustomValidity(t('invalidService'));
       if(controls.service.value==='nails'){
@@ -128,7 +131,7 @@
       return true;
     }
     function requestPayload(){
-      const data=values();delete data.currentPhoto;delete data.inspirationPhoto;delete data.duration;
+      const data=values();delete data.currentPhoto;delete data.inspirationPhoto;delete data.duration;delete data.countryCode;
       data.whatsapp=normalizeWhatsApp(data.whatsapp);data.instagram=data.instagram.trim()?('@'+data.instagram.trim().replace(/^@/,'')):'';
       data.name=data.name.trim();data.message=data.message.trim();data.language=I.language;data.reference=selectedReference;
       if(data.service!=='nails'){data.nailType='';data.removal='';data.removalConsent=false;}
@@ -163,7 +166,11 @@
       }catch(error){announce(error?.status===409?'slotConflict':'saveFailed');}
       finally{saving=false;send.disabled=false;edit.disabled=false;send.textContent=t('sendRequest');}
     });
-    $('booking-new').addEventListener('click',()=>{savedReceipt=null;pendingPayload=null;idempotencyKey=null;form.reset();controls.name.focus();});
+    $('booking-exit').addEventListener('click',()=>$('booking-dialog').close());
+    $('booking-dialog').addEventListener('close',()=>{
+      if(!savedReceipt)return;
+      savedReceipt=null;pendingPayload=null;idempotencyKey=null;requestSignature='';form.reset();
+    });
     document.addEventListener('paca:book',event=>{
       if(saving)return;
       if(savedReceipt){success.hidden=false;fields.hidden=true;review.hidden=true;syncReceipt();return;}
@@ -189,10 +196,10 @@
     form.addEventListener('reset',()=>{
       resetReview();automaticReference='';selectedReference=null;pendingPayload=null;idempotencyKey=null;requestSignature='';
       Object.values(controls).forEach(control=>control.setCustomValidity(''));
-      queueMicrotask(()=>{agenda.clear();syncNails();syncSlot();previews.forEach(url=>URL.revokeObjectURL(url));previews.clear();document.querySelectorAll('.reference-preview').forEach(img=>{img.hidden=true;img.removeAttribute('src');});});
+      queueMicrotask(()=>{calendarPrevious=null;calendarApplied=false;agenda.clear();syncNails();syncSlot();previews.forEach(url=>URL.revokeObjectURL(url));previews.clear();document.querySelectorAll('.reference-preview').forEach(img=>{img.hidden=true;img.removeAttribute('src');});});
     });
     syncNails();syncSlot();form.dataset.bookingReady='true';$('booking-submit').disabled=false;
     return {reset:resetReview};
   }
-  return {initPacaBooking,studioToday,validDate,validWhatsApp,validInstagram,normalizeWhatsApp,makeSummary,withCatalogReference};
+  return {initPacaBooking,studioToday,validDate,validWhatsApp,validNationalWhatsApp,composeWhatsApp,validInstagram,normalizeWhatsApp,makeSummary,withCatalogReference};
 });

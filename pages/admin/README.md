@@ -1,6 +1,6 @@
-# ADMIN
+# JK
 
-Panel privado del sitio para gestionar los aplicativos. PACA incluye solicitudes,
+Panel JK del sitio para gestionar los aplicativos. PACA incluye solicitudes,
 edición, confirmación de horarios, eliminación, fotos privadas y disponibilidad.
 LBDS muestra un espacio pendiente de integración; no inventa registros.
 

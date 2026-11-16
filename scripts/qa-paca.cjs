@@ -56,6 +56,8 @@ async function settleAnimations(page, selector) {
     await page.route('**/shared/api-config.js*',route=>route.fulfill({contentType:'text/javascript',body:'/* Browser QA configuration */'}));
     await page.goto(url);
     await page.locator('.work-card').first().waitFor();
+    assert.equal(await page.locator('.service[open]').count(),0);
+    assert.equal(await page.locator('.hero-tabs small').count(),0);
     assert.equal(await page.locator('#motion-toggle,#catalog-search,#total-count,.service-number,#booking-copy,#booking-instagram').count(),0);
     assert.equal(await page.locator('main #agendar').count(),0);
     for(const category of ['all','nails','tattoo','pmu','beauty']){
@@ -75,7 +77,10 @@ async function settleAnimations(page, selector) {
     assert.equal(await page.locator('#calendar-dialog').isVisible(),false);
     assert.equal(await page.evaluate(()=>window.__availabilityCalls),0);
     await form.locator('[name="name"]').fill('Ana Test');
-    await form.locator('[name="whatsapp"]').fill('+57 300 123 4567');
+    assert.equal(await form.locator('[name="countryCode"]').inputValue(),'+1');
+    assert.deepEqual(await form.locator('[name="countryCode"] option').evaluateAll(options=>options.map(option=>option.value)),['+1','+57']);
+    await form.locator('[name="countryCode"]').selectOption('+57');
+    await form.locator('[name="whatsapp"]').fill('300 123 4567');
     await form.locator('[name="message"]').fill('Azul y flores.');
     await form.locator('[name="service"]').selectOption('beauty');
     async function selectSlot(){
@@ -92,6 +97,7 @@ async function settleAnimations(page, selector) {
     await selectSlot();
     await page.keyboard.press('Escape');
     await page.locator('#calendar-dialog').waitFor({state:'hidden'});
+    await page.waitForFunction(()=>document.querySelector('#booking-form [name="date"]').value==='');
     assert.equal(await page.locator('#booking-dialog').isVisible(),true,'Escape closes only calendar');
     assert.equal(await form.locator('[name="date"]').inputValue(),'','Cancel restores original selection');
     await selectSlot();await page.locator('#calendar-apply').click();
@@ -119,11 +125,28 @@ async function settleAnimations(page, selector) {
     assert.equal(writes[1].payload.instagram,'');
     assert.equal(writes[1].photos.currentPhoto.name,'test.png');
     assert.equal('currentPhoto' in writes[1].payload,false,'Attachments are Files, not fake saved filenames');
-    await closeBooking(page);
+    assert.equal(await page.locator('#booking-exit').innerText(),'Exit');
+    await page.locator('#booking-exit').click();
+    await page.locator('#booking-dialog').waitFor({state:'hidden'});
     await page.locator('.nav-book').click();
-    assert.equal(await page.locator('#booking-success').isVisible(),true,'Receipt survives closing and reopening');
-    await page.locator('#booking-new').click();
-    assert.equal(await form.locator('[name="name"]').inputValue(),'');
+    assert.equal(await page.locator('#booking-success').isVisible(),false,'Reopening a completed request starts fresh');
+    for(const name of ['name','whatsapp','instagram','message','date','time'])assert.equal(await form.locator('[name="'+name+'"]').inputValue(),'');
+    assert.equal(await form.locator('[name="countryCode"]').inputValue(),'+1');
+    assert.equal(await form.locator('[name="currentPhoto"]').evaluate(input=>input.files.length),0);
+    for(const name of ['punctuality','cancellation','policy','consent'])assert.equal(await form.locator('[name="'+name+'"]').isChecked(),false);
+    await form.locator('[name="name"]').fill('Second Visitor');
+    await form.locator('[name="whatsapp"]').fill('2015550123');
+    await form.locator('[name="service"]').selectOption('beauty');
+    const reads=await page.evaluate(()=>window.__availabilityCalls);
+    await selectSlot();await page.locator('#calendar-apply').click();
+    assert.ok(await page.evaluate(()=>window.__availabilityCalls)>reads,'New calendar selection refreshes availability');
+    for(const name of ['punctuality','cancellation','policy','consent'])await form.locator('[name="'+name+'"]').check();
+    await page.locator('#booking-submit').click();await page.locator('#booking-review').waitFor();
+    await page.locator('#booking-send').click();await page.locator('#booking-success').waitFor();
+    const next=await page.evaluate(()=>window.__bookingCalls[2]);
+    assert.notEqual(next.key,writes[1].key,'Another completed request uses a fresh idempotency key');
+    assert.equal(next.payload.whatsapp,'+12015550123');
+    assert.equal(next.payload.name,'Second Visitor');
     await closeBooking(page);
     await page.locator('[data-language="es"]').click();
     await page.locator('#theme-toggle').click();
@@ -137,6 +160,11 @@ async function settleAnimations(page, selector) {
     for(const [width,height] of [[1180,820],[768,1024],[375,812],[812,375],[320,640]]){
       await page.setViewportSize({width,height});await page.locator('.nav-book').click();await checkLayout(page);await settleAnimations(page,'#booking-dialog');
       await page.screenshot({path:path.join(output,'booking-'+width+'x'+height+'.png')});
+      if(width<=375){
+        await form.locator('[name="whatsapp"]').fill('2015550123');
+        await form.locator('[name="whatsapp"]').scrollIntoViewIfNeeded();
+        await page.screenshot({path:path.join(output,'phone-'+width+'x'+height+'.png')});
+      }
       await page.locator('#calendar-open').click();await settleAnimations(page,'#calendar-dialog');
       assert.ok(await page.locator('#calendar-dialog').evaluate(element=>element.scrollWidth<=element.clientWidth+1));
       await page.screenshot({path:path.join(output,'calendar-'+width+'x'+height+'.png')});

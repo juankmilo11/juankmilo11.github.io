@@ -72,7 +72,7 @@
       valid:()=>Boolean(config&&S.slots(date.value,config,details()).some(slot=>slot.available&&slot.time===time.value)),
       duration:()=>config?S.serviceDuration(config,details()):null,
       focus:()=>container.querySelector('.calendar-days button:not(:disabled)')?.focus(),
-      clear:()=>{date.value='';time.value='';render();}
+      clear:()=>{date.value='';time.value='';cursor=S.studioNow().date.slice(0,7);render();}
     };
   };
 })();

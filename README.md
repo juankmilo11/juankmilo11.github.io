@@ -1,6 +1,6 @@
 # Sitio personal · juankmilo11.github.io
 
-Portada y aplicaciones en GitHub Pages, con FCT, PACA y un panel ADMIN.
+Portada y aplicaciones en GitHub Pages, con FCT, PACA y un panel JK.
 El agendamiento utiliza un servidor independiente en Sites con base de datos
 Cloudflare D1 y fotografías privadas en R2. Los datos de clientes no se guardan
 en GitHub ni en archivos del navegador.
@@ -92,16 +92,16 @@ Subir los commits al `origin` configurado:
 [juankmilo11.github.io](https://github.com/juankmilo11/juankmilo11.github.io).
 La activación de GitHub Pages depende de la configuración del repositorio remoto.
 
-## Agendamiento en línea y ADMIN
+## Agendamiento en línea y JK
 
-La burbuja ADMIN pide la contraseña antes de cargar registros. La activación
+La burbuja JK pide la contraseña antes de cargar registros. La activación
 inicial usa un enlace privado de un solo uso, con caducidad; la contraseña la
 elige el propietario en esa pantalla. No se solicita por chat ni se incluye en
 el repositorio. Hasta activar ADMIN el servidor no acepta solicitudes de citas.
 
 PACA pide WhatsApp obligatorio e Instagram opcional. El calendario se abre en
 otra subventana. Tras revisar y enviar, el comprobante solo aparece cuando el
-servidor confirma que guardó la solicitud. ADMIN permite editar, confirmar,
+servidor confirma que guardó la solicitud. JK permite editar, confirmar,
 cancelar y eliminar, consultar fotos privadas y exportar un respaldo de datos.
 Las solicitudes pendientes no reservan un horario; las citas confirmadas sí.
 LBDS aún no tiene registros ni un módulo de negocio que gestionar.
