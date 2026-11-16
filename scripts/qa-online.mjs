@@ -148,6 +148,12 @@ try {
   assert.equal((await env.DB.prepare('SELECT COUNT(*) AS total FROM appointments').first()).total, 0);
   assert.equal((await env.DB.prepare('SELECT COUNT(*) AS total FROM attachments').first()).total, 0);
   assert.equal(env.BUCKET.objects.size, 0, 'Deleting also removes the private photo');
+  const activityDate=new Date(date+'T12:00:00Z');activityDate.setUTCDate(activityDate.getUTCDate()+7);const eventDate=activityDate.toISOString().slice(0,10);
+  for(const [index,state] of ['confirmed','pending','completed','cancelled'].entries()){
+    const body={...overlapPayload,date:eventDate,time:['08:00','10:00','13:00','16:00'][index],name:'Agenda QA '+state,whatsapp:'+1202555022'+index};
+    const created=await fetch(origin+'/api/appointments',{method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':crypto.randomUUID()},body:JSON.stringify(body)});assert.equal(created.status,201);const record=await created.json();
+    if(state!=='pending')assert.equal((await fetch(origin+'/api/admin/appointments/'+record.id,{method:'PATCH',headers:{'Content-Type':'application/json',Authorization:'Bearer '+a.token},body:JSON.stringify({version:1,status:state,durationMinutes:60})})).status,200);
+  }
   await a.page.locator('#schedule-tab').click();
   await a.page.locator('#schedule-form:not([aria-busy])').waitFor();
   assert.equal(await a.page.locator('#dashboard .topbar h1').innerText(),'ADMIN');
@@ -155,13 +161,25 @@ try {
   await a.page.locator('[data-estimate="fullSet"][data-part="maxMinutes"]').fill('135');
   await a.page.locator('[data-estimate="fullSet"][data-part="minPrice"]').fill('45');
   await a.page.locator('[data-estimate="fullSet"][data-part="maxPrice"]').fill('85');
-  await a.page.locator('#schedule-closed').fill(date);
+  await a.page.locator('#schedule-closed').fill(date+'\n'+eventDate);
+  await a.page.locator('#schedule-blocked').fill(eventDate+' 11:30-12:30');
   await a.page.locator('#schedule-preview').click();
-  await a.page.locator('#schedule-preview-dialog[open]').waitFor();
-  for(let i=0;i<12&&!(await a.page.locator(`#preview-days button[aria-label^="${date}"]`).count());i++)await a.page.locator('#preview-next').click();
-  assert.equal(await a.page.locator(`#preview-days button[aria-label^="${date}"]`).isDisabled(),true);
+  await a.page.locator('#schedule-preview-dialog[open]:not([aria-busy])').waitFor();
+  for(let i=0;i<12&&!(await a.page.locator(`#preview-days button[aria-label^="${eventDate}"]`).count());i++){await a.page.locator('#preview-next').click();await a.page.locator('#schedule-preview-dialog:not([aria-busy])').waitFor();}
+  const eventDay=a.page.locator(`#preview-days button[aria-label^="${eventDate}"]`);
+  assert.equal(await eventDay.isDisabled(),false,'Closed days remain inspectable');
+  assert.match(await eventDay.innerText(),/4 citas/);assert.equal(await eventDay.locator('.event-dot').count(),4);
+  await eventDay.click();assert.equal(await a.page.locator('.preview-event').count(),5,'Every appointment status plus the manual block is visible');
+  assert.match(await a.page.locator('#preview-events').innerText(),/Cancelada · No bloquea horarios/);
+  assert.match(await a.page.locator('#preview-events').innerText(),/Día cerrado/);
   assert.equal((await (await fetch(origin+'/api/availability')).json()).closedDates.includes(date),false,'Preview does not save draft closure');
   await a.page.screenshot({path:path.join(output,'agenda-preview.png')});
+  for(const width of [768,375,320]){
+    await a.page.setViewportSize({width,height:820});
+    assert.ok(await a.page.locator('#schedule-preview-dialog').evaluate(el=>el.scrollWidth<=el.clientWidth+1),'Agenda fits '+width);
+  }
+  await a.page.locator('#schedule-preview-dialog').evaluate(el=>el.scrollTop=0);
+  await a.page.screenshot({path:path.join(output,'agenda-mobile.png')});
   await a.page.locator('[data-close="schedule-preview-dialog"]').click();
   for(const width of [1180,768,375,320]){
     await a.page.setViewportSize({width,height:820});
@@ -180,6 +198,7 @@ try {
   assert.match(await catalog.locator('#booking-estimate').innerText(),/75–135 min · USD \$45–\$85/);
   await a.page.locator('#logout').click();
   await a.page.locator('#access').waitFor();
+  assert.equal(await a.page.locator('#preview-events').innerText(),'','Session end clears agenda names');
   assert.equal((await fetch(origin + '/api/admin/appointments', { headers: { Authorization: 'Bearer ' + a.token } })).status, 401);
   assert.deepEqual(errors, []);
   console.log('OK: real browser/Worker/SQLite/R2 flow: multipart save, restart persistence, two ADMIN sessions, private photo, edit, version conflict, blocked availability, deletion and logout.');

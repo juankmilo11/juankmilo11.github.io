@@ -194,3 +194,28 @@ test('availability changes and newly confirmed appointments during photo upload 
     environment.DB.close();
   }
 });
+
+
+test('private monthly agenda includes every status and historical cancellations without exposing events publicly',async()=>{
+  const environment=env(),token=await login(environment),date=payload().date;
+  const ids={};let index=0;
+  for(const status of ['confirmed','pending','completed','cancelled']){
+    const data={...payload(),name:'Agenda '+status,time:['07:00','10:00','13:00','16:00'][index],whatsapp:'+1201555012'+index};index++;
+    const item=await create(environment,data);assert.equal(item.status,201);ids[status]=item.value.id;
+    if(status!=='pending')assert.equal((await call(environment,'/api/admin/appointments/'+item.value.id,'PATCH',{version:1,status,durationMinutes:60},{token})).status,200);
+  }
+  const saved=(await call(environment,'/api/admin/schedule','GET',null,{token})).value;
+  saved.config.closedDates=[date];saved.config.blocked=[{date,start:'12:00',end:'13:00'}];
+  const route='/api/admin/schedule/preview',body={config:saved.config,month:date.slice(0,7)};
+  const preview=await call(environment,route,'POST',body,{token});assert.equal(preview.status,200);
+  assert.deepEqual(preview.value.events.map(e=>e.status).sort(),['cancelled','completed','confirmed','pending']);
+  assert.ok(preview.value.events.every(e=>!('whatsapp' in e)&&!('payload' in e)&&!('notes' in e)));
+  assert.equal(preview.value.blocked.length,2,'Only confirmed appointment and manual block occupy time');
+  assert.equal((await call(environment,route,'POST',body)).status,401);
+  assert.equal((await call(environment,route,'POST',{...body,month:'2026-13'},{token})).status,400);
+  const publicData=(await call(environment,'/api/availability')).value;assert.equal(publicData.events,undefined);assert.doesNotMatch(JSON.stringify(publicData),/Agenda|cancelled|whatsapp/);
+  const history=new Date(date+'T12:00:00Z');history.setUTCMonth(history.getUTCMonth()-2);const historicalDate=history.toISOString().slice(0,10);
+  assert.equal((await call(environment,'/api/admin/appointments/'+ids.cancelled,'PATCH',{version:2,date:historicalDate},{token})).status,200);
+  const past=await call(environment,route,'POST',{...body,month:historicalDate.slice(0,7)},{token});assert.equal(past.value.events.length,1);assert.equal(past.value.events[0].status,'cancelled');
+  environment.DB.close();
+});

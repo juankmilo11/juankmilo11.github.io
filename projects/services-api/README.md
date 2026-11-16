@@ -128,7 +128,11 @@ servidor usan el máximo del rango; el retiro se suma solo para uñas y una sola
 vez. La duración real de una cita confirmada sigue siendo editable.
 
 La vista previa privada valida el borrador y combina sus bloqueos con citas
-confirmadas, sin guardar ni exponer datos personales. Los ejemplos grises de
+confirmadas, sin guardar cambios. Su consulta mensual incluye todos los estados,
+también canceladas e históricas, con nombre, servicio, hora y duración. Estos
+registros requieren sesión ADMIN y no aparecen en la API pública. Las canceladas,
+completadas y pendientes no bloquean horarios. No se cargan contactos, notas ni
+fotografías en esta consulta. Los ejemplos grises de
 los campos no son cierres guardados. El aviso indica qué está guardado y qué
 es un cambio pendiente. La migración 0002 comprueba atómicamente la versión
 de disponibilidad y las citas confirmadas al insertar una solicitud, para

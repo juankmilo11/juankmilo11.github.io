@@ -219,8 +219,12 @@ async function route(request,env,url) {
   }
   if(path==='/api/admin/schedule/preview'&&request.method==='POST'){
     const data=await jsonBody(request,200000),config=validateConfig(data.config),now=studioNow();
+    const month=data.month??now.date.slice(0,7);
+    if(typeof month!=='string'||!/^\d{4}-(?:0[1-9]|1[0-2])$/.test(month)||!validDate(month+'-01'))fail(400,'invalid_month');
     const rows=await env.DB.prepare("SELECT date,time,end_minute FROM appointments WHERE status='confirmed' AND date>=? AND date<=?").bind(now.date,addDays(now.date,config.horizonDays)).all();
-    return response({...config,blocked:[...config.blocked,...rows.results.map(item=>({date:item.date,start:item.time,end:timeString(item.end_minute)}))]});
+    const records=await env.DB.prepare('SELECT id,name,date,time,duration_minutes,status,service FROM appointments WHERE date>=? AND date<=? ORDER BY date,time,id').bind(month+'-01',month+'-31').all();
+    const events=records.results.map(({duration_minutes,...item})=>({...item,durationMinutes:duration_minutes}));
+    return response({...config,blocked:[...config.blocked,...rows.results.map(item=>({date:item.date,start:item.time,end:timeString(item.end_minute)}))],month,events});
   }
   if(path==='/api/admin/schedule'&&request.method==='GET')return response(await schedule(env));
   if(path==='/api/admin/schedule'&&request.method==='PUT'){

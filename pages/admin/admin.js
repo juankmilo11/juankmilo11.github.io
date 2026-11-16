@@ -56,7 +56,7 @@
     items = [];
     selected = null;
     schedule = null;
-    previewConfig=null;$('#preview-days').replaceChildren();$('#preview-times').replaceChildren();$('#preview-status').textContent='';
+    previewRequest++;previewConfig=null;previewDraft=null;for(const id of ['preview-days','preview-events','preview-times'])$('#'+id).replaceChildren();$('#preview-month-summary').textContent='';$('#preview-status').textContent='';
     nextCursor = null;
     $('#appointments').replaceChildren();
     $('#request-details').replaceChildren();
@@ -437,27 +437,80 @@
       } catch (error) { report('#dashboard-status', error); }
     });
   });
-  let previewConfig=null,previewCursor='',previewDate='';
+  let previewConfig=null,previewDraft=null,previewCursor='',previewDate='',previewRequest=0;
+  const eventNotes={pending:'No reserva horario',confirmed:'Horario reservado',completed:'Registro de cita completada',cancelled:'Cancelada · No bloquea horarios'};
+  function previewDayReason(date,config){
+    const S=window.PacaSchedule,today=S.studioNow().date;
+    if(config.closedDates.includes(date))return 'Día cerrado';
+    if(!config.weekdays.includes(new Date(date+'T12:00:00Z').getUTCDay()))return 'Día no laborable';
+    if(date<today)return 'Fecha pasada';
+    if(date>S.addDays(today,config.horizonDays))return 'Fuera del plazo de solicitudes';
+    return '';
+  }
   function renderPreview(){
     const S=window.PacaSchedule,config=previewConfig;if(!config)return;
-    const today=S.studioNow().date,key=$('#preview-service').value,details={service:Object.hasOwn(serviceLabels,key)?key:'nails',nailType:key,removal:'no'};
-    $('#preview-month').textContent=new Intl.DateTimeFormat('es-CO',{timeZone:'UTC',month:'long',year:'numeric'}).format(new Date(`${previewCursor}-01T12:00:00Z`));
-    $('#preview-previous').disabled=previewCursor<=today.slice(0,7);$('#preview-next').disabled=previewCursor>=S.addDays(today,config.horizonDays).slice(0,7);
-    const days=$('#preview-days');days.replaceChildren();const first=new Date(`${previewCursor}-01T12:00:00Z`),offset=(first.getUTCDay()+6)%7,count=new Date(Date.UTC(first.getUTCFullYear(),first.getUTCMonth()+1,0)).getUTCDate();
+    const key=$('#preview-service').value,details={service:Object.hasOwn(serviceLabels,key)?key:'nails',nailType:key,removal:'no'};
+    const events=config.events||[],manual=previewDraft.blocked;
+    const counts=Object.fromEntries(Object.keys(statusLabels).map(status=>[status,events.filter(e=>e.status===status).length]));
+    $('#preview-month').textContent=new Intl.DateTimeFormat('es-CO',{timeZone:'UTC',month:'long',year:'numeric'}).format(new Date(previewCursor+'-01T12:00:00Z'));
+    const monthBlocks=manual.filter(b=>b.date.startsWith(previewCursor)).length,monthClosed=config.closedDates.filter(date=>date.startsWith(previewCursor)).length;
+    $('#preview-month-summary').textContent=[events.length?Object.entries(counts).filter(([,n])=>n).map(([status,n])=>n+' '+statusLabels[status].toLowerCase()+(n===1?'':'s')).join(' · '):'Sin citas registradas',monthBlocks+' bloqueos manuales',monthClosed+' días cerrados'].join(' · ');
+    const legend=$('#preview-legend');legend.replaceChildren();
+    for(const [status,label] of Object.entries(statusLabels)){const badge=textElement('span',label,'badge');badge.dataset.status=status;legend.append(badge);}
+    legend.append(textElement('span','Bloqueo manual / día cerrado','preview-block-legend'));
+    $('#preview-previous').disabled=previewCursor<='0001-01';$('#preview-next').disabled=previewCursor>='9999-12';
+    const days=$('#preview-days');days.replaceChildren();const first=new Date(previewCursor+'-01T12:00:00Z'),offset=(first.getUTCDay()+6)%7,count=new Date(Date.UTC(first.getUTCFullYear(),first.getUTCMonth()+1,0)).getUTCDate();
     for(let i=0;i<offset;i++)days.append(document.createElement('span'));
-    for(let i=1;i<=count;i++){const date=`${previewCursor}-${String(i).padStart(2,'0')}`,button=textElement('button',String(i));button.type='button';button.disabled=!S.dayOpen(date,config);button.setAttribute('aria-label',`${date}${config.closedDates.includes(date)?' · Día cerrado':''}`);button.setAttribute('aria-pressed',String(date===previewDate));button.addEventListener('click',()=>{previewDate=date;renderPreview();});days.append(button);}
-    const times=$('#preview-times');times.replaceChildren();const slots=previewDate?S.slots(previewDate,config,details):[];
-    $('#preview-status').textContent=previewDate?`${previewDate} · ${S.formatEstimate(config,details,'es')} ${slots.filter(s=>s.available).length} horas de inicio disponibles.`:'Selecciona un día para ver las horas de inicio disponibles.';
-    for(const slot of slots){const label=textElement('span',`${slot.time}${slot.available?'':' · Ocupado'}`);label.className=slot.available?'preview-slot':'preview-slot is-busy';times.append(label);}
+    for(let i=1;i<=count;i++){
+      const date=previewCursor+'-'+String(i).padStart(2,'0'),records=events.filter(e=>e.date===date),blocks=manual.filter(b=>b.date===date),reason=previewDayReason(date,config),button=document.createElement('button');
+      button.type='button';button.className=reason?'is-unavailable':'';button.append(textElement('span',String(i),'preview-day-number'));
+      const descriptions=[date,reason];
+      if(records.length){
+        button.append(textElement('span',records.length+' '+(records.length===1?'cita':'citas'),'preview-day-count'));
+        const marks=textElement('span','','preview-day-marks');marks.setAttribute('aria-hidden','true');
+        for(const status of Object.keys(statusLabels)){const n=records.filter(e=>e.status===status).length;if(!n)continue;const dot=textElement('span','','event-dot');dot.dataset.status=status;marks.append(dot);descriptions.push(n+' '+statusLabels[status].toLowerCase()+(n===1?'':'s'));}
+        button.append(marks);
+      }
+      if(blocks.length||config.closedDates.includes(date))button.append(textElement('span',config.closedDates.includes(date)?'Cerrado':'Bloqueo','preview-day-block'));
+      if(blocks.length)descriptions.push(blocks.length+' bloqueos manuales');
+      button.setAttribute('aria-label',descriptions.filter(Boolean).join(' · '));button.title=button.getAttribute('aria-label');button.setAttribute('aria-pressed',String(date===previewDate));
+      button.addEventListener('click',()=>{previewDate=date;renderPreview();$('#preview-days button[aria-pressed="true"]').focus({preventScroll:true});});days.append(button);
+    }
+    const eventList=$('#preview-events');eventList.replaceChildren();$('#preview-events-title').textContent=previewDate?'Eventos del '+formatDate(previewDate):'Eventos del día';
+    if(!previewDate)eventList.append(textElement('p','Selecciona un día para consultar sus citas, estados y bloqueos.','hint'));
+    else{
+      const records=events.filter(e=>e.date===previewDate),blocks=manual.filter(b=>b.date===previewDate),reason=previewDayReason(previewDate,config);
+      if(reason)eventList.append(textElement('p',reason,'preview-day-notice'));
+      for(const item of records){const card=textElement('article','','preview-event'),heading=textElement('div','','preview-event-heading'),badge=textElement('span',statusLabels[item.status]||item.status,'badge');badge.dataset.status=item.status;heading.append(textElement('strong',item.time+' · '+item.name),badge);card.append(heading,textElement('p',(serviceLabels[item.service]||item.service)+(item.durationMinutes?' · '+item.durationMinutes+' min':'')),textElement('p',eventNotes[item.status]||'','hint'));eventList.append(card);}
+      for(const block of blocks){const card=textElement('article','','preview-event manual-block');card.append(textElement('strong',block.start+'–'+block.end+' · Bloqueo manual'),textElement('p','No se ofrecen horarios que se crucen con este intervalo.','hint'));eventList.append(card);}
+      if(!records.length&&!blocks.length)eventList.append(textElement('p','Sin citas ni bloqueos manuales registrados en este día.','hint'));
+    }
+    const times=$('#preview-times');times.replaceChildren();const slots=previewDate?S.slots(previewDate,config,details):[],reason=previewDate?previewDayReason(previewDate,config):'';
+    $('#preview-status').textContent=!previewDate?'':reason?'No se ofrecen nuevas solicitudes: '+reason.toLowerCase()+'.':S.formatEstimate(config,details,'es')+' '+slots.filter(s=>s.available).length+' horas de inicio disponibles.';
+    for(const slot of slots){const label=textElement('span',slot.time+(slot.available?'':' · Ocupado'));label.className=slot.available?'preview-slot':'preview-slot is-busy';times.append(label);}
   }
-  $('#schedule-preview').addEventListener('click',async event=>{
+  async function loadPreview(month){
+    const marker=++previewRequest;previewCursor=month;previewConfig=null;
+    $('#schedule-preview-dialog').setAttribute('aria-busy','true');
+    for(const id of ['preview-previous','preview-next','preview-refresh'])$('#'+id).disabled=true;
+    for(const id of ['preview-days','preview-events','preview-times'])$('#'+id).replaceChildren();
+    $('#preview-month-summary').textContent='';$('#preview-status').dataset.kind='';$('#preview-status').textContent='Cargando eventos y disponibilidad…';
+    try{
+      const config=await api('/api/admin/schedule/preview',{method:'POST',body:{config:previewDraft,month}});
+      if(marker!==previewRequest)return;
+      previewConfig=window.PacaSchedule.validateConfig(config);renderPreview();
+    }catch(error){if(marker===previewRequest&&token)announce('#preview-status',describe(error),'error');}
+    finally{if(marker===previewRequest){$('#schedule-preview-dialog').removeAttribute('aria-busy');$('#preview-refresh').disabled=false;}}
+  }
+  $('#schedule-preview').addEventListener('click',()=>{
     if(!schedule||!$('#schedule-form').reportValidity())return;
-    const button=event.currentTarget;button.disabled=true;
-    try{previewConfig=window.PacaSchedule.validateConfig(await api('/api/admin/schedule/preview',{method:'POST',body:{config:draftConfig()}}));previewCursor=window.PacaSchedule.studioNow().date.slice(0,7);previewDate='';renderPreview();$('#schedule-preview-dialog').showModal();}
-    catch(error){report('#dashboard-status',error);}finally{button.disabled=false;}
+    try{previewDraft=draftConfig();previewDate='';$('#schedule-preview-dialog').showModal();loadPreview(window.PacaSchedule.studioNow().date.slice(0,7));}
+    catch(error){report('#dashboard-status',error);}
   });
   $('#preview-service').addEventListener('change',renderPreview);
-  for(const [id,delta] of [['preview-previous',-1],['preview-next',1]])$('#'+id).addEventListener('click',()=>{const date=new Date(`${previewCursor}-01T12:00:00Z`);date.setUTCMonth(date.getUTCMonth()+delta);previewCursor=date.toISOString().slice(0,7);previewDate='';renderPreview();});
+  $('#preview-refresh').addEventListener('click',()=>loadPreview(previewCursor));
+  $('#schedule-preview-dialog').addEventListener('close',()=>{previewRequest++;previewConfig=null;previewDraft=null;for(const id of ['preview-days','preview-events','preview-times'])$('#'+id).replaceChildren();$('#preview-month-summary').textContent='';$('#preview-status').textContent='';});
+  for(const [id,delta] of [['preview-previous',-1],['preview-next',1]])$('#'+id).addEventListener('click',()=>{const date=new Date(previewCursor+'-01T12:00:00Z');date.setUTCMonth(date.getUTCMonth()+delta);previewDate='';loadPreview(date.toISOString().slice(0,7));});
   async function chooseTab(name) {
     const requests = name === 'requests';
     $('#requests-panel').hidden = !requests;
