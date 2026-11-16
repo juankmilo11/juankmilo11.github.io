@@ -161,8 +161,8 @@ button { cursor: pointer; font: inherit; }
   box-shadow: inset 0 0 0 1px #c5e4ff66, 0 5px 13px #0008, 0 0 12px var(--yin-glow, transparent), 0 0 25px var(--yin-glow-soft, transparent);
   transition: box-shadow 180ms ease, scale 180ms ease;
 }
-.escenario:hover { box-shadow: inset 0 0 0 1px #c5e4ff66, 0 6px 20px #001537, 0 0 12px var(--yin-glow, #c5e6ff65), 0 0 25px var(--yin-glow-soft, transparent); scale: 1.025; }
-.escenario:active { scale: 0.97; }
+.escenario:enabled:hover { box-shadow: inset 0 0 0 1px #c5e4ff66, 0 6px 20px #001537, 0 0 12px var(--yin-glow, #c5e6ff65), 0 0 25px var(--yin-glow-soft, transparent); scale: 1.025; }
+.escenario:enabled:active { scale: 0.97; }
 .yin-yang {
   position: absolute;
   inset: 0;
@@ -192,6 +192,9 @@ button { cursor: pointer; font: inherit; }
   align-items: start;
   gap: clamp(10px, 3vw, 32px);
 }
+.enlaces[inert] { pointer-events: none; cursor: wait; }
+.enlaces[aria-busy="true"] .icono_imagen { opacity: 0.55; }
+.escenario:disabled { cursor: wait; }
 .enlace {
   --icon-glow: #8ecae680;
   min-width: 0;
@@ -416,7 +419,7 @@ button { cursor: pointer; font: inherit; }
   .yin-yang { animation-duration: 120s; }
   .titulo-glitch { animation: none; transform: none; text-shadow: 0 1px 3px #001127; }
   .icono_imagen, .escenario, .redes a, .yin-yang .yin, .yin-yang .yang { transition: none; }
-  .escenario:hover, .escenario:active { scale: 1; }
+  .escenario:enabled:hover, .escenario:enabled:active { scale: 1; }
 }
 
 /* Colombia and light now share one control. */

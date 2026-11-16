@@ -5,16 +5,14 @@ const reloj = document.querySelector("#reloj");
 const plantillaVentana = document.querySelector("#plantilla-ventana");
 const escenario = document.querySelector(".escenario");
 const enlaces = [...document.querySelectorAll(".enlace")];
+const navegacion = document.querySelector(".enlaces");
 
 const fondosGif = [
-  "img/fondos/gif1.gif",
   "img/fondos/gif2.gif",
   "img/fondos/gif3.gif",
   "img/fondos/gif4.gif",
-  "img/fondos/gif5.gif",
   "img/fondos/gif6.gif",
   "img/fondos/gif7.gif",
-  "img/fondos/gif8.gif",
   "img/fondos/gif9.gif"
 ];
 const velocidades = ["7s", "2s", "0.5s", "30s"];
@@ -26,6 +24,8 @@ const arrastres = new WeakMap();
 const enlacesOrigen = new WeakMap();
 const TIEMPOS_FONDO = { oscurecer: 1000, aclarar: 1000, mostrar: 5000, carga: 20000 };
 const DURACION_GLITCH = 2400;
+const DURACION_INICIO = 5000;
+let inicioEnCurso = true;
 let colaFondos = [];
 let ultimoGifElegido = -1;
 let fondoPreparado = null;
@@ -33,13 +33,19 @@ let temporizadorFondo;
 let versionFondo = 0;
 let temporizadorGlitch;
 let finGlitch;
+let temporizadorReloj;
+const formatoHora = new Intl.DateTimeFormat("es-CO", {
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false
+});
 
 function actualizarHora() {
-  reloj.textContent = new Intl.DateTimeFormat("es-CO", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false
-  }).format(new Date());
+  clearTimeout(temporizadorReloj);
+  if (document.hidden) return;
+  reloj.textContent = formatoHora.format(new Date());
+  // The display has no seconds; update only at the next minute boundary.
+  temporizadorReloj = setTimeout(actualizarHora, 60000 - Date.now() % 60000);
 }
 
 const COLOR_RANGES = { hue: [0, 359], saturation: [70, 89], lightness: [15, 34] };
@@ -102,7 +108,7 @@ function elegirSiguienteGif() {
       const j = Math.floor(Math.random() * (i + 1));
       [colaFondos[i], colaFondos[j]] = [colaFondos[j], colaFondos[i]];
     }
-    // Visit all nine backgrounds before reshuffling, without adjacent repeats.
+    // Visit every background before reshuffling, without adjacent repeats.
     if (colaFondos[0] === ultimoGifElegido) {
       [colaFondos[0], colaFondos[1]] = [colaFondos[1], colaFondos[0]];
     }
@@ -144,6 +150,7 @@ function programarFondo(demora) {
 }
 
 async function cambiarFondoGif() {
+  if (document.hidden) return;
   const version = ++versionFondo;
   document.body.classList.add("fondo-oscurecido");
   // Load only the next image, behind the blackout, then reveal a decoded GIF.
@@ -282,8 +289,15 @@ enlaces.forEach((enlace) => {
   enlace.addEventListener("pointerleave", restaurarColorYinYang);
   enlace.addEventListener("focus", () => actualizarColorYinYang(enlace));
   enlace.addEventListener("blur", restaurarColorYinYang);
-  if (enlace.hasAttribute("data-open-tab")) return;
+  enlace.addEventListener("auxclick", (evento) => {
+    if (inicioEnCurso) evento.preventDefault();
+  });
   enlace.addEventListener("click", (evento) => {
+    if (inicioEnCurso) {
+      evento.preventDefault();
+      return;
+    }
+    if (enlace.hasAttribute("data-open-tab")) return;
     evento.preventDefault();
     crearVentana(enlace);
   });
@@ -297,7 +311,7 @@ function cambiarVelocidad() {
   velocidadActual = (velocidadActual + 1) % velocidades.length;
 }
 
-function animarTitulo() {
+function animarTitulo(duracion = DURACION_GLITCH) {
   clearInterval(temporizadorGlitch);
   clearTimeout(finGlitch);
   const fuentes = ['"MS Gothic", monospace', '"Yu Mincho", serif', '"Yu Gothic", sans-serif', 'Meiryo, sans-serif', '"MS Mincho", serif', '"Courier New", monospace'];
@@ -317,10 +331,11 @@ function animarTitulo() {
     titulo.classList.remove("titulo-glitch");
     titulo.style.removeProperty("--glitch-font");
     titulo.style.removeProperty("--glitch-color");
-  }, DURACION_GLITCH);
+  }, duracion);
 }
 
 function activarYinYang() {
+  if (inicioEnCurso) return;
   cambiarVelocidad();
   animarTitulo();
   if (botonColor.getAttribute('aria-pressed') === 'true') {
@@ -347,9 +362,41 @@ window.addEventListener("resize", () => {
   });
 });
 
+// Lock shortcuts before the first paint, including native new-tab navigation.
+navegacion.setAttribute("inert", "");
+navegacion.setAttribute("aria-busy", "true");
+escenario.disabled = true;
+enlaces.forEach((enlace) => {
+  enlace.setAttribute("aria-disabled", "true");
+  enlace.setAttribute("tabindex", "-1");
+});
+animarTitulo(DURACION_INICIO);
+setTimeout(() => {
+  inicioEnCurso = false;
+  navegacion.removeAttribute("inert");
+  navegacion.removeAttribute("aria-busy");
+  escenario.disabled = false;
+  enlaces.forEach((enlace) => {
+    enlace.removeAttribute("aria-disabled");
+    enlace.removeAttribute("tabindex");
+  });
+}, DURACION_INICIO);
+
+document.addEventListener("visibilitychange", () => {
+  actualizarHora();
+  if (document.hidden) {
+    // Invalidate any fade in progress, retaining the single prepared image.
+    versionFondo++;
+    clearTimeout(temporizadorFondo);
+    document.body.classList.remove("fondo-oscurecido");
+  } else if (botonColor.getAttribute("aria-pressed") !== "true") {
+    if (indiceGif < 0) cambiarFondoGif();
+    else programarFondo(TIEMPOS_FONDO.mostrar);
+  }
+});
+
 cambiarFondoGif();
 actualizarHora();
-setInterval(actualizarHora, 1000);
 
 window.addEventListener('message', evento => {
   if (evento.origin !== location.origin || evento.data?.type !== 'paca:theme' || !['light','dark'].includes(evento.data.theme)) return;

@@ -5,13 +5,23 @@
 `index.html` carga `styles.css` y `script.js`. El script administra el reloj,
 fondos GIF, colores, rotación del yin yang y ventanas arrastrables con iframe.
 Los enlaces con `data-open-tab` abren otra pestaña (FCT); el resto abre ventanas.
-Al iniciar no se abre ninguna ventana. El Yin Yang cambia su velocidad y anima el título; si btn_1 activó el color
+Al iniciar no se abre ninguna ventana. El título tiene glitch durante cinco
+segundos y las burbujas permanecen bloqueadas durante ese mismo plazo.
+El HTML inicial declara `inert`, `aria-busy` y enlaces fuera del orden de
+tabulación; el script restablece la navegación a los 5000 ms, incluso con GIFs
+lentos o fallidos. El Yin Yang también permanece deshabilitado al iniciar,
+para que no reinicie el efecto. Después cambia su velocidad y anima el título; si btn_1 activó el color
 manual, retoma los GIF. Las ventanas se abren únicamente desde las burbujas. Las ventanas
 se reutilizan por sección y se centran al abrirse o restaurarse, conservando el
-arrastre manual. PACA utiliza un marco rosa con el mismo estilo XP. Los nueve GIF se precargan y decodifican de uno en
+arrastre manual. PACA utiliza un marco rosa con el mismo estilo XP. Los seis GIF se precargan y decodifican de uno en
 uno, con una cola aleatoria sin repeticiones por ciclo y una transición oscura
 de un segundo, un segundo de aclarado y cinco segundos de visualización.
 El botón btn_1 mantiene el color manual hasta que el Yin Yang reactive los GIF.
+La rotación se detiene al ocultar la pestaña y conserva la siguiente imagen
+preparada; al volver, respeta el color manual si estaba activo. El reloj usa
+un único `Intl.DateTimeFormat` y programa la siguiente actualización al inicio
+del minuto, suspendiendo el temporizador mientras la pestaña está oculta.
+`img/fondos/README.md` registra los archivos vigentes sin renumerar sus nombres.
 
 Cada sección bajo `pages/` es independiente. PACA carga su propio CSS y JS,
 con catálogo JSON de trabajos reales, filtros, búsqueda, visor de fotos/videos
@@ -112,5 +122,8 @@ del proceso artístico.
 ## Comprobación automática
 
 `scripts/check-site.mjs` verifica archivos locales referenciados desde el HTML
-y CSS de producción. Omite enlaces externos, fragmentos y recursos dinámicos.
+y CSS de producción y el inventario de fondos definido en `script.js`.
+Omite enlaces externos, fragmentos y otros recursos dinámicos.
 No ejecuta JavaScript del navegador, comprueba APIs externas ni evalúa la IA.
+`scripts/tests/home.test.cjs` comprueba el bloqueo inicial, el glitch,
+los ciclos de seis fondos, la visibilidad, el reloj y las ventanas.

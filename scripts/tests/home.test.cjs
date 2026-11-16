@@ -134,6 +134,7 @@ function browser({ imageDelay = 0, imageFailure = false, reducedMotion = false }
     '.titulo': new Element('h1', 'titulo'),
     '#reloj': new Element(),
     '.escenario': new Element('button', 'escenario'),
+    '.enlaces': new Element('nav', 'enlaces'),
     '.fondo-pantalla': new Element('div', 'fondo-pantalla')
   };
   const windowTemplate = new Element('section', 'ventana');
@@ -201,7 +202,64 @@ test('loading the homepage starts GIFs without opening windows or choosing a ran
   await page.advance(15000);
   assert.equal(page.windows().length, 0);
   assert.ok(page.images.length >= 2, 'GIF rotation should keep loading subsequent backgrounds');
-  for (const image of page.images) assert.match(image.src, /^img\/fondos\/gif[1-9]\.gif$/);
+  for (const image of page.images) assert.match(image.src, /^img\/fondos\/gif[234679]\.gif$/);
+});
+
+test('the six configured backgrounds exactly match the GIFs on disk', () => {
+  const page = browser();
+  const configured = Array.from(page.read('fondosGif')).sort();
+  const actual = fs.readdirSync(path.join(root, 'img/fondos'))
+    .filter(name => name.endsWith('.gif')).map(name => `img/fondos/${name}`).sort();
+  assert.equal(configured.length, 6);
+  assert.deepEqual(configured, actual);
+});
+
+test('startup glitches for five seconds and blocks all bubbles until the deadline', async () => {
+  const page = browser();
+  const title = page.controls['.titulo'];
+  const nav = page.controls['.enlaces'];
+  const assertLocked = () => {
+    assert.equal(title.classList.contains('titulo-glitch'), true);
+    assert.equal(nav.hasAttribute('inert'), true);
+    assert.equal(nav.getAttribute('aria-busy'), 'true');
+    assert.equal(page.controls['.escenario'].disabled, true);
+    for (const link of page.links) {
+      assert.equal(link.getAttribute('aria-disabled'), 'true');
+      assert.equal(link.getAttribute('tabindex'), '-1');
+      for (const event of ['click', 'auxclick']) {
+        assert.equal(link.dispatch(event).defaultPrevented, true);
+      }
+    }
+    page.click('.escenario');
+    assert.equal(page.windows().length, 0);
+  };
+  assertLocked();
+  await page.advance(4999);
+  assertLocked();
+  await page.advance(1);
+  assert.equal(title.classList.contains('titulo-glitch'), false);
+  assert.equal(nav.hasAttribute('inert'), false);
+  assert.equal(nav.hasAttribute('aria-busy'), false);
+  assert.equal(page.controls['.escenario'].disabled, false);
+  for (const link of page.links) {
+    assert.equal(link.hasAttribute('aria-disabled'), false);
+    assert.equal(link.hasAttribute('tabindex'), false);
+  }
+  assert.equal(Boolean(page.links[2].dispatch('click').defaultPrevented), false);
+  assert.equal(Boolean(page.links[2].dispatch('auxclick').defaultPrevented), false);
+  page.links[0].dispatch('click');
+  assert.equal(page.windows().length, 1);
+});
+
+test('startup unlocks after five seconds even when GIFs are slow or unavailable, including reduced motion', async () => {
+  for (const options of [{ imageDelay: 30000 }, { imageFailure: true }, { reducedMotion: true }]) {
+    const page = browser(options);
+    await page.advance(5000);
+    assert.equal(page.controls['.titulo'].classList.contains('titulo-glitch'), false);
+    assert.equal(page.controls['.enlaces'].hasAttribute('inert'), false);
+    page.links[1].dispatch('click');
+    assert.equal(page.windows().length, 1);
+  }
 });
 
 function shownGif(page) {
@@ -228,16 +286,16 @@ test('backgrounds are loaded before swapping and retain one second of blackout p
   assert.equal(page.document.body.classList.contains('fondo-oscurecido'), false);
 });
 
-test('one shuffled rotation visits all nine GIFs and never immediately repeats across cycles', async () => {
+test('one shuffled rotation visits all six GIFs and never immediately repeats across cycles', async () => {
   const page = browser();
   await page.advance(1000);
   const shown = [shownGif(page)];
-  for (let index = 1; index < 19; index++) {
+  for (let index = 1; index < 13; index++) {
     await page.advance(7000);
     shown.push(shownGif(page));
   }
-  assert.equal(new Set(shown.slice(0, 9)).size, 9);
-  assert.equal(new Set(shown.slice(9, 18)).size, 9);
+  assert.equal(new Set(shown.slice(0, 6)).size, 6);
+  assert.equal(new Set(shown.slice(6, 12)).size, 6);
   for (let index = 1; index < shown.length; index++) assert.notEqual(shown[index], shown[index - 1]);
 });
 
@@ -267,21 +325,90 @@ test('unavailable GIFs leave the page visible and retry without opening windows'
   assert.ok(page.images.length >= 2, 'Failures must not stop the rotation permanently');
 });
 
+test('hidden tabs pause background rotation and resume without skipping prepared images', async () => {
+  const page = browser();
+  await page.advance(5000);
+  const first = shownGif(page);
+  const prepared = page.images[1].src;
+  const loaded = page.images.length;
+  page.document.hidden = true;
+  page.document.dispatch('visibilitychange');
+  await page.advance(60000);
+  assert.equal(shownGif(page), first);
+  assert.equal(page.images.length, loaded, 'No new GIF downloads while hidden');
+  page.document.hidden = false;
+  page.document.dispatch('visibilitychange');
+  await page.advance(6000);
+  assert.equal(shownGif(page), `url("${prepared}")`);
+});
+
+test('hiding during initial image loading prevents stale swaps and allows resuming', async () => {
+  const page = browser({ imageDelay: 3000 });
+  await page.advance(500);
+  page.document.hidden = true;
+  page.document.dispatch('visibilitychange');
+  await page.advance(10000);
+  assert.equal(shownGif(page), '');
+  assert.equal(page.images.length, 1);
+  assert.equal(page.document.body.classList.contains('fondo-oscurecido'), false);
+  page.document.hidden = false;
+  page.document.dispatch('visibilitychange');
+  await page.advance(1000);
+  assert.ok(shownGif(page));
+});
+
+test('visibility changes preserve manual color mode', async () => {
+  const page = browser();
+  await page.advance(5000);
+  page.click('.boton_color');
+  const color = page.document.documentElement.style.getPropertyValue('--page-bg');
+  const loaded = page.images.length;
+  page.document.hidden = true;
+  page.document.dispatch('visibilitychange');
+  await page.advance(30000);
+  page.document.hidden = false;
+  page.document.dispatch('visibilitychange');
+  await page.advance(30000);
+  assert.equal(page.document.documentElement.style.getPropertyValue('--page-bg'), color);
+  assert.equal(page.document.body.classList.contains('fondo-gif'), false);
+  assert.equal(page.images.length, loaded);
+});
+
+test('the clock updates at minute boundaries, pauses while hidden and refreshes on return', async () => {
+  const page = browser();
+  let updates = 0;
+  Object.defineProperty(page.controls['#reloj'], 'textContent', {
+    set() { updates++; }
+  });
+  await page.advance(59999);
+  assert.equal(updates, 0);
+  await page.advance(1);
+  assert.equal(updates, 1);
+  page.document.hidden = true;
+  page.document.dispatch('visibilitychange');
+  await page.advance(300000);
+  assert.equal(updates, 1);
+  page.document.hidden = false;
+  page.document.dispatch('visibilitychange');
+  assert.equal(updates, 2);
+});
+
 test('Yin Yang changes speed without opening windows or disturbing an active GIF cycle', async () => {
-  const page=browser();await page.advance(1000);const first=shownGif(page);
+  const page=browser();await page.advance(5000);const first=shownGif(page);
   page.click('.escenario');page.click('.escenario');page.click('.escenario');
-  await page.advance(3000);assert.equal(page.windows().length,0);assert.equal(shownGif(page),first);
+  await page.advance(1000);assert.equal(page.windows().length,0);assert.equal(shownGif(page),first);
   assert.equal(page.document.documentElement.style.getPropertyValue('--rotation-speed'),'0.5s');
   assert.equal(Boolean(page.links[2].dispatch('click').defaultPrevented),false);
 });
 
-test('bubbles open windows immediately and reuse existing iframes', () => {
-  const page=browser();page.links[1].dispatch('click');const frame=page.windows()[0].querySelector('iframe');
+test('bubbles open windows after startup and reuse existing iframes', async () => {
+  const page=browser();await page.advance(5000);page.links[1].dispatch('click');const frame=page.windows()[0].querySelector('iframe');
   page.links[1].dispatch('click');assert.equal(page.windows().length,1);assert.equal(page.windows()[0].querySelector('iframe'),frame);
 });
 
 test('the title glitch ends after a few seconds and can restart on another Yin Yang click', async () => {
   const page = browser();
+  await page.advance(5000);
   const title = page.controls['.titulo'];
   page.click('.escenario');
   assert.equal(title.classList.contains('titulo-glitch'), true);
@@ -296,6 +423,7 @@ test('the title glitch ends after a few seconds and can restart on another Yin Y
 
 test('closing the top window with Escape preserves other windows and allows reopening', async () => {
   const page = browser();
+  await page.advance(5000);
   page.links[0].dispatch('click');page.links[1].dispatch('click');
   const top = page.windows().sort((a, b) => Number(b.style.zIndex) - Number(a.style.zIndex))[0];
   const removedFrame = top.querySelector('iframe');
@@ -310,6 +438,7 @@ test('closing the top window with Escape preserves other windows and allows reop
 
 test('PACA language messages require the matching iframe and origin, and size controls are absent', async () => {
   const page = browser();
+  await page.advance(5000);
   page.links[1].dispatch('click');
   const paca = page.windows()[0];
   const frame = paca.querySelector('iframe');
@@ -324,9 +453,10 @@ test('PACA language messages require the matching iframe and origin, and size co
   assert.equal(paca.classList.contains('ventana-ampliada'),false);
 });
 
-test('windows open and reopen centered on desktop and mobile', () => {
+test('windows open and reopen centered on desktop and mobile', async () => {
   for (const [width, height] of [[1280, 900], [375, 667], [812, 375]]) {
     const page = browser();
+    await page.advance(5000);
     page.window.innerWidth = width;
     page.window.innerHeight = height;
     const assertCentered = popup => {
@@ -363,6 +493,7 @@ test('Yin Yang halo follows the hovered or focused bubble and clears on exit', (
 
 test('windows stay within the viewport after resize and titlebar dragging', async () => {
   const page = browser();
+  await page.advance(5000);
   page.links[0].dispatch('click');
   const popup = page.windows()[0];
   popup.style.left = '1200px';
