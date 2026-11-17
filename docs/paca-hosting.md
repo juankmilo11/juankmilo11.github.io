@@ -2,7 +2,70 @@
 
 Publicación: <https://paca-paula-daniela.pages.dev/>.
 Administración: <https://paca-paula-daniela.pages.dev/admin/>.
-Proyecto Cloudflare Pages: `paca-paula-daniela` (carga directa, plan gratuito).
+Proyecto Cloudflare Pages: `paca-paula-daniela` (creado con carga directa).
+
+## Local → GitHub → Cloudflare
+
+El flujo previsto utiliza la integración Git del proyecto para compilar y subir
+`dist/paca/` al recibir commits en `main`. La portada y FCT siguen en GitHub Pages.
+La API mantiene su publicación independiente en Sites, con los mismos D1/R2.
+
+Estado comprobado el 17 de noviembre de 2026: el proyecto sirve PACA y su rama
+de producción es `main`; no hay una cuenta Git conectada. El panel ofrece
+**Settings → Build → Git repository → Connect**, con configuración de repositorio,
+rama, comando de build y carpeta de salida. La conexión queda pendiente de la
+autorización de GitHub y de comprobar un primer despliegue exitoso. La presencia
+de archivos locales no confirma que la automatización esté activa.
+
+Conectar únicamente `juankmilo11/juankmilo11.github.io` a la aplicación oficial
+de Cloudflare y aplicar estos valores:
+
+| Ajuste | Valor |
+| --- | --- |
+| Production branch | `main` |
+| Framework preset | `None` |
+| Root directory | Raíz del repositorio |
+| Build command | `npm run validate:paca` |
+| Build output directory | `dist/paca` |
+| Node.js | `24`, fijado en `.node-version` |
+
+El comando ejecuta 24 pruebas de cliente HTTP, reservas, agenda, idiomas y tema,
+valida el catálogo y genera el paquete comprobando referencias HTML/CSS.
+Si falla, Cloudflare debe detenerse antes de publicar. No necesita instalar ni
+compilar FCT, y no publica la API, fuentes de desarrollo ni datos privados.
+
+`.github/workflows/paca-cloudflare.yml` ejecuta la misma validación en pull
+requests hacia `main`, pushes relevantes a `main` y ejecuciones manuales. Ese
+workflow solo valida: la publicación corresponde a la integración de Cloudflare,
+que también ejecuta las pruebas y no depende de que Actions termine primero.
+No se necesitan tokens de Cloudflare en el repositorio para esta modalidad.
+
+La documentación de carga directa aún indica que no se puede convertir un
+proyecto a integración Git, aunque el panel observado ofrece **Connect**.
+Confirmar el resultado de esa conexión antes de dar el flujo por activo. Si el
+proveedor la rechaza, mantener el proyecto y su dirección: la alternativa
+documentada es GitHub Actions con Wrangler y un token limitado a Cloudflare
+Pages en la cuenta correspondiente. No habilitar ambas vías a la vez.
+Ver [integración Git](https://developers.cloudflare.com/pages/configuration/git-integration/)
+y [carga directa con CI](https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/).
+
+Para cada actualización, desde la raíz del repositorio:
+
+```powershell
+npm run validate:paca
+git add pages/paula/ pages/admin/ shared/
+git commit -m "Update PACA"
+git push origin main
+```
+
+Incluir también cualquier otro archivo modificado que necesite esa actualización.
+Revisar **Actions → PACA · Validation** y **Cloudflare → Deployments** hasta ver
+las ejecuciones exitosas y comprobar la URL pública, calendario y acceso ADMIN.
+`dist/paca/` no se añade a Git: Cloudflare lo genera desde las fuentes.
+El build local sigue disponible como
+respaldo para carga manual.
+
+## Paquete y servidor existente
 
 La fuente continúa siendo `pages/paula/`. El icono es el mismo PNG de la
 burbuja rosa de la portada. No mantener otra copia manual de esta página.
@@ -20,7 +83,7 @@ exacta en `ALLOWED_ORIGINS` del servidor, junto con los orígenes anteriores.
 Después de cambiar esa variable hay que volver a desplegar la versión existente
 del servidor para aplicar su nueva revisión de entorno.
 
-Para actualizar la publicación de carga directa de Cloudflare Pages:
+Como alternativa manual, para actualizar la publicación de carga directa:
 
 ```powershell
 npm run build:paca

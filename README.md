@@ -1,6 +1,11 @@
 # Sitio personal · juankmilo11.github.io
 
 Portada y aplicaciones en GitHub Pages, con FCT, PACA y un panel JK.
+PACA también se publica de forma independiente en Cloudflare Pages. Su flujo
+previsto es Local → GitHub → Cloudflare Pages. GitHub Actions valida PACA en
+`.github/workflows/paca-cloudflare.yml`; Cloudflare debe tener conectada la rama
+`main` según [publicación de PACA](docs/paca-hosting.md). La portada y FCT conservan su
+publicación actual en GitHub Pages.
 El agendamiento utiliza un servidor independiente en Sites con base de datos
 Cloudflare D1 y fotografías privadas en R2. Los datos de clientes no se guardan
 en GitHub ni en archivos del navegador.
@@ -35,6 +40,7 @@ node scripts/serve-static.cjs
 Abrir `http://127.0.0.1:4173/`. Así funcionan las rutas absolutas de FCT.
 PACA se edita en `pages/paula/`; ya no requiere sincronización manual.
 La versión independiente para Cloudflare Pages se genera con `npm run build:paca`.
+`npm run validate:paca` prueba y genera exclusivamente PACA, sin instalar FCT.
 Incluye el acceso protegido `/admin/` para Paula y conserva el servidor de datos
 existente. Ver [publicación de PACA](docs/paca-hosting.md).
 

@@ -1,0 +1,45 @@
+name: PACA · Validation
+
+on:
+  push:
+    branches: [main]
+    paths: &paca_paths
+      - 'pages/paula/**'
+      - 'pages/admin/**'
+      - 'shared/**'
+      - 'img/bubble-paca.png'
+      - 'projects/FCT/public/fonts/**'
+      - 'scripts/build-paca.mjs'
+      - 'scripts/validate-paca.mjs'
+      - 'scripts/check-paca.mjs'
+      - 'scripts/test-paca-*.cjs'
+      - 'scripts/tests/api-client.test.cjs'
+      - 'package.json'
+      - '.node-version'
+      - '.github/workflows/paca-cloudflare.yml'
+  pull_request:
+    branches: [main]
+    paths: *paca_paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: paca-cloudflare-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  paca:
+    name: Validate and build PACA
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.node-version'
+      - name: Validate and build PACA
+        run: npm run validate:paca

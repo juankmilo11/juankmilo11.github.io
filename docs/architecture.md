@@ -54,6 +54,16 @@ Sites publica ese servidor y provisiona D1 (`DB`) y R2 (`BUCKET`) según su prop
 conecta ambos por HTTPS; `shared/api-config.js` contiene únicamente el origen
 público. Las operaciones públicas no devuelven registros personales ni fotos.
 
+PACA también tiene una publicación independiente en el proyecto Cloudflare
+Pages `paca-paula-daniela`. El flujo previsto es Local → GitHub → Cloudflare
+Pages, con `main` conectado en el panel de Cloudflare. GitHub Actions ejecuta
+`npm run validate:paca` para los cambios relevantes y pull requests.
+Cloudflare debe ejecutar el mismo comando antes de publicar exclusivamente
+`dist/paca`, para que una prueba fallida impida el despliegue incluso si ambos
+servicios compilan en paralelo. La conexión requiere autorización de GitHub;
+ver `docs/paca-hosting.md` para su estado y configuración. No publica la API ni modifica D1/R2; el servidor de Sites
+conserva su despliegue independiente. La portada y FCT siguen en GitHub Pages.
+
 `pages/admin/` valida el acceso en el servidor, conserva la sesión solo en
 memoria y pide contraseña al abrirse. La portada amplía la ventana únicamente
 con mensajes del iframe ADMIN validando origen y emisor. La base de datos
