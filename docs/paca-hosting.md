@@ -13,9 +13,10 @@ La API mantiene su publicación independiente en Sites, con los mismos D1/R2.
 Estado comprobado el 17 de noviembre de 2026: Cloudflare está conectado a
 `juankmilo11/juankmilo11.github.io`, con rama de producción `main` y despliegues
 automáticos habilitados. El propietario completó la autorización de la aplicación
-oficial de Cloudflare en GitHub. La primera compilación desde Git se verifica
-después de publicar esta configuración; conectar el repositorio por sí solo no
-demuestra que el build haya terminado correctamente.
+oficial de Cloudflare en GitHub. El despliegue automático del commit `5e424bc`
+terminó con estado `success`, 24 pruebas aprobadas y publicación en 27 segundos.
+Su ID es `1ca929d7-0739-4d5d-a2e3-60b6dccf705a`; el panel conserva el historial
+para comprobar el commit y los logs de cada publicación posterior.
 
 La conexión utiliza únicamente `juankmilo11/juankmilo11.github.io` y estos valores:
 
@@ -58,8 +59,7 @@ Incluir también cualquier otro archivo modificado que necesite esa actualizaci�
 Revisar **Actions → PACA · Validation** y **Cloudflare → Deployments** hasta ver
 las ejecuciones exitosas y comprobar la URL pública, calendario y acceso ADMIN.
 `dist/paca/` no se añade a Git: Cloudflare lo genera desde las fuentes.
-El build local sigue disponible como
-respaldo para carga manual.
+El build local sigue disponible para conservar un paquete de respaldo.
 
 ## Paquete y servidor existente
 
@@ -79,15 +79,15 @@ exacta en `ALLOWED_ORIGINS` del servidor, junto con los orígenes anteriores.
 Después de cambiar esa variable hay que volver a desplegar la versión existente
 del servidor para aplicar su nueva revisión de entorno.
 
-Como alternativa manual, para actualizar la publicación de carga directa:
+Para conservar un paquete local de respaldo:
 
 ```powershell
 npm run build:paca
 Compress-Archive -Path 'dist/paca/*' -DestinationPath 'dist/paca-upload.zip' -Force
 ```
 
-Subir el ZIP a una nueva implementación de producción del mismo proyecto Pages.
-El archivo `index.html` queda en la raíz del ZIP. Conservar la cuenta y el
+El archivo `index.html` queda en la raíz del ZIP. El flujo activo publica desde
+Git; el ZIP no se sube como parte del proceso habitual. Conservar la cuenta y el
 proyecto. Usar el plan gratuito, sin Workers de pago ni complementos. Los límites
 y la disponibilidad corresponden al proveedor; el servidor de citas existente
 tiene su propio ciclo de vida y necesita mantenerse activo y respaldado.
