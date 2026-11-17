@@ -55,13 +55,14 @@ conecta ambos por HTTPS; `shared/api-config.js` contiene únicamente el origen
 público. Las operaciones públicas no devuelven registros personales ni fotos.
 
 PACA también tiene una publicación independiente en el proyecto Cloudflare
-Pages `paca-paula-daniela`. El flujo previsto es Local → GitHub → Cloudflare
+Pages `paca-paula-daniela`. El flujo es Local → GitHub → Cloudflare
 Pages, con `main` conectado en el panel de Cloudflare. GitHub Actions ejecuta
 `npm run validate:paca` para los cambios relevantes y pull requests.
 Cloudflare debe ejecutar el mismo comando antes de publicar exclusivamente
 `dist/paca`, para que una prueba fallida impida el despliegue incluso si ambos
-servicios compilan en paralelo. La conexión requiere autorización de GitHub;
-ver `docs/paca-hosting.md` para su estado y configuración. No publica la API ni modifica D1/R2; el servidor de Sites
+servicios compilan en paralelo. La conexión utiliza la aplicación oficial de
+Cloudflare autorizada por el propietario en GitHub; ver `docs/paca-hosting.md`
+para su estado y configuración. No publica la API ni modifica D1/R2; el servidor de Sites
 conserva su despliegue independiente. La portada y FCT siguen en GitHub Pages.
 
 `pages/admin/` valida el acceso en el servidor, conserva la sesión solo en

@@ -2,23 +2,22 @@
 
 Publicación: <https://paca-paula-daniela.pages.dev/>.
 Administración: <https://paca-paula-daniela.pages.dev/admin/>.
-Proyecto Cloudflare Pages: `paca-paula-daniela` (creado con carga directa).
+Proyecto Cloudflare Pages: `paca-paula-daniela` (integración Git conectada).
 
 ## Local → GitHub → Cloudflare
 
-El flujo previsto utiliza la integración Git del proyecto para compilar y subir
+El flujo utiliza la integración Git del proyecto para compilar y subir
 `dist/paca/` al recibir commits en `main`. La portada y FCT siguen en GitHub Pages.
 La API mantiene su publicación independiente en Sites, con los mismos D1/R2.
 
-Estado comprobado el 17 de noviembre de 2026: el proyecto sirve PACA y su rama
-de producción es `main`; no hay una cuenta Git conectada. El panel ofrece
-**Settings → Build → Git repository → Connect**, con configuración de repositorio,
-rama, comando de build y carpeta de salida. La conexión queda pendiente de la
-autorización de GitHub y de comprobar un primer despliegue exitoso. La presencia
-de archivos locales no confirma que la automatización esté activa.
+Estado comprobado el 17 de noviembre de 2026: Cloudflare está conectado a
+`juankmilo11/juankmilo11.github.io`, con rama de producción `main` y despliegues
+automáticos habilitados. El propietario completó la autorización de la aplicación
+oficial de Cloudflare en GitHub. La primera compilación desde Git se verifica
+después de publicar esta configuración; conectar el repositorio por sí solo no
+demuestra que el build haya terminado correctamente.
 
-Conectar únicamente `juankmilo11/juankmilo11.github.io` a la aplicación oficial
-de Cloudflare y aplicar estos valores:
+La conexión utiliza únicamente `juankmilo11/juankmilo11.github.io` y estos valores:
 
 | Ajuste | Valor |
 | --- | --- |
@@ -40,14 +39,11 @@ workflow solo valida: la publicación corresponde a la integración de Cloudflar
 que también ejecuta las pruebas y no depende de que Actions termine primero.
 No se necesitan tokens de Cloudflare en el repositorio para esta modalidad.
 
-La documentación de carga directa aún indica que no se puede convertir un
-proyecto a integración Git, aunque el panel observado ofrece **Connect**.
-Confirmar el resultado de esa conexión antes de dar el flujo por activo. Si el
-proveedor la rechaza, mantener el proyecto y su dirección: la alternativa
-documentada es GitHub Actions con Wrangler y un token limitado a Cloudflare
-Pages en la cuenta correspondiente. No habilitar ambas vías a la vez.
-Ver [integración Git](https://developers.cloudflare.com/pages/configuration/git-integration/)
-y [carga directa con CI](https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/).
+El proyecto se creó con carga directa y el panel permitió vincularlo mediante
+**Settings → Build → Git repository → Connect**, conservando su dirección.
+La integración Git es la única vía automática configurada. No habilitar además
+otro workflow de publicación con Wrangler, para evitar despliegues duplicados.
+Ver [integración Git](https://developers.cloudflare.com/pages/configuration/git-integration/).
 
 Para cada actualización, desde la raíz del repositorio:
 

@@ -2,8 +2,8 @@
 
 Portada y aplicaciones en GitHub Pages, con FCT, PACA y un panel JK.
 PACA también se publica de forma independiente en Cloudflare Pages. Su flujo
-previsto es Local → GitHub → Cloudflare Pages. GitHub Actions valida PACA en
-`.github/workflows/paca-cloudflare.yml`; Cloudflare debe tener conectada la rama
+es Local → GitHub → Cloudflare Pages. GitHub Actions valida PACA en
+`.github/workflows/paca-cloudflare.yml`; Cloudflare tiene conectada la rama
 `main` según [publicación de PACA](docs/paca-hosting.md). La portada y FCT conservan su
 publicación actual en GitHub Pages.
 El agendamiento utiliza un servidor independiente en Sites con base de datos
