@@ -12,7 +12,8 @@ import worker, { passwordHash } from '../projects/services-api/worker/index.js';
 import { D1Database, R2Bucket } from '../projects/services-api/tests/adapter.mjs';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || 'playwright');
-const root = fileURLToPath(new URL('../', import.meta.url));
+const standalone = Boolean(process.env.PACA_QA_ROOT);
+const root = process.env.PACA_QA_ROOT || fileURLToPath(new URL('../', import.meta.url));
 const output = mkdtempSync(path.join(tmpdir(), 'paca-online-qa-'));
 const filename = path.join(output, 'appointments.sqlite');
 function submissionForm(payload) {
@@ -59,7 +60,7 @@ try {
   const visitor = await browser.newPage({ viewport: { width: 1180, height: 820 } });
   const errors = [];
   visitor.on('pageerror', error => errors.push(error.message));
-  const paca = origin + '/pages/paula/';
+  const paca = origin + (standalone ? '/' : '/pages/paula/');
   await visitor.goto(paca);
   await visitor.locator('.nav-book').click();
   const form = visitor.locator('#booking-form');
@@ -103,7 +104,7 @@ try {
   async function login() {
     const page = await browser.newPage({ viewport: { width: 1180, height: 820 } });
     page.on('pageerror', error => errors.push(error.message));
-    await page.goto(origin + '/pages/admin/');
+    await page.goto(origin + (standalone ? '/admin/' : '/pages/admin/'));
     await page.locator('#login-password').fill(password);
     const response = page.waitForResponse(response => response.url() === origin + '/api/admin/login');
     await page.locator('#login-form [type="submit"]').click();
@@ -264,7 +265,7 @@ try {
   assert.equal(await a.page.locator('[data-estimate="fullSet"][data-part="maxMinutes"]').inputValue(),'135','Cancel uses the latest successful save');
   const updated=(await (await fetch(origin+'/api/availability')).json());assert.ok(updated.closedDates.includes(date));assert.equal(updated.estimates.fullSet.maxMinutes,135);
   assert.equal((await fetch(origin+'/api/appointments',{method:'POST',headers:{'Idempotency-Key':crypto.randomUUID()},body:submissionForm(overlapPayload)})).status,409,'Saved closure rejects real submissions');
-  const catalog=await browser.newPage();await catalog.goto(origin+'/pages/paula/');
+  const catalog=await browser.newPage();await catalog.goto(paca);
   await catalog.locator('.work-card .service-estimate').first().waitFor();
   assert.match(await catalog.locator('.work-card .service-estimate').first().innerText(),/USD/);
   await catalog.locator('.nav-book').click();await catalog.locator('#booking-form [name="service"]').selectOption('nails');

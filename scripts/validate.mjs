@@ -5,6 +5,7 @@ const root = new URL('../', import.meta.url);
 const checks = [
   ['.', ['scripts/check-site.mjs']],
   ['.', ['scripts/check-paca.mjs']],
+  ['.', ['scripts/build-paca.mjs']],
   ['.', ['--test', 'scripts/tests/*.test.cjs']],
   ...['booking', 'schedule', 'i18n', 'theme'].map(name => ['.', [`scripts/test-paca-${name}.cjs`]]),
   ['projects/services-api/', ['--test', 'tests/*.test.mjs']],

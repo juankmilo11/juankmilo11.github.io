@@ -5,6 +5,7 @@
     "dev": "node scripts/serve-static.cjs",
     "validate": "node scripts/validate.mjs",
     "build:fct": "npm --prefix projects/FCT run build",
+    "build:paca": "node scripts/build-paca.mjs",
     "qa:online": "node scripts/qa-online.mjs",
     "qa:paca": "node scripts/qa-paca.cjs",
     "qa:fct": "node scripts/qa-fct-performance.cjs"

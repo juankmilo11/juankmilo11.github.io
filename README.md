@@ -34,6 +34,9 @@ node scripts/serve-static.cjs
 
 Abrir `http://127.0.0.1:4173/`. Así funcionan las rutas absolutas de FCT.
 PACA se edita en `pages/paula/`; ya no requiere sincronización manual.
+La versión independiente para Cloudflare Pages se genera con `npm run build:paca`.
+Incluye el acceso protegido `/admin/` para Paula y conserva el servidor de datos
+existente. Ver [publicación de PACA](docs/paca-hosting.md).
 
 Para el juego se necesita Node.js compatible con el Vite fijado en su lockfile:
 
