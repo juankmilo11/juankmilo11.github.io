@@ -117,7 +117,10 @@ async function settleAnimations(page, selector) {
     await page.locator('#calendar-open').click();await page.locator('#calendar-cancel').click();
     assert.equal(await form.locator('[name="date"]').inputValue(),originalDate);
     for(const name of ['punctuality','cancellation','policy','consent'])await form.locator('[name="'+name+'"]').check();
-    await form.locator('[name="currentPhoto"]').setInputFiles({name:'test.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l1cAAAAASUVORK5CYII=','base64')});
+    await page.locator('#booking-submit').click();
+    assert.equal(await page.locator('#booking-review').isVisible(),false,'An inspiration design is required before review');
+    assert.equal(await form.locator('[name="inspirationPhoto"]').evaluate(input=>input.validity.valueMissing),true);
+    await form.locator('[name="inspirationPhoto"]').setInputFiles({name:'test.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l1cAAAAASUVORK5CYII=','base64')});
     await page.locator('#booking-submit').click();
     await page.locator('#booking-review').waitFor();
     assert.match(await page.locator('#booking-summary').innerText(),/\+573001234567/);
@@ -133,7 +136,7 @@ async function settleAnimations(page, selector) {
     assert.equal(writes[0].key,writes[1].key,'Retry uses the same idempotency key');
     assert.equal(writes[1].payload.whatsapp,'+573001234567');
     assert.equal(writes[1].payload.instagram,'');
-    assert.equal(writes[1].photos.currentPhoto.name,'test.png');
+    assert.equal(writes[1].photos.inspirationPhoto.name,'test.png');
     assert.equal('currentPhoto' in writes[1].payload,false,'Attachments are Files, not fake saved filenames');
     assert.equal(await page.locator('#booking-exit').innerText(),'Exit');
     await page.locator('#booking-exit').click();
@@ -142,7 +145,7 @@ async function settleAnimations(page, selector) {
     assert.equal(await page.locator('#booking-success').isVisible(),false,'Reopening a completed request starts fresh');
     for(const name of ['name','whatsapp','instagram','message','date','time'])assert.equal(await form.locator('[name="'+name+'"]').inputValue(),'');
     assert.equal(await form.locator('[name="countryCode"]').inputValue(),'+1');
-    assert.equal(await form.locator('[name="currentPhoto"]').evaluate(input=>input.files.length),0);
+    assert.equal(await form.locator('[name="inspirationPhoto"]').evaluate(input=>input.files.length),0);
     for(const name of ['punctuality','cancellation','policy','consent'])assert.equal(await form.locator('[name="'+name+'"]').isChecked(),false);
     await form.locator('[name="name"]').fill('Second Visitor');
     await form.locator('[name="whatsapp"]').fill('2015550123');
@@ -161,6 +164,7 @@ async function settleAnimations(page, selector) {
     await page.locator('#booking-agenda[aria-busy="false"]').waitFor();
     await page.locator('#calendar-apply').click();await page.evaluate(()=>window.__availabilityDelay=0);
     for(const name of ['punctuality','cancellation','policy','consent'])await form.locator('[name="'+name+'"]').check();
+    await form.locator('[name="inspirationPhoto"]').setInputFiles({name:'second-design.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l1cAAAAASUVORK5CYII=','base64')});
     await page.locator('#booking-submit').click();await page.locator('#booking-review').waitFor();
     await page.locator('#booking-send').click();await page.locator('#booking-success').waitFor();
     const next=await page.evaluate(()=>window.__bookingCalls[2]);

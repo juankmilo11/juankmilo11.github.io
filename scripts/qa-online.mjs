@@ -15,6 +15,12 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || 'playwright')
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = mkdtempSync(path.join(tmpdir(), 'paca-online-qa-'));
 const filename = path.join(output, 'appointments.sqlite');
+function submissionForm(payload) {
+  const form = new FormData();
+  form.set('payload', JSON.stringify(payload));
+  form.set('inspirationPhoto', new Blob([new Uint8Array([255,216,255,1,2,3])], {type:'image/jpeg'}), 'design.jpg');
+  return form;
+}
 const password = 'QA-only-' + crypto.randomUUID();
 const env = { DB: new D1Database(filename), BUCKET: new R2Bucket(), ADMIN_PASSWORD_HASH: await passwordHash(password), RATE_LIMIT_SECRET: crypto.randomUUID() };
 let origin;
@@ -62,7 +68,7 @@ try {
   await form.locator('[name="instagram"]').fill('@online_qa');
   await form.locator('[name="service"]').selectOption('beauty');
   await form.locator('[name="message"]').fill('Synthetic integration test.');
-  await form.locator('[name="currentPhoto"]').setInputFiles({ name: 'qa-reference.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l1cAAAAASUVORK5CYII=', 'base64') });
+  await form.locator('[name="inspirationPhoto"]').setInputFiles({ name: 'qa-reference.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l1cAAAAASUVORK5CYII=', 'base64') });
   await visitor.locator('#calendar-open').click();
   await visitor.locator('#booking-agenda[aria-busy="false"]').waitFor();
   const days = visitor.locator('.calendar-days button:not(:disabled)');
@@ -76,6 +82,8 @@ try {
   await visitor.locator('#calendar-apply').click();
   const date = await form.locator('[name="date"]').inputValue(), time = await form.locator('[name="time"]').inputValue();
   for (const name of ['punctuality', 'cancellation', 'policy', 'consent']) await form.locator('[name="' + name + '"]').check();
+  const design = await form.locator('[name="inspirationPhoto"]').inputValue();
+  assert.ok(design);
   await visitor.locator('#booking-submit').click();
   await visitor.locator('#booking-review').waitFor();
   const posted = visitor.waitForResponse(response => response.url() === origin + '/api/appointments' && response.request().method() === 'POST');
@@ -107,6 +115,46 @@ try {
   }
   const a = await login(), b = await login();
   assert.match(await a.page.locator('#appointments').innerText(), /Online QA Visitor/);
+  assert.match(await a.page.locator('#appointments').innerText(), /\d{2}:\d{2} (AM|PM)/);
+  // The template flow uses the real Worker/D1, including another device/session.
+  await a.page.locator('#templates-tab').click();
+  await a.page.locator('.template-card').first().waitFor();
+  assert.ok(await a.page.locator('.template-card').count() >= 6);
+  await a.page.locator('#template-add').click();
+  await a.page.locator('#template-title').fill('QA template');
+  await a.page.locator('#template-body').fill('Hello {nombre}\nPrivate test message');
+  await a.page.locator('#template-form [type="submit"]').click();
+  await a.page.locator('#template-dialog').waitFor({state:'hidden'});
+  const card = a.page.locator('.template-card').filter({has:a.page.getByRole('heading',{name:'QA template',exact:true})});
+  await card.waitFor();
+  await a.page.context().grantPermissions(['clipboard-read','clipboard-write']);
+  await card.getByRole('button',{name:'Copiar',exact:true}).click();
+  assert.equal((await a.page.evaluate(()=>navigator.clipboard.readText())).replaceAll('\r\n','\n'),'Hello {nombre}\nPrivate test message');
+  await b.page.locator('#templates-tab').click();
+  await b.page.getByRole('heading',{name:'QA template',exact:true}).waitFor();
+  await card.getByRole('button',{name:'Editar',exact:true}).click();
+  await a.page.locator('#template-body').fill('Edited from session A');
+  await a.page.locator('#template-form [type="submit"]').click();
+  await a.page.locator('#template-dialog').waitFor({state:'hidden'});
+  const stale = b.page.locator('.template-card').filter({has:b.page.getByRole('heading',{name:'QA template',exact:true})});
+  await stale.getByRole('button',{name:'Editar',exact:true}).click();
+  await b.page.locator('#template-body').fill('Stale overwrite');
+  await b.page.locator('#template-form [type="submit"]').click();
+  await b.page.locator('#template-edit-status[data-kind="error"]').waitFor();
+  assert.equal(await b.page.locator('#template-dialog').isVisible(),true);
+  await b.page.keyboard.press('Escape');
+  await b.page.locator('#refresh').click();
+  await b.page.waitForFunction(()=>document.querySelectorAll('.template-card textarea').length && [...document.querySelectorAll('.template-card textarea')].some(node=>node.value==='Edited from session A'));
+  await a.page.setViewportSize({width:390,height:844});
+  await a.page.screenshot({path:path.join(output,'templates-mobile.png'),fullPage:true});
+  assert.equal(await a.page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  await a.page.setViewportSize({width:1180,height:820});
+  await a.page.screenshot({path:path.join(output,'templates-desktop.png'),fullPage:true});
+  await card.getByRole('button',{name:'Eliminar',exact:true}).click();
+  await a.page.locator('#template-delete-form [type="submit"]').click();
+  await a.page.locator('#template-delete-dialog').waitFor({state:'hidden'});
+  await card.waitFor({state:'detached'});
+  for (const instance of [a,b]) await instance.page.locator('#requests-tab').click();
   for (const instance of [a, b]) {
     await instance.page.locator('.appointment-action').first().click();
     await instance.page.locator('#edit-dialog').waitFor();
@@ -137,7 +185,7 @@ try {
   assert.ok(availability.blocked.some(block => block.date === date && block.start === time));
   assert.ok(!JSON.stringify(availability).includes('Online QA'), 'Public availability contains no customer names');
   const overlapPayload = { name: 'QA Overlap', whatsapp: '+12025550124', instagram: '', service: 'beauty', date, time, nailType: '', removal: '', removalConsent: false, punctuality: true, cancellation: true, policy: true, consent: true, message: '', language: 'en', reference: null };
-  const duplicate = await fetch(origin + '/api/appointments', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify(overlapPayload) });
+  const duplicate = await fetch(origin + '/api/appointments', { method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: submissionForm(overlapPayload) });
   assert.equal(duplicate.status, 409, 'Server rejects an appointment overlapping a confirmed slot');
   await a.page.locator('.appointment-action').first().click();
   await a.page.locator('#delete-open').click();
@@ -151,7 +199,7 @@ try {
   const activityDate=new Date(date+'T12:00:00Z');activityDate.setUTCDate(activityDate.getUTCDate()+7);const eventDate=activityDate.toISOString().slice(0,10);
   for(const [index,state] of ['confirmed','pending','completed','cancelled'].entries()){
     const body={...overlapPayload,date:eventDate,time:['08:00','10:00','13:00','16:00'][index],name:'Agenda QA '+state,whatsapp:'+1202555022'+index};
-    const created=await fetch(origin+'/api/appointments',{method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':crypto.randomUUID()},body:JSON.stringify(body)});assert.equal(created.status,201);const record=await created.json();
+    const created=await fetch(origin+'/api/appointments',{method:'POST',headers:{'Idempotency-Key':crypto.randomUUID()},body:submissionForm(body)});assert.equal(created.status,201);const record=await created.json();
     if(state!=='pending')assert.equal((await fetch(origin+'/api/admin/appointments/'+record.id,{method:'PATCH',headers:{'Content-Type':'application/json',Authorization:'Bearer '+a.token},body:JSON.stringify({version:1,status:state,durationMinutes:60})})).status,200);
   }
   await a.page.locator('#schedule-tab').click();
@@ -215,7 +263,7 @@ try {
   await a.page.locator('#schedule-cancel').click();
   assert.equal(await a.page.locator('[data-estimate="fullSet"][data-part="maxMinutes"]').inputValue(),'135','Cancel uses the latest successful save');
   const updated=(await (await fetch(origin+'/api/availability')).json());assert.ok(updated.closedDates.includes(date));assert.equal(updated.estimates.fullSet.maxMinutes,135);
-  assert.equal((await fetch(origin+'/api/appointments',{method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':crypto.randomUUID()},body:JSON.stringify(overlapPayload)})).status,409,'Saved closure rejects real submissions');
+  assert.equal((await fetch(origin+'/api/appointments',{method:'POST',headers:{'Idempotency-Key':crypto.randomUUID()},body:submissionForm(overlapPayload)})).status,409,'Saved closure rejects real submissions');
   const catalog=await browser.newPage();await catalog.goto(origin+'/pages/paula/');
   await catalog.locator('.work-card .service-estimate').first().waitFor();
   assert.match(await catalog.locator('.work-card .service-estimate').first().innerText(),/USD/);

@@ -131,6 +131,7 @@
       }
       for(const key of ['punctuality','cancellation','policy'])if(!controls[key].checked)controls[key].setCustomValidity(t('invalidPolicy'));
       for(const key of ['currentPhoto','inspirationPhoto']){const file=controls[key].files?.[0];if(file&&(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>8*1024*1024))controls[key].setCustomValidity(t('invalidPhoto'));}
+      if(!controls.inspirationPhoto.files?.length)controls.inspirationPhoto.setCustomValidity(t('inspirationRequired'));
       if(controls.message.value.length>700)controls.message.setCustomValidity(t('invalidMessage'));
       if(!controls.consent.checked)controls.consent.setCustomValidity(t('invalidConsent'));
       if(!form.reportValidity())return false;

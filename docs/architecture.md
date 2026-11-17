@@ -104,12 +104,11 @@ ver `projects/services-api/README.md` para límites y procedimientos.
 - `src/style.css`: presentación principal del juego.
 - `src/menu-theme.css`: tipografía local, portada ilustrada, acabado del selector
   y centrado/arrastre de sprites en 2D.
-- `src/field-life.js`: detalles de casillas oscuras y cuatro bandadas de 52 aves
-  en total mediante mallas instanciadas, con vuelos escalonados; respeta
-  movimiento reducido y no interviene en la selección de casillas.
-- `src/cosmos.js`: cielo con paralaje aparente, planeta rojo, planeta con aro
-  con oclusión 3D, Tierra con Luna en órbita, galaxia de giro lento y meteoros. Texturas procedurales
-  salvo el mapa local Blue Marble de NASA en `src/assets/`.
+- `src/field-life.js`: detalles de casillas oscuras y una bandada de dos aves,
+  con pausas de 45–75 segundos; movimiento reducido desactiva aves y viento.
+  El viento tiene cuatro partículas. El cielo cósmico, sus planetas, galaxia,
+  meteoros y texturas se retiraron. El render limita la densidad a 1,25 y
+  las sombras a 1024 × 1024.
 - `src/piece-values.js`: puntos de material compartidos por la interfaz y la IA;
   las torres valen cuatro puntos.
 - `src/piece-motion.js`: fases y alturas individuales de flotación y ráfagas

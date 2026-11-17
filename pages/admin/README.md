@@ -33,7 +33,13 @@ rechazadas con HTTP 401 cierran el panel y borran los datos mostrados.
 
 ## Gestión de PACA
 
-- Las fechas y horas de las citas corresponden a `America/New_York`.
+- Las fechas y horas de las citas corresponden a `America/New_York`. Las listas,
+  detalles y vista previa muestran AM/PM; los campos editables conservan HH:mm.
+- Plantillas permite copiar, añadir, editar y eliminar mensajes en español e inglés.
+  Los campos {nombre}, {servicio}, {fecha} y {hora} deben reemplazarse antes de enviar.
+  Copiar solo usa el portapapeles; no envía mensajes. Los cambios se guardan en D1
+  mediante sesión ADMIN y versiones para evitar sobrescrituras entre dispositivos.
+  Actualizar recarga las plantillas y el respaldo incluye la colección guardada.
 - Una solicitud pendiente no confirma una cita. Para confirmar hay que indicar
   su duración total; el servidor comprueba disponibilidad y solapamientos.
 - La edición y la eliminación incluyen la versión del registro para detectar

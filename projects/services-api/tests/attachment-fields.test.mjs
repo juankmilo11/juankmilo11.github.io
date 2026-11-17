@@ -16,7 +16,7 @@ test('photo fields are preserved and legacy roles require an exact original fing
   try{
     const {token}=await call(env,'/api/admin/login','POST',{password});
     const day=new Date();day.setUTCDate(day.getUTCDate()+3);while([0,6].includes(day.getUTCDay()))day.setUTCDate(day.getUTCDate()+1);
-    for(const fields of [['currentPhoto'],['inspirationPhoto'],['currentPhoto','inspirationPhoto']]){
+    for(const fields of [['inspirationPhoto'],['currentPhoto','inspirationPhoto']]){
       const form=new FormData();form.set('payload',JSON.stringify({name:'Role test',whatsapp:'+12015550123',instagram:'',service:'beauty',date:day.toISOString().slice(0,10),time:'09:00',punctuality:true,cancellation:true,policy:true,consent:true,message:'',language:'en'}));
       for(const field of fields)form.set(field,new File([field==='currentPhoto'?png:new Uint8Array([...png,0])],field+'.png',{type:'image/png'}));
       const receipt=await call(env,'/api/appointments','POST',form,null,crypto.randomUUID());

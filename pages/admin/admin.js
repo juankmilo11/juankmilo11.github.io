@@ -7,7 +7,7 @@
   const durationLabels = { fullSet: 'Set completo', fill: 'Relleno / mantenimiento', removalOnly: 'Solo retiro', nails: 'Uñas / asesoría', tattoo: 'Tatuaje', pmu: 'Maquillaje permanente', beauty: 'Maquillaje', consultation: 'Asesoría' };
   const removalLabels = { yes: 'Sí', no: 'No', unsure: 'Por confirmar con foto' };
   let token = null, expirationTimer = null, epoch = 0;
-  let items = [], nextCursor = null, selected = null, schedule = null;
+  let items = [], nextCursor = null, selected = null, schedule = null, templates = null;
   let listRequest = 0, scheduleRequest = 0, refreshRequest = 0, photoURL = null;
   let activationToken = new URLSearchParams(location.hash.slice(1)).get('activate');
   if (activationToken) history.replaceState(null, '', location.pathname + location.search);
@@ -56,6 +56,10 @@
     items = [];
     selected = null;
     schedule = null;
+    templates = null;
+    $('#templates-list').replaceChildren();
+    $('#template-form').reset();
+    announce('#templates-status');
     previewRequest++;previewConfig=null;previewDraft=null;for(const id of ['preview-days','preview-events','preview-times'])$('#'+id).replaceChildren();$('#preview-month-summary').textContent='';$('#preview-status').textContent='';
     nextCursor = null;
     $('#appointments').replaceChildren();
@@ -111,6 +115,11 @@
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return date || 'Sin fecha';
     return new Intl.DateTimeFormat('es-CO', { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(date + 'T12:00:00Z'));
   }
+  function formatTime(time) {
+    if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time || '')) return time || 'Sin hora';
+    const [hour, minute] = time.split(':').map(Number);
+    return `${String(hour % 12 || 12).padStart(2, '0')}:${String(minute).padStart(2, '0')} ${hour < 12 ? 'AM' : 'PM'}`;
+  }
   function renderItems() {
     const cards = items.map(item => {
       const card = document.createElement('article');
@@ -120,7 +129,7 @@
       badge.dataset.status = item.status;
       content.append(badge, textElement('h3', item.name));
       const meta = textElement('div', '', 'appointment-meta');
-      meta.append(textElement('span', `${formatDate(item.date)} · ${item.time}`), textElement('span', serviceLabels[item.service] || item.service));
+      meta.append(textElement('span', `${formatDate(item.date)} · ${formatTime(item.time)}`), textElement('span', serviceLabels[item.service] || item.service));
       if (item.durationMinutes) meta.append(textElement('span', `${item.durationMinutes} min`));
       content.append(meta, textElement('p', [item.whatsapp, item.instagram].filter(Boolean).join(' · '), 'appointment-contact'));
       const button = textElement('button', 'Ver', 'appointment-action');
@@ -206,6 +215,7 @@
     $('#request-details').replaceChildren();
     detail('Creada', item.createdAt ? new Date(item.createdAt).toLocaleString('es-CO') : '');
     detail('Idioma', item.language === 'es' ? 'Español' : 'Inglés');
+    detail('Cita · New Jersey', `${formatDate(item.date)} · ${formatTime(item.time)}`);
     detail('Tipo de uñas', durationLabels[item.nailType]);
     detail('Retiro', removalLabels[item.removal]);
     detail('Referencia del catálogo', typeof item.reference === 'string' ? item.reference : item.reference?.es || item.reference?.en);
@@ -302,7 +312,8 @@
     button.textContent = 'Actualizando…';
     button.setAttribute('aria-busy', 'true');
     try {
-      if ($('#schedule-panel').hidden) await loadItems({ successMessage: 'Solicitudes actualizadas.' });
+      if (!$('#templates-panel').hidden) await loadTemplates();
+      else if ($('#schedule-panel').hidden) await loadItems({ successMessage: 'Solicitudes actualizadas.' });
       else await loadSchedule({ successMessage: 'Disponibilidad actualizada.' });
     } finally {
       if (marker === refreshRequest) {
@@ -339,7 +350,7 @@
   });
   $('#delete-open').addEventListener('click', () => {
     if (!selected) return;
-    $('#delete-description').textContent = `¿Eliminar la solicitud de ${selected.name} para el ${formatDate(selected.date)} a las ${selected.time}?`;
+    $('#delete-description').textContent = `¿Eliminar la solicitud de ${selected.name} para el ${formatDate(selected.date)} a las ${formatTime(selected.time)}?`;
     announce('#delete-status');
     $('#delete-dialog').showModal();
   });
@@ -488,8 +499,8 @@
     else{
       const records=events.filter(e=>e.date===previewDate),blocks=manual.filter(b=>b.date===previewDate),reason=previewDayReason(previewDate,config);
       if(reason)eventList.append(textElement('p',reason,'preview-day-notice'));
-      for(const item of records){const card=textElement('article','','preview-event'),heading=textElement('div','','preview-event-heading'),badge=textElement('span',statusLabels[item.status]||item.status,'badge');badge.dataset.status=item.status;heading.append(textElement('strong',item.time+' · '+item.name),badge);card.append(heading,textElement('p',(serviceLabels[item.service]||item.service)+(item.durationMinutes?' · '+item.durationMinutes+' min':'')),textElement('p',eventNotes[item.status]||'','hint'));eventList.append(card);}
-      for(const block of blocks){const card=textElement('article','','preview-event manual-block');card.append(textElement('strong',block.start+'–'+block.end+' · Bloqueo manual'),textElement('p','No se ofrecen horarios que se crucen con este intervalo.','hint'));eventList.append(card);}
+      for(const item of records){const card=textElement('article','','preview-event'),heading=textElement('div','','preview-event-heading'),badge=textElement('span',statusLabels[item.status]||item.status,'badge');badge.dataset.status=item.status;heading.append(textElement('strong',formatTime(item.time)+' · '+item.name),badge);card.append(heading,textElement('p',(serviceLabels[item.service]||item.service)+(item.durationMinutes?' · '+item.durationMinutes+' min':'')),textElement('p',eventNotes[item.status]||'','hint'));eventList.append(card);}
+      for(const block of blocks){const card=textElement('article','','preview-event manual-block');card.append(textElement('strong',formatTime(block.start)+'–'+formatTime(block.end)+' · Bloqueo manual'),textElement('p','No se ofrecen horarios que se crucen con este intervalo.','hint'));eventList.append(card);}
       if(!records.length&&!blocks.length)eventList.append(textElement('p','Sin citas ni bloqueos manuales registrados en este día.','hint'));
     }
     const times=$('#preview-times');times.replaceChildren();const reason=previewDate?previewDayReason(previewDate,config):'';
@@ -497,7 +508,7 @@
     if(previewDate&&!reason)for(const key of selectedServices){
       const details={service:Object.hasOwn(serviceLabels,key)?key:'nails',nailType:key,removal:'no'},slots=S.slots(previewDate,config,details),section=textElement('section','','preview-service-times');
       section.append(textElement('h4',durationLabels[key]),textElement('p',S.formatEstimate(config,details,'es'),'hint'),textElement('p',slots.filter(s=>s.available).length+' horas de inicio disponibles.','hint'));
-      const grid=textElement('div','','preview-times');for(const slot of slots){const label=textElement('span',slot.time+(slot.available?'':' · Ocupado'),slot.available?'preview-slot':'preview-slot is-busy');grid.append(label);}section.append(grid);times.append(section);
+      const grid=textElement('div','','preview-times');for(const slot of slots){const label=textElement('span',formatTime(slot.time)+(slot.available?'':' · Ocupado'),slot.available?'preview-slot':'preview-slot is-busy');grid.append(label);}section.append(grid);times.append(section);
     }
   }
 
@@ -525,24 +536,101 @@
   $('#schedule-preview-dialog').addEventListener('close',()=>{previewRequest++;previewConfig=null;previewDraft=null;for(const id of ['preview-days','preview-events','preview-times'])$('#'+id).replaceChildren();$('#preview-month-summary').textContent='';$('#preview-status').textContent='';});
   for(const [id,delta] of [['preview-previous',-1],['preview-next',1]])$('#'+id).addEventListener('click',()=>{const date=new Date(previewCursor+'-01T12:00:00Z');date.setUTCMonth(date.getUTCMonth()+delta);previewDate='';loadPreview(date.toISOString().slice(0,7));});
   async function chooseTab(name) {
-    const requests = name === 'requests';
-    $('#requests-panel').hidden = !requests;
-    $('#schedule-panel').hidden = requests;
-    for (const [key, active] of [['requests', requests], ['schedule', !requests]]) {
+    for (const key of ['requests', 'schedule', 'templates']) {
+      const active = key === name;
+      $(`#${key}-panel`).hidden = !active;
       $(`#${key}-tab`).setAttribute('aria-selected', String(active));
       $(`#${key}-tab`).tabIndex = active ? 0 : -1;
     }
-    if (!requests && !schedule) await loadSchedule();
+    announce('#dashboard-status');
+    if (name === 'schedule' && !schedule) await loadSchedule();
+    if (name === 'templates' && !templates) await loadTemplates();
   }
   $('#requests-tab').addEventListener('click', () => chooseTab('requests'));
   $('#schedule-tab').addEventListener('click', () => chooseTab('schedule'));
+  $('#templates-tab').addEventListener('click', () => chooseTab('templates'));
   $('.tabs').addEventListener('keydown', event => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
     event.preventDefault();
-    const scheduleSelected = $('#schedule-tab').getAttribute('aria-selected') === 'true';
-    const name = event.key === 'Home' ? 'requests' : event.key === 'End' ? 'schedule' : scheduleSelected ? 'requests' : 'schedule';
+    const names = ['requests', 'schedule', 'templates'];
+    const index = names.findIndex(name => $(`#${name}-tab`).getAttribute('aria-selected') === 'true');
+    const name = event.key === 'Home' ? names[0] : event.key === 'End' ? names.at(-1) : names[(index + (event.key === 'ArrowRight' ? 1 : 2)) % names.length];
     chooseTab(name);
     $(`#${name}-tab`).focus();
+  });
+  async function loadTemplates() {
+    announce('#templates-status', 'Cargando plantillas…');
+    try {
+      const result = await api('/api/admin/templates');
+      if (!Array.isArray(result.items)) throw new Error('No se recibieron las plantillas.');
+      templates = result;
+      renderTemplates();
+      announce('#templates-status');
+    } catch (error) { report('#templates-status', error); }
+  }
+  function renderTemplates() {
+    $('#templates-list').replaceChildren(...templates.items.map(item => {
+      const card = textElement('article', '', 'template-card');
+      const body = textElement('textarea', item.body);
+      body.value = item.body; body.readOnly = true; body.rows = 7;
+      body.setAttribute('aria-label', 'Texto de ' + item.title);
+      const actions = textElement('div', '', 'section-actions');
+      const copy = textElement('button', 'Copiar'), edit = textElement('button', 'Editar'), remove = textElement('button', 'Eliminar', 'danger-outline');
+      for (const button of [copy, edit, remove]) button.type = 'button';
+      copy.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(item.body);
+          if (token) announce('#templates-status', 'Plantilla copiada. Sustituye los campos entre llaves antes de enviarla.', 'success');
+        } catch {
+          if (!token) return;
+          body.focus(); body.select();
+          announce('#templates-status', 'Seleccionamos el texto. Usa Copiar en tu dispositivo.');
+        }
+      });
+      edit.addEventListener('click', () => openTemplate(item));
+      remove.addEventListener('click', () => {
+        $('#template-delete-id').value = item.id;
+        $('#template-delete-description').textContent = `¿Eliminar la plantilla «${item.title}»?`;
+        announce('#template-delete-status');
+        $('#template-delete-dialog').showModal();
+      });
+      actions.append(copy, edit, remove); card.append(textElement('h3', item.title), body, actions); return card;
+    }));
+    if (!templates.items.length) $('#templates-list').append(textElement('p', 'No hay plantillas. Puedes añadir una nueva.', 'empty-state'));
+  }
+  function openTemplate(item = {}) {
+    $('#template-form').reset();
+    $('#template-id').value = item.id || '';
+    $('#template-title').value = item.title || '';
+    $('#template-body').value = item.body || '';
+    $('#template-heading').textContent = item.id ? 'Editar plantilla' : 'Añadir plantilla';
+    announce('#template-edit-status');
+    $('#template-dialog').showModal();
+  }
+  $('#template-add').addEventListener('click', () => { if (templates) openTemplate(); });
+  async function saveTemplates(items) {
+    templates = await api('/api/admin/templates', { method: 'PUT', body: { items, version: templates.version } });
+    renderTemplates();
+    announce('#templates-status', 'Plantillas guardadas.', 'success');
+  }
+  $('#template-form').addEventListener('submit', event => {
+    event.preventDefault();
+    withBusy(event.currentTarget, async () => {
+      const item = { id: $('#template-id').value || crypto.randomUUID(), title: $('#template-title').value.trim(), body: $('#template-body').value.trim() };
+      try {
+        await saveTemplates($('#template-id').value ? templates.items.map(old => old.id === item.id ? item : old) : [...templates.items, item]);
+        $('#template-dialog').close();
+      } catch (error) { report('#template-edit-status', error); }
+    });
+  });
+  $('#template-delete-form').addEventListener('submit', event => {
+    event.preventDefault();
+    withBusy(event.currentTarget, async () => {
+      try {
+        await saveTemplates(templates.items.filter(item => item.id !== $('#template-delete-id').value));
+        $('#template-delete-dialog').close();
+      } catch (error) { report('#template-delete-status', error); }
+    });
   });
   function chooseApp(paca) {
     $('#paca-panel').hidden = !paca; $('#lbds-panel').hidden = paca;

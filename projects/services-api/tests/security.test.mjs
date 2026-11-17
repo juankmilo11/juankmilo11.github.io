@@ -39,6 +39,7 @@ test('every administrative data or mutation route rejects missing and forged ses
     ['/api/admin/appointments/' + id, 'PATCH', {}], ['/api/admin/appointments/' + id + '?version=1', 'DELETE'],
     ['/api/admin/attachments/' + id, 'GET'], ['/api/admin/export', 'GET'],
     ['/api/admin/schedule', 'GET'], ['/api/admin/schedule', 'PUT', {}], ['/api/admin/schedule/preview', 'POST', {}],
+    ['/api/admin/templates', 'GET'], ['/api/admin/templates', 'PUT', {}],
     ['/api/admin/password', 'POST', {}], ['/api/admin/logout', 'POST', {}]
   ];
   try {

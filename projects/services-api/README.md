@@ -96,15 +96,17 @@ No borrar el Site ni sus bindings al publicar una actualización.
 
 Las respuestas fallidas son `{ "error": { "code": "...", "message": "..." } }`.
 Las operaciones públicas son `GET /api/availability` y
-`POST /api/appointments`; el envío acepta JSON o multipart (`payload` JSON,
-`currentPhoto`, `inspirationPhoto`) y requiere `Idempotency-Key`.
+`POST /api/appointments`; las nuevas solicitudes requieren multipart (`payload` JSON,
+`currentPhoto` opcional, `inspirationPhoto` obligatoria) y `Idempotency-Key`.
+Las nuevas solicitudes JSON o sin imagen de inspiración reciben `400 inspiration_required`.
+Los reintentos idénticos de solicitudes anteriores y la edición ADMIN se conservan.
 
 ADMIN utiliza `POST /api/admin/setup`, `POST /api/admin/login`,
 `POST /api/admin/logout`, `POST /api/admin/password`,
 `GET /api/admin/appointments`, `GET/PATCH/DELETE /api/admin/appointments/:id`,
 `GET /api/admin/attachments/:id`, `GET/PUT /api/admin/schedule`,
 `POST /api/admin/schedule/preview` y
-`GET /api/admin/export`. Las rutas privadas requieren `Authorization: Bearer`.
+`GET/PUT /api/admin/templates` y `GET /api/admin/export`. Las rutas privadas requieren `Authorization: Bearer`.
 `GET /health` informa únicamente estado técnico del servicio, sin datos privados.
 
 `tests/adapter.mjs` adapta `node:sqlite` a D1 y simula R2 para las pruebas; nunca
@@ -137,3 +139,17 @@ los campos no son cierres guardados. El aviso indica qué está guardado y qué
 es un cambio pendiente. La migración 0002 comprueba atómicamente la versión
 de disponibilidad y las citas confirmadas al insertar una solicitud, para
 rechazar cambios concurrentes durante la subida de fotos.
+
+## Plantillas de mensajes
+
+La colección inicial está en `worker/templates.json` e incluye recepción,
+depósito, confirmación, recordatorio, cancelación/reagenda y seguimiento.
+GET devuelve `{items,version}`; PUT recibe la colección completa con la versión
+leída. Se guarda en la tabla existente `settings` bajo la clave `templates`,
+sin migración ni alteración de citas o fotos. Se validan títulos, mensajes, IDs
+únicos y un máximo de 100 plantillas. Un borrado total se conserva vacío.
+La compilación incorpora el JSON en el Worker y el respaldo incluye la colección.
+
+La publicación del servidor es independiente del push a GitHub. La versión
+del servidor debe publicarse en el Site existente antes de usar Plantillas
+en producción; el push de GitHub Pages solo actualiza los clientes.

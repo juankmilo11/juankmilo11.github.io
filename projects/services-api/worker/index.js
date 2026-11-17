@@ -1,4 +1,5 @@
 import INITIAL_ESTIMATES from './initial-estimates.json' with { type: 'json' };
+import INITIAL_TEMPLATES from './templates.json' with { type: 'json' };
 const ZONE = 'America/New_York';
 const SERVICES = new Set(['nails', 'tattoo', 'pmu', 'beauty', 'consultation']);
 const STATUSES = new Set(['pending', 'confirmed', 'completed', 'cancelled']);
@@ -162,6 +163,7 @@ async function submit(request,env) {
   if(receipt){if(receipt.request_hash!==requestHash)fail(409,'idempotency_conflict');if(receipt.deleted)fail(410,'request_deleted');}
   const existing=await env.DB.prepare('SELECT id,status,created_at,request_hash FROM appointments WHERE idempotency_hash=?').bind(keyHash).first();
   if(existing){if(existing.request_hash!==requestHash)fail(409,'idempotency_conflict');return response(summary(existing));}
+  if(!files.some(file=>file.field==='inspirationPhoto'))fail(400,'inspiration_required','Upload an inspiration design photo before submitting.');
   await rate(env,request,'submit-phone',5,3600000,payload.whatsapp);
   const {config,version:availabilityVersion}=await schedule(env,true),duration=serviceDuration(config,payload);validateSlot(payload,config,duration);
   const id=crypto.randomUUID(),createdAt=new Date().toISOString(),stored=[];
@@ -181,6 +183,20 @@ async function submit(request,env) {
   }
 }
 function response(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json; charset=utf-8'}});}
+async function readTemplates(env) {
+  const row=await env.DB.prepare("SELECT config,version FROM settings WHERE id='templates'").first();
+  return {items:row?JSON.parse(row.config):structuredClone(INITIAL_TEMPLATES),version:row?.version||0};
+}
+function validateTemplates(data) {
+  if(!Number.isInteger(data.version)||data.version<0)fail(400,'version_required');
+  if(!Array.isArray(data.items)||data.items.length>100)fail(400,'invalid_templates');
+  const ids=new Set();
+  return data.items.map(item=>{
+    if(!item||typeof item.id!=='string'||!/^[A-Za-z0-9_-]{1,100}$/.test(item.id)||ids.has(item.id))fail(400,'invalid_templates');
+    ids.add(item.id);
+    return {id:item.id,title:cleanText(item.title,100,true),body:cleanText(item.body,5000,true)};
+  });
+}
 async function cleanObjects(env) {
   if(!env.BUCKET)return;
   const queue=await env.DB.prepare('SELECT object_key FROM object_deletions ORDER BY created_at LIMIT 20').all();
@@ -212,6 +228,14 @@ async function route(request,env,url) {
   if(!path.startsWith('/api/admin/'))fail(404,'not_found');
   const session=await authenticate(request,env);
   await cleanObjects(env);
+  if(path==='/api/admin/templates'&&request.method==='GET')return response(await readTemplates(env));
+  if(path==='/api/admin/templates'&&request.method==='PUT'){
+    const data=await jsonBody(request,2200000),items=validateTemplates(data);
+    const saved=data.version===0
+      ? await env.DB.prepare("INSERT INTO settings(id,config,version) VALUES('templates',?,1) ON CONFLICT(id) DO NOTHING RETURNING version").bind(JSON.stringify(items)).first()
+      : await env.DB.prepare("UPDATE settings SET config=?,version=version+1 WHERE id='templates' AND version=? RETURNING version").bind(JSON.stringify(items),data.version).first();
+    if(!saved)fail(409,'version_conflict');return response({items,version:saved.version});
+  }
   if(path==='/api/admin/logout'&&request.method==='POST'){await env.DB.prepare('DELETE FROM sessions WHERE token_hash=?').bind(session).run();return response({ok:true});}
   if(path==='/api/admin/password'&&request.method==='POST'){
     await rate(env,request,'password',5,900000);const data=await jsonBody(request),stored=await adminHash(env);if(!await verifyPassword(data.currentPassword,stored))fail(401,'invalid_credentials');if(!validPassword(data.newPassword))fail(400,'weak_password');const encoded=await passwordHash(data.newPassword);
@@ -235,7 +259,7 @@ async function route(request,env,url) {
     if(!saved)fail(409,'version_conflict');return response({config,version:saved.version});
   }
   if(path==='/api/admin/export'&&request.method==='GET'){
-    const rows=await env.DB.prepare('SELECT * FROM appointments ORDER BY created_at,id').all();const items=[];for(const row of rows.results)items.push(await appointment(env,row));return response({exportedAt:new Date().toISOString(),appointments:items,schedule:await schedule(env)});
+    const rows=await env.DB.prepare('SELECT * FROM appointments ORDER BY created_at,id').all();const items=[];for(const row of rows.results)items.push(await appointment(env,row));return response({exportedAt:new Date().toISOString(),appointments:items,schedule:await schedule(env),templates:await readTemplates(env)});
   }
   if(path==='/api/admin/appointments'&&request.method==='GET'){
     const status=url.searchParams.get('status')||'',q=(url.searchParams.get('q')||'').trim();if(status&&!STATUSES.has(status))fail(400,'invalid_status');if(q.length>100)fail(400,'invalid_query');

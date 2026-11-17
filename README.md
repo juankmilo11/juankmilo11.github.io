@@ -50,6 +50,13 @@ Abrir la URL que indique Vite bajo `/FCT/`. Ver [FCT](projects/FCT/README.md),
 
 Desde la raíz:
 
+`npm run validate` ejecuta las comprobaciones estáticas, las pruebas de la
+portada/PACA/API/FCT y la compilación del Worker en orden, deteniéndose ante
+el primer fallo. No instala dependencias ni publica. FCT requiere sus
+dependencias locales (`npm --prefix projects/FCT ci`). Las pruebas de navegador
+se ejecutan por separado con `npm run qa:online`, `npm run qa:paca` y
+`npm run qa:fct`; requieren Playwright y Edge.
+
 ```powershell
 node scripts/check-site.mjs
 node --test scripts/tests/*.test.cjs
@@ -105,6 +112,13 @@ otra subventana. Tras revisar y enviar, el comprobante solo aparece cuando el
 servidor confirma que guardó la solicitud. JK permite editar, confirmar,
 cancelar y eliminar, consultar fotos privadas y exportar un respaldo de datos.
 Las solicitudes pendientes no reservan un horario; las citas confirmadas sí.
+Las horas mostradas en JK incluyen AM/PM. PACA exige una imagen de inspiración;
+la foto actual sigue siendo opcional. El cliente acepta cancelar o reagendar
+con al menos un día de anticipación, nunca el mismo día, y realizar un depósito
+mínimo de $20 USD cuando Paula Daniela le contacte por WhatsApp para confirmar.
+JK incluye Plantillas con mensajes editables, copia al portapapeles y guardado
+en el servidor. La publicación del Worker en Sites es independiente del push a
+GitHub: ambos clientes y servidor deben actualizarse para habilitar este módulo.
 LBDS aún no tiene registros ni un módulo de negocio que gestionar.
 
 El servicio está en [Juankmilo Apps API](https://juankmilo-apps-api.camilo200181.chatgpt.site).

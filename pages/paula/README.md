@@ -17,10 +17,16 @@ del servidor.
   elección anterior y devuelve el foco al botón; Escape no cierra el formulario.
 - Las condiciones de la cita se muestran cerradas inicialmente. Los acuerdos
   siguen siendo obligatorios antes del envío.
+- Solo se permite cancelar o reagendar con al menos 1 día de anticipación,
+  nunca el mismo día. Cuando Paula Daniela contacte por WhatsApp, el cliente
+  debe realizar un depósito mínimo de $20 USD para confirmar. El formulario,
+  las preguntas frecuentes y el resumen explican estas condiciones en ambos idiomas.
 - La persona revisa el resumen y pulsa «Enviar solicitud». Solo se muestra un
   número de solicitud cuando el servidor confirma la escritura. El estado
   inicial es pendiente; recibir la solicitud no equivale a confirmar la cita.
-- El contacto y las fotos opcionales se envían con consentimiento. Las fotos
+- El diseño de inspiración es obligatorio para todos los servicios antes de enviar,
+  también si se eligió una referencia del catálogo. La foto actual es opcional.
+  El contacto y las fotos se envían con consentimiento. Las fotos
   JPEG, PNG o WebP admiten hasta 8 MB cada una; se mandan como archivos privados,
   no como nombres de archivo que aparenten haber sido guardados.
 - Los fallos conservan el borrador y permiten reintentar con la misma clave de

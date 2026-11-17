@@ -81,20 +81,12 @@ and broad, asymmetric shoulders. The island has one continuous cliff wall that
 meets its irregular perimeter, replacing stacked cylinders. The four summit squares
 and flat piece positions are preserved. Seams also accept clicks and drops.
 `src/field-life.js` scatters tiny stones, mud and moss on selected dark squares.
-Four large flocks (12/16/10/14 birds, 52 total) cross behind the field at different
-heights, directions and wing phases. Instanced wings/bodies keep this to eight
-draw calls. Departures are staggered from the first second, flights last 18–24
-seconds and pauses last 2–6 seconds. Reduced-motion mode disables the flocks.
+A single flock of two birds crosses the field, with 45–75 seconds between flights.
+Only four wind particles remain; reduced-motion mode disables both effects.
+The cosmic scene, planets, galaxy, stars and meteors have been removed entirely,
+including their texture asset. The 3D renderer caps pixel density at 1.25 and
+uses 1024 × 1024 directional shadows to reduce fill rate and GPU memory.
 These decorations do not participate in raycasting or chess rules.
-`src/cosmos.js` adds an infinite-distance star field, a red planet, a ringed
-planet, Earth and occasional meteors. The ring is a tilted 3D annulus; the globe
-writes depth so it hides the rear arc. The spiral galaxy rotates inside a fixed
-elliptical projection, making one turn in about nine minutes.
-Their directions change with camera orbit; they stay behind the playing field.
-Reduced-motion mode retains a static sky without twinkling or meteors.
-Earth uses NASA's Blue Marble map (credits in `docs/art-assets.md`), uploaded at
-1024 × 512 to keep GPU memory small. A cratered Moon slowly orbits Earth at a
-fixed distance; reduced-motion mode preserves its initial position.
 
 Pawns are slightly smaller: 0.84 world units versus 0.92 for ordinary pieces,
 with the same reduction in 2D. Queens and kings keep their larger sizes.
@@ -133,7 +125,7 @@ Optional headless browser QA (requires Playwright and Microsoft Edge):
 
 ```powershell
 node scripts/qa-fct.cjs
-node scripts/qa-fct-cosmos.cjs
+node scripts/qa-fct-performance.cjs
 node scripts/qa-fct-motion.cjs
 ```
 
@@ -151,10 +143,10 @@ flow. Scripted opponent replies exercise the app's castling, en passant,
 promotion, captures, mate, review/replay and new-game flows in both mobile
 orientations. These browser tests emulate mobile; they do not replace testing
 on physical iOS/Android hardware. `FCT_QA_VIEWER_ONLY=1` runs just the preview checks.
-The cosmos check uses a local Vite server and the real WebGL renderer to compare
-ring pixels against a globe-only image, verifying rear occlusion and front
-visibility. It also checks slow galaxy rotation, reduced motion and Earth loading,
-and saves sky close-ups for visual inspection.
+The performance check inspects the real 3D scene at a mobile viewport with
+3× device density: no cosmic objects or texture downloads, at most two birds
+and four wind particles, reduced-motion suppression, pixel ratio and shadow limits.
+It saves screenshots; physical low-end device performance still needs device testing.
 The motion check samples the real 3D board over several seconds after two
 captures, verifying independent bounded floats, cheering arms, fixed X/Z anchors,
 restoration through review and reduced-motion behavior.

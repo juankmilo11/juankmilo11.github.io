@@ -19,7 +19,11 @@ async function call(environment,route,method='GET',data=null,{token,key,origin=O
   return {status:response.status,value,headers:response.headers};
 }
 const login=async environment=>(await call(environment,'/api/admin/login','POST',{password:PASSWORD})).value.token;
-const create=(environment,data=payload(),key=crypto.randomUUID())=>call(environment,'/api/appointments','POST',data,{key});
+const jpeg=new Uint8Array([255,216,255,1,2,3]);
+const create=(environment,data=payload(),key=crypto.randomUUID())=>{
+  if(!(data instanceof FormData)){const form=new FormData();form.set('payload',JSON.stringify(data));form.set('inspirationPhoto',new File([jpeg],'design.jpg',{type:'image/jpeg'}));data=form;}
+  return call(environment,'/api/appointments','POST',data,{key});
+};
 
 test('one-time setup expires, verifies activation, and stores only a password hash',async()=>{
   const environment=env();delete environment.ADMIN_PASSWORD_HASH;
@@ -113,7 +117,7 @@ test('closed schedules do not prevent cancelling records or editing contact and 
 
 test('private photo upload has no public read route, validates magic bytes and uses durable deletion retries',async()=>{
   const environment=env(),token=await login(environment);
-  const form=new FormData();form.set('payload',JSON.stringify(payload()));form.set('currentPhoto',new File([new Uint8Array([255,216,255,1,2,3])],'nails.jpg',{type:'image/jpeg'}));
+  const form=new FormData();form.set('payload',JSON.stringify(payload()));form.set('inspirationPhoto',new File([new Uint8Array([255,216,255,1,2,3])],'nails.jpg',{type:'image/jpeg'}));
   const saved=await create(environment,form);assert.equal(saved.status,201);assert.equal(environment.BUCKET.objects.size,1);
   const record=(await call(environment,`/api/admin/appointments/${saved.value.id}`,'GET',null,{token})).value;
   const photo='/api/admin/attachments/'+record.attachments[0].id;
@@ -187,12 +191,51 @@ test('availability changes and newly confirmed appointments during photo upload 
       }else assert.equal((await call(environment,'/api/admin/appointments/'+pending.value.id,'PATCH',{version:1,status:'confirmed',durationMinutes:60},{token})).status,200);
     };
     const form=new FormData();form.set('payload',JSON.stringify(data));
-    form.set('currentPhoto',new Blob([Uint8Array.from([0xff,0xd8,0xff,0xe0,0,0,0,0,0,0,0,0])],{type:'image/jpeg'}),'current.jpg');
+    form.set('inspirationPhoto',new Blob([Uint8Array.from([0xff,0xd8,0xff,0xe0,0,0,0,0,0,0,0,0])],{type:'image/jpeg'}),'current.jpg');
     const result=await call(environment,'/api/appointments','POST',form,{key:crypto.randomUUID()});
     assert.equal(result.status,409,mode);assert.equal(result.value.error.code,'slot_unavailable');
-    assert.equal(environment.BUCKET.objects.size,0);assert.equal((await environment.DB.prepare('SELECT COUNT(*) AS n FROM appointments').first()).n,1);
+    assert.equal(environment.BUCKET.objects.size,1,'Only the earlier pending request keeps its inspiration photo');assert.equal((await environment.DB.prepare('SELECT COUNT(*) AS n FROM appointments').first()).n,1);
     environment.DB.close();
   }
+});
+
+test('every new service requires an actual inspiration upload; JSON references and current photos cannot bypass it',async()=>{
+  const environment=env();
+  for(const service of ['nails','tattoo','pmu','beauty','consultation']){
+    const result=await call(environment,'/api/appointments','POST',{...payload(),service,reference:{en:'Catalog design',es:'Diseño del catálogo'}},{key:crypto.randomUUID()});
+    assert.equal(result.status,400);assert.equal(result.value.error.code,'inspiration_required');
+  }
+  const form=new FormData();form.set('payload',JSON.stringify(payload()));form.set('currentPhoto',new File([jpeg],'current.jpg',{type:'image/jpeg'}));
+  assert.equal((await create(environment,form)).value.error.code,'inspiration_required');
+  form.set('inspirationPhoto',new File(['fake'],'fake.png',{type:'image/png'}));
+  assert.equal((await create(environment,form)).value.error.code,'invalid_photo');
+  assert.equal(environment.BUCKET.objects.size,0);
+  assert.equal((await create(environment)).status,201);
+  environment.DB.close();
+});
+
+test('templates require authentication, persist across connections, reject stale writes and export the saved collection',async()=>{
+  const filename=path.join(tmpdir(),`paca-templates-${crypto.randomUUID()}.sqlite`),environment=env();
+  environment.DB.close();environment.DB=new D1Database(filename);
+  assert.equal((await call(environment,'/api/admin/templates')).status,401);
+  assert.equal((await call(environment,'/api/admin/templates','PUT',{version:0,items:[]})).status,401);
+  const token=await login(environment),initial=(await call(environment,'/api/admin/templates','GET',null,{token})).value;
+  assert.equal(initial.version,0);assert.ok(initial.items.length>=6);
+  assert.match(initial.items.find(item=>item.id==='deposit-es').body,/\$20 USD/);
+  const item={id:crypto.randomUUID(),title:'Custom',body:'Hello {nombre}\nSecond line'};
+  const saved=await call(environment,'/api/admin/templates','PUT',{version:0,items:[...initial.items,item]},{token});
+  assert.equal(saved.status,200);assert.equal(saved.value.version,1);
+  assert.equal((await call(environment,'/api/admin/templates','PUT',{version:0,items:[]},{token})).status,409);
+  assert.equal((await call(environment,'/api/admin/templates','PUT',{version:1,items:[item,item]},{token})).status,400);
+  assert.equal((await call(environment,'/api/admin/templates','PUT',{version:1,items:[{...item,body:'x'.repeat(5001)}]},{token})).status,400);
+  environment.DB.close();environment.DB=new D1Database(filename,{migrate:false});
+  assert.deepEqual((await call(environment,'/api/admin/templates','GET',null,{token})).value,saved.value);
+  const changed={...item,body:'Edited'};
+  assert.equal((await call(environment,'/api/admin/templates','PUT',{version:1,items:[changed]},{token})).status,200);
+  const backup=await call(environment,'/api/admin/export','GET',null,{token});assert.deepEqual(backup.value.templates.items,[changed]);
+  assert.equal((await call(environment,'/api/admin/templates','PUT',{version:2,items:[]},{token})).status,200);
+  assert.deepEqual((await call(environment,'/api/admin/templates','GET',null,{token})).value.items,[],'An intentionally empty collection stays empty');
+  environment.DB.close();unlinkSync(filename);
 });
 
 

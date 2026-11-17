@@ -8,11 +8,11 @@
   <meta name="theme-color" content="#121a25">
   <title>JK · Juankmilo</title>
   <link rel="icon" type="image/png" href="../../img/bubble-jk.png">
-  <link rel="stylesheet" href="admin.css?v=2026-11-16-multiselect">
+  <link rel="stylesheet" href="admin.css?v=2026-11-17-templates">
   <script src="../../shared/api-config.js?v=2026-11-16-online" defer></script>
   <script src="../../shared/api.js?v=2026-11-16-final-polish" defer></script>
-  <script src="../paula/js/schedule.js?v=2026-11-16-multiselect" defer></script>
-  <script src="admin.js?v=2026-11-16-multiselect" defer></script>
+  <script src="../paula/js/schedule.js?v=2026-11-17-templates" defer></script>
+  <script src="admin.js?v=2026-11-17-templates" defer></script>
 </head>
 <body>
   <main id="access" class="access">
@@ -46,7 +46,7 @@
       <main class="content">
         <section id="paca-panel" aria-labelledby="paca-title">
           <div class="section-heading"><div><p class="eyebrow">PACA / PAULA DANIELA</p><h2 id="paca-title">Citas y solicitudes</h2><p class="muted">Horarios de New Jersey · New York</p></div><div class="section-actions"><button id="refresh" type="button">Actualizar</button><button id="export" type="button">Exportar respaldo</button></div></div>
-          <div class="tabs" role="tablist" aria-label="Gestión de PACA"><button id="requests-tab" type="button" role="tab" aria-selected="true" aria-controls="requests-panel">Solicitudes</button><button id="schedule-tab" type="button" role="tab" aria-selected="false" aria-controls="schedule-panel" tabindex="-1">Disponibilidad</button></div>
+          <div class="tabs" role="tablist" aria-label="Gestión de PACA"><button id="requests-tab" type="button" role="tab" aria-selected="true" aria-controls="requests-panel">Solicitudes</button><button id="schedule-tab" type="button" role="tab" aria-selected="false" aria-controls="schedule-panel" tabindex="-1">Disponibilidad</button><button id="templates-tab" type="button" role="tab" aria-selected="false" aria-controls="templates-panel" tabindex="-1">Plantillas</button></div>
           <section id="requests-panel" role="tabpanel" aria-labelledby="requests-tab">
             <form id="filters" class="filters"><label>Estado<select id="filter-status"><option value="">Todos</option><option value="pending">Pendientes</option><option value="confirmed">Confirmadas</option><option value="completed">Completadas</option><option value="cancelled">Canceladas</option></select></label><label class="search-label">Buscar<input id="filter-search" type="search" maxlength="120" placeholder="Nombre, WhatsApp o Instagram"></label><button type="submit">Buscar</button></form>
             <p class="hint">Las solicitudes pendientes requieren revisión. Confirmar una cita bloquea su horario en el calendario público.</p>
@@ -64,6 +64,10 @@
               <div class="section-actions"><button id="schedule-preview" type="button">Visualizar agenda</button><button id="schedule-cancel" type="button">Cancelar</button><button class="primary" type="submit">Guardar disponibilidad</button></div>
             </form>
           </section>
+          <section id="templates-panel" role="tabpanel" aria-labelledby="templates-tab" hidden>
+            <div class="section-heading"><div><h3>Mensajes para clientes</h3><p class="hint">Copia una plantilla y reemplaza {nombre}, {servicio}, {fecha} y {hora} antes de enviarla por WhatsApp u otra bandeja. Las plantillas se guardan en el servidor y se comparten entre tus dispositivos.</p></div><button id="template-add" type="button">Añadir plantilla</button></div>
+            <p id="templates-status" class="status" role="status" aria-live="polite"></p><div id="templates-list" class="templates-list"></div>
+          </section>
         </section>
         <section id="lbds-panel" class="empty-state" aria-labelledby="lbds-title" hidden><p class="eyebrow">LBDS</p><h2 id="lbds-title">Sin módulo conectado</h2><p>Aquí se incorporará la gestión de LBDS cuando se defina su aplicativo y sus datos.</p></section>
         <p id="dashboard-status" class="status" role="status" aria-live="polite"></p>
@@ -71,6 +75,8 @@
     </div>
   </div>
 
+  <dialog id="template-dialog" aria-labelledby="template-heading"><form id="template-form" class="dialog-form"><header class="dialog-header"><h2 id="template-heading">Añadir plantilla</h2><button data-close="template-dialog" class="icon-button" type="button" aria-label="Cerrar plantilla">×</button></header><input id="template-id" type="hidden"><label>Título<input id="template-title" required maxlength="100"></label><label>Mensaje<textarea id="template-body" rows="10" required maxlength="5000"></textarea></label><p class="hint">Puedes usar {nombre}, {servicio}, {fecha} y {hora}; reemplázalos antes de enviar el mensaje.</p><p id="template-edit-status" class="status" role="status"></p><div class="section-actions"><button data-close="template-dialog" type="button">Cancelar</button><button class="primary" type="submit">Guardar plantilla</button></div></form></dialog>
+  <dialog id="template-delete-dialog" class="small-dialog" aria-labelledby="template-delete-heading"><form id="template-delete-form" class="dialog-form"><h2 id="template-delete-heading">Eliminar plantilla</h2><input id="template-delete-id" type="hidden"><p id="template-delete-description"></p><p id="template-delete-status" class="status" role="status"></p><div class="section-actions"><button data-close="template-delete-dialog" type="button">Cancelar</button><button class="danger" type="submit">Eliminar plantilla</button></div></form></dialog>
   <dialog id="schedule-preview-dialog" aria-labelledby="preview-title"><div class="dialog-form"><header class="dialog-header"><h2 id="preview-title">Vista previa de la agenda</h2><button class="icon-button" data-close="schedule-preview-dialog" type="button" aria-label="Cerrar vista previa">×</button></header><p class="hint">Vista previa del borrador: no guarda cambios. Muestra todas las citas y sus estados, incluidos los registros cancelados. Solo las confirmadas y los bloqueos ocupan horarios. Horario de New Jersey · New York.</p><button id="preview-refresh" type="button">Actualizar agenda</button><fieldset><legend>Servicios para consultar horarios</legend><p class="hint">Selecciona cualquier combinación para comparar horarios. Las citas y los bloqueos se muestran siempre.</p><div class="section-actions"><button id="preview-select-all" type="button">Seleccionar todos</button><button id="preview-select-none" type="button">Quitar selección</button></div><div id="preview-services" class="preview-services"></div></fieldset><div class="preview-navigation"><button id="preview-previous" type="button" aria-label="Mes anterior">←</button><h3 id="preview-month"></h3><button id="preview-next" type="button" aria-label="Mes siguiente">→</button></div><div id="preview-legend" class="preview-legend" aria-label="Estados de la agenda"></div><p id="preview-month-summary" class="hint" role="status"></p><div class="preview-weekdays" aria-hidden="true"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div id="preview-days" class="preview-days"></div><section id="preview-events-section" aria-labelledby="preview-events-title"><h3 id="preview-events-title">Eventos del día</h3><div id="preview-events" class="preview-events"></div></section><p id="preview-status" role="status"></p><div id="preview-times" class="preview-times"></div><p class="hint">Puedes consultar cualquier día, incluso si está cerrado o ya pasó. Las marcas indican citas y bloqueos; pulsa el día para ver su detalle. Las pendientes, completadas y canceladas no bloquean nuevos horarios.</p></div></dialog>
   <dialog id="edit-dialog" aria-labelledby="edit-title">
     <form id="edit-form" class="dialog-form">

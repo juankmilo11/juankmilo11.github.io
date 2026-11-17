@@ -6,7 +6,6 @@ import { createMountainGeometry, createTileGeometry } from './mountain.js';
 import { createCharacter, animateCharacter, releaseCharacter } from './character-model.js';
 import { appearanceFor, appearanceKey, thumbnailUrl } from './appearance.js';
 import { addFieldLife } from './field-life.js';
-import { createCosmos } from './cosmos.js';
 import { createFloatMotion, floatOffset, createCheerMotion, cheerPose } from './piece-motion.js';
 
 const spriteTextures = new Map();
@@ -31,7 +30,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
   camera.position.set(0, 7.8, 11.5);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -44,7 +43,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
   const sun = new THREE.DirectionalLight(0xffefd9, 3.0);
   sun.position.set(-5, 11, 6);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.mapSize.set(1024, 1024);
   sun.shadow.camera.left = -10;
   sun.shadow.camera.right = 10;
   sun.shadow.camera.top = 10;
@@ -69,7 +68,6 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const cosmos = createCosmos(scene,reducedMotion);
   const controls = new OrbitControls(camera, renderer.domElement);
   let cameraProfile = { radius: 11.5, height: 7.8, fov: 36, targetY: 0.35 };
   let lastPortrait = null;
@@ -586,7 +584,6 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
       }
     }
     controls.update();
-    cosmos.update(time,camera);
     renderer.render(scene, camera);
   }
   animate();
@@ -629,7 +626,7 @@ function buildBoard(world, tileMeshes, tileHeights, tileMaterials) {
 
 function buildWindParticles(world, reducedMotion) {
   if (reducedMotion) return null;
-  const count = 32;
+  const count = 4;
   const positions = new Float32Array(count * 3);
   const drift = new Float32Array(count * 2);
   const phase = new Float32Array(count);

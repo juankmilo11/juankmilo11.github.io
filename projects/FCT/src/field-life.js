@@ -37,7 +37,7 @@ export function addFieldLife(world, reducedMotion) {
   wingGeometry.computeVertexNormals();
   const bodyGeometry=new THREE.SphereGeometry(1,6,4);
   const birdMaterial=new THREE.MeshBasicMaterial({color:0x343d30,side:THREE.DoubleSide});
-  const flocks=[6,8,5,7].map((count,index)=>{
+  const flocks=[2].map((count,index)=>{
     const group=new THREE.Group();group.name=`bird-flock-${index}`;group.visible=false;group.userData.birdCount=count;aviary.add(group);
     const wings=new THREE.InstancedMesh(wingGeometry,birdMaterial,count*2);
     const bodies=new THREE.InstancedMesh(bodyGeometry,birdMaterial,count);
@@ -71,7 +71,7 @@ export function addFieldLife(world, reducedMotion) {
       }
       if(flock.startAt===null)continue;
       const progress=(time-flock.startAt)/flock.duration;
-      if(progress>=1){flock.group.visible=false;flock.startAt=null;flock.nextAt=time+2+Math.random()*4;continue;}
+      if(progress>=1){flock.group.visible=false;flock.startAt=null;flock.nextAt=time+45+Math.random()*30;continue;}
       flock.group.visible=true;
       const travel=-12+progress*24,bend=Math.sin(progress*Math.PI)*flock.curve;
       flock.group.position.set(flock.dx*travel-flock.dz*bend,flock.height+Math.sin(progress*Math.PI)*.35,flock.lane+flock.dz*travel+flock.dx*bend);
