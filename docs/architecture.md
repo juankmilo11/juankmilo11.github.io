@@ -121,12 +121,12 @@ ver `projects/services-api/README.md` para límites y procedimientos.
   meteoros y texturas se retiraron. El render limita la densidad a 1,25 y
   las sombras a 1024 × 1024.
 - `src/piece-values.js`: puntos de material compartidos por la interfaz y la IA;
-  las torres valen cuatro puntos.
+  las torres valen cinco puntos.
 - `src/piece-motion.js`: fases y alturas individuales de flotación y ráfagas
   aleatorias de saltos para las capturadas; los desplazamientos se aplican sobre
   anclas fijas para conservar las casillas y la colocación lateral.
 - `src/audio-system.js` y `audio-system.css`: controles independientes de música
-  y efectos, volumen, selección suave, intento de autoplay y desbloqueo por interacción.
+  y efectos, activación/desactivación independiente, selección suave, intento de autoplay y desbloqueo por interacción.
 - `src/shuffle-queue.js` y `music-tracks.json`: cola aleatoria sin repetición por
   ciclo y navegación por el historial real de música.
 - `public/game-status.js` y `public/status.css`: comportamiento y estilos
@@ -136,7 +136,7 @@ ver `projects/services-api/README.md` para límites y procedimientos.
   Se publican sin cambiar sus bytes en `/FCT/assets/music/`.
 - `public/fct-potion.png`: fuente del icono del juego y de su enlace en la portada.
 - `sprites/`: hojas originales y recortes utilizados por las piezas.
-  `scripts/build-characters.py` extrae las 70 paletas y tres vistas por personaje
+  `scripts/build-characters.py` extrae/genera las 190 paletas y tres vistas por personaje
   con Pillow en `sprites/characters/`. Los recortes anteriores de `cropped/`
   y `crop-sprites.ps1` son recursos heredados.
 - `DESIGN.md`: concepto y decisiones iniciales; contrastar con la implementación
@@ -167,3 +167,15 @@ Omite enlaces externos, fragmentos y otros recursos dinámicos.
 No ejecuta JavaScript del navegador, comprueba APIs externas ni evalúa la IA.
 `scripts/tests/home.test.cjs` comprueba el bloqueo inicial, el glitch,
 los ciclos de seis fondos, la visibilidad, el reloj y las ventanas.
+
+## Revisión visual de FCT · noviembre de 2026
+
+El catálogo tiene 38 personajes, cinco variantes por personaje y 180 opciones
+para el usuario. Dycedarg y Gaff Gafgarion aportan las diez variantes exclusivas
+de rey para la IA; `appearance-core.js` rechaza su selección por el jugador.
+Las mallas articuladas suavizan sus superficies conservando colores y siluetas
+de los sprites. `mountain.js` cierra las cuatro esquinas mediante un único
+perímetro; `terrain.js` comparte la altura de las galerías y el campo.
+El fondo corregido está en `projects/FCT/public/menu-keyart-v2.webp`.
+Los controles de audio son botones de activar/desactivar; el aviso de estado
+ocupa su antigua posición sobre el tablero. La cámara utiliza un ojo SVG.

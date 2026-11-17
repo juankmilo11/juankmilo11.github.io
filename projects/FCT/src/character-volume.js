@@ -26,6 +26,31 @@ function pixelColor(image, x, y) {
   return [linear(image.data[i]), linear(image.data[i + 1]), linear(image.data[i + 2])];
 }
 
+// Smooth the shared surface, keeping the sprite's colors and articulated parts.
+// Welding positions before relaxation prevents cracks between adjacent pixels.
+function softenSurface(geometry) {
+  const attribute=geometry.attributes.position, unique=[], indices=[], lookup=new Map(), neighbors=[];
+  for(let i=0;i<attribute.count;i++){
+    const point=[attribute.getX(i),attribute.getY(i),attribute.getZ(i)];
+    const key=point.map(v=>v.toFixed(5)).join(',');
+    if(!lookup.has(key)){lookup.set(key,unique.length);unique.push(point);neighbors.push(new Set());}
+    indices.push(lookup.get(key));
+  }
+  for(let i=0;i<indices.length;i+=3)for(let a=0;a<3;a++)for(let b=0;b<3;b++)if(a!==b)neighbors[indices[i+a]].add(indices[i+b]);
+  let points=unique;
+  for(let pass=0;pass<3;pass++)points=points.map((point,i)=>point.map((v,c)=>{
+    const adjacent=[...neighbors[i]];return adjacent.length?v*.62+adjacent.reduce((sum,n)=>sum+points[n][c],0)/adjacent.length*.38:v;
+  }));
+  const welded=new THREE.BufferGeometry();
+  welded.setAttribute('position',new THREE.Float32BufferAttribute(points.flat(),3));welded.setIndex(indices);welded.computeVertexNormals();
+  const normals=[];
+  for(let i=0;i<indices.length;i++){
+    attribute.setXYZ(i,...points[indices[i]]);
+    const n=welded.attributes.normal;normals.push(n.getX(indices[i]),n.getY(indices[i]),n.getZ(indices[i]));
+  }
+  geometry.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));welded.dispose();
+}
+
 // A visual hull from three original projections. Solid adjoining voxels have no
 // internal faces or gaps; actual back/profile colors replace extruded front edges.
 export function sculptCharacter(front, back, side) {
@@ -104,6 +129,7 @@ export function sculptCharacter(front, back, side) {
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(data.positions, 3));
     geometry.setAttribute('normal', new THREE.Float32BufferAttribute(data.normals, 3));
     geometry.setAttribute('color', new THREE.Float32BufferAttribute(data.colors, 3));
+    softenSurface(geometry);
     geometry.computeBoundingSphere();
     return { name, geometry, pivot: pivots[name] };
   }), voxelCount: cells.size };

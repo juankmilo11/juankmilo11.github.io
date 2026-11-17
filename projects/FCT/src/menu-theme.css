@@ -2,7 +2,7 @@
 @font-face { font-family: 'Cinzel'; src: url('/fonts/Cinzel.ttf') format('truetype'); font-style: normal; font-weight: 400 900; font-display: swap; }
 :root { --font-ui: 'Crimson Pro', Georgia, serif; --font-title: 'Cinzel', Georgia, serif; }
 body,button { font-family: var(--font-ui); }
-.app-shell:not(.is-playing) { background: linear-gradient(90deg,#ece1c5cc,#f0e5cd12 65%),url('/menu-keyart.webp') center / cover no-repeat; }
+.app-shell:not(.is-playing) { background: linear-gradient(90deg,#ece1c5cc,#f0e5cd12 65%),url('/menu-keyart-v2.webp') center / cover no-repeat; }
 .app-shell:not(.is-playing) .topbar { background: #141d18ed; border-color: #aa986633; }
 .app-shell:not(.is-playing) .brand { color: #e7ddbf; }
 .app-shell:not(.is-playing) .brand-copy small { color: #b0ad97; }

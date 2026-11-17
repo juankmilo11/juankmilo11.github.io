@@ -10,14 +10,25 @@ move/capture audio for both sides (including en passant).
 ## Character appearances
 
 The menu's **Seleccionar piezas** dialog replaces the old player/rival card.
-The resource catalog has 16 characters and 70 original variants. The player
-chooses from all 70 variants within role restrictions: Squire for pawns, Knight for
-rooks, Dragoon for knights, and White Mage / Black Mage / Summoner for bishops.
-The queen can be Agrias or Teta; the king can be Ramza or Delita, each with their
-original palettes. The opponent uses the other royal character. Choices are cosmetic and kept only in page memory: **Guardar**
+The resource catalog has 38 characters with five colors each (190 variants).
+The player can choose 180 appearances in the following roles:
+
+- Pawns: Squire, Monk and Thief, female/male.
+- Rooks: Knight, Samurai and Ninja, female/male.
+- Knights: Dragoon, Archer and Geomancer, female/male.
+- Bishops: White Mage, Black Mage and Summoner, female/male.
+- Queens: Agrias, Teta, Dancer, Mime (Female), Ovelia and Balmafula.
+- Kings: Ramza, Delita, Cloud, Orlandu, Mustadio and Beowulf.
+
+Dycedarg and Gaff Gafgarion are AI-only kings, with five colors each. They never
+appear in the player selector or pass player-loadout validation. AI king identity
+is stable for a given loadout and changes between these two exclusive characters;
+its palette maximizes contrast against the player. Other roles retain contrasting
+palettes and the queen uses a different character.
+Choices are cosmetic and kept only in page memory: **Guardar**
 applies the draft, **Salir**/Escape discards it, and reloading resets defaults.
 
-The rival chooses the most contrasting available palette for each role.
+The rival chooses a contrasting available palette for each role.
 Only the player's character appears in the preview. Color choices use accessible
 swatches without visible labels. Piece identities remain available through the
 focus inspector and square descriptions, without badges below the figures.
@@ -28,7 +39,7 @@ The centered 2D sprite, drag follower and drop preview all use the selected PNG.
 Promotion uses the selected appearance of the promoted role.
 
 `src/character-volume.js` reconstructs a solid voxel hull from the original
-front, back and profile silhouettes. Shared voxel faces are removed; neighboring
+front, back and profile silhouettes. The welded surface is relaxed in three passes with smooth shared normals to soften the pixel steps, while retaining projection colors. Shared voxel faces are removed; neighboring
 voxels touch without the old lateral gaps. Each view supplies its own colors,
 including the actual back. This is a stylized voxel reconstruction, not an
 imported rigged character mesh. Head, torso, arms and legs are articulated for
@@ -63,9 +74,10 @@ Cinzel/Crimson Pro fonts. See [asset provenance and image prompt](../../docs/art
 
 The original sheets and their credits remain in `sprites/`. With Python 3 and
 Pillow, run `python scripts/build-characters.py` from `projects/FCT/`.
-It detects palette paste offsets and writes 70 transparent three-view atlases,
-70 menu thumbnails and `sprites/characters/catalog.json`. Names and color
-swatches are maintained in `scripts/character-palettes.json`. Commit the generated
+It detects palette paste offsets and writes 190 transparent three-view atlases,
+190 menu thumbnails and `sprites/characters/catalog.json`. Existing named palettes remain in `scripts/character-palettes.json`; new native
+palettes derive their swatches from clothing pixels. Single-palette characters
+receive four deterministic cloth recolors, preserving skin, hair and highlights. Commit the generated
 files and rebuild Vite. The earlier `sprites/cropped/` and `crop-sprites.ps1`
 are legacy extracts; the new renderer reads `sprites/characters/`.
 
@@ -77,7 +89,9 @@ external texture requests. Capture galleries remain clear of decorations.
 
 The board, grassy capture banks and field share a texture, UV scale and green
 palette. Flat turf patches have irregular edges, joined by triangulated seams
-and broad, asymmetric shoulders. The island has one continuous cliff wall that
+and a single closed, smoothly shaded collar. Rounded capture banks and the field
+share one height function, without overlaid rectangular bank planes. Grass uses
+five-blade tufts; smaller irregular rocks sit inside the island perimeter. The island has one continuous cliff wall that
 meets its irregular perimeter, replacing stacked cylinders. The four summit squares
 and flat piece positions are preserved. Seams also accept clicks and drops.
 `src/field-life.js` scatters tiny stones, mud and moss on selected dark squares.
@@ -91,15 +105,17 @@ These decorations do not participate in raycasting or chess rules.
 Pawns are slightly smaller: 0.84 world units versus 0.92 for ordinary pieces,
 with the same reduction in 2D. Queens and kings keep their larger sizes.
 `src/piece-values.js` defines the material points used by both the HUD and AI:
-pawn 1, rook 4, knight/bishop 3, queen 9 (the king has no material score).
+pawn 1, rook 5, knight/bishop 3, queen 9 (the king has no material score).
 The AI retains its small positional/minor-piece adjustments.
 
-## Music and effect levels
+## Music and effects
 
-`src/audio-system.js` owns the two independent panels: music and sound effects.
-The music player has a level slider, play/pause, previous/next and current title;
-the effects panel has its own level and mute. Piece selection/dragging uses the
-normal movement cue at 34% of the chosen FX level; actual moves keep that level.
+`src/audio-system.js` owns two on/off buttons, with `aria-pressed` state and
+accessible action labels. Music uses a fixed 15% level and effects 35%; there
+are no volume sliders or panels. Selecting/dragging uses the move cue at 34%
+of the FX level. The buttons live in the game toolbar during play and return to
+the menu dock when leaving combat. The turn/check/thinking notice now floats
+near the board in the previous sound-dock position. The camera reset uses an eye SVG.
 
 Eight user-provided MP3 files are preserved in `public/assets/music/` and copied
 verbatim to `/FCT/assets/music/`. `src/music-tracks.json` lists their display names.
@@ -119,7 +135,7 @@ tap before audible playback; see the [MDN autoplay guide](https://developer.mozi
 During move review a small pause notice appears inside the review controls.
 It stays visible even at the latest position until the player presses **Volver**.
 The HUD reserves its height above the scene so the notice cannot cover the
-opponent's piece strip. A ResizeObserver positions audio controls below it.
+opponent's piece strip. A ResizeObserver positions the floating turn notice below the HUD.
 
 Optional headless browser QA (requires Playwright and Microsoft Edge):
 
@@ -134,11 +150,10 @@ module search path, set `PLAYWRIGHT_MODULE_PATH` to its package directory.
 `FCT_QA_OUTPUT` sets the screenshot directory (default: OS temp directory).
 The script tests actual moves, review/resume and HUD overlap at desktop, tablet,
 320/390 px mobile, and landscape sizes, with touch emulation for mobile.
-It also builds all 70 allowed player previews, checks role restrictions,
+It also builds all 180 allowed player previews, checks role restrictions,
 save/cancel and reload reset, PNG drag previews, keyboard focus, the four exclusive
-selector sounds and camera orbit. It checks all eight playlist entries, previous/
-next history, independent effect mute, music level, intentional pause and mobile
-panel bounds. Real AI games cover the normal
+selector sounds and camera orbit. It checks all eight playlist entries, non-repeating playlist, independent effect mute, intentional pause and mobile
+button bounds. Real AI games cover the normal
 flow. Scripted opponent replies exercise the app's castling, en passant,
 promotion, captures, mate, review/replay and new-game flows in both mobile
 orientations. These browser tests emulate mobile; they do not replace testing

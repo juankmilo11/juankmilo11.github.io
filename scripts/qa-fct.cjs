@@ -39,31 +39,25 @@ async function inspectViewer(browser) {
   assert.ok(await page.evaluate(()=>window.qaAudio.some(src=>src.includes('/assets/music/'))),'music starts attempting on page load');
   const card=await page.locator('.match-card').boundingBox();
   assert.ok(Math.abs(card.x+card.width/2-720)<3,'menu card centered');
+  assert.equal(await page.locator('input[type="range"]').count(),0);
+  assert.equal(await page.locator('#audio-reopen').getAttribute('aria-pressed'),'true');
   await page.locator('#audio-reopen').click();
-  assert.equal(await page.locator('#music-title').count(),0);
-  assert.ok(Math.abs(await page.locator('#background-music').evaluate(el=>el.volume)-.15)<.001);
-  const seen=[await page.locator('#background-music').getAttribute('data-track')];
-  for(let i=0;i<7;i++){await page.locator('#music-next').click();seen.push(await page.locator('#background-music').getAttribute('data-track'));}
-  assert.equal(new Set(seen).size,8,'all themes play before a repeat');
-  await page.locator('#music-next').click();const ninth=await page.locator('#background-music').getAttribute('data-track');
-  assert.notEqual(ninth,seen.at(-1));
-  await page.locator('#music-previous').click();assert.equal(await page.locator('#background-music').getAttribute('data-track'),seen.at(-1));
-  await page.locator('#music-next').click();assert.equal(await page.locator('#background-music').getAttribute('data-track'),ninth);
-  await page.locator('#music-volume').evaluate(el=>{el.value='17';el.dispatchEvent(new Event('input',{bubbles:true}));});
-  assert.ok(Math.abs(await page.locator('#background-music').evaluate(el=>el.volume)-.17)<.001);
-  if(await page.locator('#background-music').evaluate(el=>el.paused))await page.locator('#audio-toggle').click();
+  const seen=[];
+  for(let i=0;i<8;i++){
+    seen.push(await page.locator('#background-music').getAttribute('data-track'));
+    await page.locator('#background-music').dispatchEvent('ended');
+  }
+  assert.equal(new Set(seen).size,8);
+  await page.locator('#audio-reopen').click();
   await page.waitForFunction(()=>!document.querySelector('#background-music').paused);
-  await page.locator('#audio-toggle').click();
+  await page.locator('#audio-reopen').click();
   await page.mouse.move(20,20);
-  assert.equal(await page.locator('#background-music').evaluate(el=>el.paused),true,'intentional pause survives mouse movement');
-  await page.locator('#audio-hide').click();
-  await page.locator('#effects-open').click();await page.locator('#effects-toggle').click();await page.locator('#effects-hide').click();
+  assert.equal(await page.locator('#background-music').evaluate(el=>el.paused),true);
+  await page.locator('#effects-open').click();
   const soundCount=await page.evaluate(()=>window.qaAudio.filter(src=>/menu[1-4]\.wav/.test(src)).length);
   await page.locator('#select-pieces').click();await page.locator('#appearance-close').click();
-  assert.equal(await page.evaluate(()=>window.qaAudio.filter(src=>/menu[1-4]\.wav/.test(src)).length),soundCount,'FX mute is independent');
-  await page.locator('#effects-open').click();await page.locator('#effects-toggle').click();
-  await page.locator('#effects-volume').evaluate(el=>{el.value='22';el.dispatchEvent(new Event('input',{bubbles:true}));});
-  await page.locator('#effects-hide').click();
+  assert.equal(await page.evaluate(()=>window.qaAudio.filter(src=>/menu[1-4]\.wav/.test(src)).length),soundCount);
+  await page.locator('#effects-open').click();
   await page.screenshot({path:path.join(output,'menu-main.png')});
   await page.locator('#select-pieces').click();
   await page.locator('[data-role="r"]').click();
@@ -104,7 +98,7 @@ async function specialMoves(browser, width, height) {
     { name:'capturas', black:['d7d5','d8d5'], white:['e2e4','e4d5'], pieces:30, squares:{d5:'Reina'} },
     { name:'enroque', black:['e7e5','b8c6','f8c5','g8f6'], white:['e2e4','g1f3','f1c4','e1g1'], pieces:32, squares:{g1:'Rey',f1:'Torre'} },
     { name:'al-paso', black:['a7a6','d7d5','c7c6'], white:['e2e4','e4e5','e5d6'], pieces:31, squares:{d6:'Peón'}, empty:['d5'] },
-    { name:'promocion', black:['h7h5','h5h4','h4h3','h3g2','b8c6'], white:['a2a4','a4a5','a5a6','a6b7','b7a8'], pieces:29, squares:{a8:'Reina'}, promote:true, balance:12 },
+    { name:'promocion', black:['h7h5','h5h4','h4h3','h3g2','b8c6'], white:['a2a4','a4a5','a5a6','a6b7','b7a8'], pieces:29, squares:{a8:'Reina'}, promote:true, balance:13 },
     { name:'jaque-mate', black:['e7e5','d8h4'], white:['f2f3','g2g4'], pieces:32, mate:true },
   ];
   for (const fixture of cases) {
@@ -129,7 +123,7 @@ async function specialMoves(browser, width, height) {
     }
     assert.equal(await page.locator('#board-2d .piece-token').count(),fixture.pieces);
     if(fixture.balance){
-      assert.equal(await page.locator('#remaining-white .remaining-count').textContent(),`+${fixture.balance}`,'captured rook is worth four material points');
+      assert.equal(await page.locator('#remaining-white .remaining-count').textContent(),`+${fixture.balance}`,'captured rook is worth five material points');
       assert.equal(await page.locator('#remaining-black .remaining-count').textContent(),`-${fixture.balance}`);
     }
     for(const [square,role] of Object.entries(fixture.squares||{})) assert.ok((await page.locator(`[data-square="${square}"]`).getAttribute('aria-label')).includes(role));
@@ -204,7 +198,7 @@ async function specialMoves(browser, width, height) {
       assert.ok(footer.y>=fixedBox.y&&footer.y+footer.height<=fixedBox.y+fixedBox.height,'footer stays inside fixed dialog');
       if (width === 1440) {
         let variants = 0;
-        for(const [role,count] of [['p',2],['r',2],['n',2],['b',6],['q',2],['k',2]]) {
+        for(const [role,count] of [['p',6],['r',6],['n',6],['b',6],['q',6],['k',6]]) {
           await page.locator(`[data-role="${role}"]`).click();
           const characters = await page.locator('[data-character]').evaluateAll(items => items.map(item => item.dataset.character));
           assert.equal(characters.length,count,'role must only expose allowed character families');
@@ -222,8 +216,8 @@ async function specialMoves(browser, width, height) {
             }
           }
         }
-        assert.equal(variants,70);
-        console.log('OK: all 70 player palettes, including Delita/Teta, restricted roles and single preview');
+        assert.equal(variants,180);
+        console.log('OK: all 180 player palettes, including Delita/Teta, restricted roles and single preview');
       }
       await page.locator('[data-role="r"]').click();
       await page.locator('[data-character="knight-male"]').click();
@@ -252,6 +246,9 @@ async function specialMoves(browser, width, height) {
       await page.locator('#new-game').click();
       await page.locator('#board-3d canvas').waitFor();
       await page.waitForFunction(() => !document.querySelector('#battle-curtain').classList.contains('is-revealing') && document.querySelector('.app-shell').classList.contains('is-playing'));
+      assert.equal(await page.locator('.game-status-badge').evaluate(el=>getComputedStyle(el).position),'fixed');
+      const notice=await page.locator('.game-status-badge').boundingBox(),hud=await page.locator('.game-toolbar').boundingBox();
+      assert.ok(notice.y>=hud.y+hud.height&&notice.x+notice.width<=width,'turn notice stays visible beside the board');
       await page.locator('[data-view="2d"]').click();
       assert.ok((await page.locator('[data-square="a1"]').getAttribute('aria-label')).includes('Caballero'));
       assert.ok((await page.locator('[data-square="e1"]').getAttribute('aria-label')).includes('Delita'));
@@ -296,10 +293,10 @@ async function specialMoves(browser, width, height) {
       assert.deepEqual(errors, []);
       await page.screenshot({ path: path.join(output, `fct-${width}x${height}.png`) });
       await page.locator('#audio-reopen').click();
-      const audioBox=await page.locator('#audio-control').boundingBox();
+      const audioBox=await page.locator('.audio-dock').boundingBox();
       assert.ok(audioBox.x>=0&&audioBox.x+audioBox.width<=width&&audioBox.y+audioBox.height<=height,'music panel fits viewport');
       await page.screenshot({path:path.join(output,`audio-${width}x${height}.png`)});
-      await page.locator('#audio-hide').click();
+      await page.locator('#audio-reopen').click();
       if(width===1440){
         const canvas=await page.locator('#board-3d canvas').boundingBox();
         await page.mouse.move(canvas.x+80,canvas.y+canvas.height*.24);await page.mouse.down();

@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import { Chess } from 'chess.js';
 import { tileElevation } from '../src/terrain.js';
 import { moveSound } from '../src/audio-cues.js';
+import {pieceValues} from '../src/piece-values.js';
+
+test('rook scoring is five points for both the HUD and AI',()=>assert.equal(pieceValues.r,5));
 
 test('all 64 squares retain low borders and four summit squares on an irregular dome', () => {
   const summit = [];

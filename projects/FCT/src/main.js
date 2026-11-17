@@ -505,6 +505,7 @@ async function startCombat() {
   describePiece(null);
   renderAll();
   appShell.classList.add('is-playing');
+  document.querySelector('.game-toolbar').append(document.querySelector('.audio-dock'));
   await setView('3d', { playSound: false });
   threeBoard?.playIntro();
   window.requestAnimationFrame(() => {
@@ -524,6 +525,7 @@ exitConfirmation.addEventListener('close', () => {
   thinking = false;
   threeBoard?.cancelIntro();
   appShell.classList.remove('is-playing');
+  appShell.append(document.querySelector('.audio-dock'));
 });
 let boardPointerDrag = null;
 let swallowBoardClick = false;

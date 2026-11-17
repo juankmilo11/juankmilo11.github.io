@@ -201,3 +201,6 @@
   .review-controls output { min-width: 0; font-size: 8px; }
   .review-pause-note { font-size: 9px; }
 }
+
+/* Status occupies the former sound-control position, close to the board. */
+.app-shell.is-playing .game-toolbar .game-status-badge,.app-shell.is-playing .game-toolbar .game-status-badge.is-check,.app-shell.is-playing .game-toolbar .game-status-badge.is-checkmate{position:fixed;inset:calc(var(--hud-height,54px) + 48px) 12px auto auto;z-index:34;font-size:13px;padding:10px 14px;max-width:calc(100vw - 24px);background:#152019f2;box-shadow:0 4px 18px #0005}

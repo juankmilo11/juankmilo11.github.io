@@ -11,7 +11,7 @@ test('mountain seams have finite vertices, upward faces and remain below piece s
     assert.ok(Number.isFinite(positions.getX(i)) && Number.isFinite(positions.getY(i)) && Number.isFinite(positions.getZ(i)));
     assert.ok(normals.getY(i) > 0, `inverted or degenerate face at ${i}`);
     assert.ok(positions.getY(i) < tileElevation(3, 3));
-    assert.ok(Math.hypot(positions.getX(i), positions.getZ(i)) < 6.52);
+    assert.ok(Math.hypot(positions.getX(i), positions.getZ(i)) < 7.81);
   }
   // Every inter-square vertex uses a single height, preventing cracks.
   const seams = new Map();

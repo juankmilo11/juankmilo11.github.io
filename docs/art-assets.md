@@ -39,3 +39,16 @@ Los cuatro WAV `menu1`–`menu4` aportados por el usuario se conservan en
 `projects/FCT/public/audio/`, su fuente de publicación. Uso exclusivo: selector
 de piezas. No añadir recursos nuevos directamente a `FCT/` sin trasladarlos
 también a las fuentes antes de compilar.
+
+## Corrección anatómica del fondo · noviembre de 2026
+
+Archivo usado por el juego: `projects/FCT/public/menu-keyart-v2.webp`, copiado
+por Vite a `FCT/menu-keyart-v2.webp`. Se editó la ilustración original con la
+herramienta integrada **image_gen** y se convirtió a WebP. El archivo anterior
+se conserva como referencia. Las piezas del juego se generan mediante el script
+de extracción/recoloración de los sprites aportados por el usuario, y su malla
+3D se reconstruye y suaviza en el código; no son imágenes generadas por IA.
+
+Prompt de edición del fondo:
+
+> Edit this existing wide parchment watercolor fantasy tactics game menu illustration. Preserve its composition, warm antique parchment, open empty left half for UI, stone ruined arch, distant castle, five adventurers on the right and reflected shallow water. Repair anatomical mistakes in the right-hand group: the young brown-haired green-cloaked adventurer in front of the blue-robed pointed-hat mage must have exactly two natural arms, hands with coherent fingers, no extra elbow/forearm. The mage should hold the long wooden staff naturally in one hand, with the hand and staff correctly connected; remove any floating arms or disconnected limbs between the ranger and mage. The white-robed healer's hands and staff should also be coherent. Refine faces/hands and clothing edges while keeping the same characters, aesthetic, light and composition. No text, no logos. Clean detailed watercolor illustration, landscape 16:9.

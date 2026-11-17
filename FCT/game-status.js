@@ -11,7 +11,7 @@ const reviewReturnButton = document.querySelector("#review-return");
 const reviewPauseNote = document.querySelector("#review-pause-note");
 const appShell = document.querySelector(".app-shell");
 const gameToolbar = document.querySelector(".game-toolbar");
-// Audio controls follow the actual HUD height, including wrapped mobile text.
+// The floating turn notice follows the actual HUD height on mobile too.
 new ResizeObserver(([entry]) => {
   appShell.style.setProperty("--hud-height", `${entry.target.getBoundingClientRect().height}px`);
 }).observe(gameToolbar);

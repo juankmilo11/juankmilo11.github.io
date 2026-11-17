@@ -73,11 +73,13 @@ const output=process.env.FCT_QA_OUTPUT||path.join(require('node:os').tmpdir(),'f
             if(Math.abs(point.x)<.95&&Math.abs(point.y)<.95&&point.z<1)visibleBirds++;
           }
         }
-        return {active,captured,phases:pieceMeshes.map(mesh=>mesh.userData.idleAnimation.phase),visibleBirds};
+        const birdCount=(scene.getObjectByName('bird-flocks')?.children||[]).reduce((sum,flock)=>sum+(flock.userData.birdCount||0),0);
+        return {active,captured,phases:pieceMeshes.map(mesh=>mesh.userData.idleAnimation.phase),visibleBirds,birdCount};
       });
       assert.equal(result.active.length,30);assert.equal(result.captured.length,2);
       assert.equal(new Set(result.phases).size,30,'each piece has an independent phase');
-      if(!reduced)assert.ok(result.visibleBirds>=8,'many birds must actually enter the default camera view');
+      assert.equal(result.birdCount,reduced?0:2,'the current landscape has one two-bird flock');
+      assert.ok(result.visibleBirds<=result.birdCount,'visible birds stay within the scene budget');
       for(const stat of result.active){
         assert.equal(stat.drift,0,'floating cannot move the piece out of its square');
         if(reduced)assert.equal(stat.max,0);else assert.ok(stat.min>=.0079&&stat.max<=.0481&&stat.max-stat.min>.015);

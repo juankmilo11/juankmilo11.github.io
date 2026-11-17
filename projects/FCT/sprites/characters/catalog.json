@@ -51,7 +51,8 @@
         277,
         308
       ]
-    ]
+    ],
+    "aiOnly": false
   },
   {
     "id": "squire-male",
@@ -105,7 +106,8 @@
         277,
         315
       ]
-    ]
+    ],
+    "aiOnly": false
   },
   {
     "id": "knight-female",
@@ -159,7 +161,8 @@
         271,
         310
       ]
-    ]
+    ],
+    "aiOnly": false
   },
   {
     "id": "knight-male",
@@ -213,7 +216,8 @@
         270,
         309
       ]
-    ]
+    ],
+    "aiOnly": false
   },
   {
     "id": "dragoon-female",
@@ -267,7 +271,8 @@
         278,
         303
       ]
-    ]
+    ],
+    "aiOnly": false
   },
   {
     "id": "dragoon-male",
@@ -321,7 +326,8 @@
         287,
         310
       ]
-    ]
+    ],
+    "aiOnly": false
   },
   {
     "id": "white-mage-female",
@@ -375,7 +381,8 @@
         280,
         309
       ]
-    ]
+    ],
+    "aiOnly": false
   },
   {
     "id": "white-mage-male",
@@ -429,7 +436,8 @@
         275,
         311
       ]
-    ]
+    ],
+    "aiOnly": false
   },
   {
     "id": "black-mage-female",
@@ -483,7 +491,8 @@
         272,
         304
       ]
-    ]
+    ],
+    "aiOnly": false
   },
   {
     "id": "black-mage-male",
@@ -537,7 +546,8 @@
         276,
         307
       ]
-    ]
+    ],
+    "aiOnly": false
   },
   {
     "id": "summoner-female",
@@ -591,7 +601,8 @@
         272,
         309
       ]
-    ]
+    ],
+    "aiOnly": false
   },
   {
     "id": "summoner-male",
@@ -645,7 +656,8 @@
         289,
         313
       ]
-    ]
+    ],
+    "aiOnly": false
   },
   {
     "id": "agrias",
@@ -655,6 +667,26 @@
         "id": 0,
         "label": "Azul real",
         "swatch": "#4c6b96"
+      },
+      {
+        "id": 1,
+        "label": "Carmesí",
+        "swatch": "#ba4654"
+      },
+      {
+        "id": 2,
+        "label": "Jade",
+        "swatch": "#438c73"
+      },
+      {
+        "id": 3,
+        "label": "Amatista",
+        "swatch": "#9362b1"
+      },
+      {
+        "id": 4,
+        "label": "Oro",
+        "swatch": "#b39543"
       }
     ],
     "source": "PlayStation - Final Fantasy Tactics - Playable Characters - Agrias Oaks.png",
@@ -663,7 +695,8 @@
         0,
         0
       ]
-    ]
+    ],
+    "aiOnly": false
   },
   {
     "id": "ramza",
@@ -683,6 +716,16 @@
         "id": 2,
         "label": "Turquesa",
         "swatch": "#398d94"
+      },
+      {
+        "id": 3,
+        "label": "Amatista",
+        "swatch": "#9362b1"
+      },
+      {
+        "id": 4,
+        "label": "Oro",
+        "swatch": "#b39543"
       }
     ],
     "source": "PlayStation - Final Fantasy Tactics - Playable Characters - Ramza Beoulve.png",
@@ -699,7 +742,8 @@
         565,
         3
       ]
-    ]
+    ],
+    "aiOnly": false
   },
   {
     "id": "delita",
@@ -719,6 +763,16 @@
         "id": 2,
         "label": "Carmesí",
         "swatch": "#a54a2e"
+      },
+      {
+        "id": 3,
+        "label": "Amatista",
+        "swatch": "#9362b1"
+      },
+      {
+        "id": 4,
+        "label": "Oro",
+        "swatch": "#b39543"
       }
     ],
     "source": "PlayStation - Final Fantasy Tactics - Non-Playable Characters - Delita Hyral.png",
@@ -735,7 +789,8 @@
         1,
         313
       ]
-    ]
+    ],
+    "aiOnly": false
   },
   {
     "id": "teta",
@@ -755,6 +810,16 @@
         "id": 2,
         "label": "Verde",
         "swatch": "#5e7d39"
+      },
+      {
+        "id": 3,
+        "label": "Amatista",
+        "swatch": "#9362b1"
+      },
+      {
+        "id": 4,
+        "label": "Oro",
+        "swatch": "#b39543"
       }
     ],
     "source": "PlayStation - Final Fantasy Tactics - Non-Playable Characters - Teta Hyral.png",
@@ -771,6 +836,1089 @@
         0,
         220
       ]
-    ]
+    ],
+    "aiOnly": false
+  },
+  {
+    "id": "monk-female",
+    "name": "Monk · Female",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Turquesa",
+        "swatch": "#388890"
+      },
+      {
+        "id": 1,
+        "label": "Carmesí",
+        "swatch": "#ba4654"
+      },
+      {
+        "id": 2,
+        "label": "Rojo",
+        "swatch": "#682820"
+      },
+      {
+        "id": 3,
+        "label": "Lima",
+        "swatch": "#587030"
+      },
+      {
+        "id": 4,
+        "label": "Violeta",
+        "swatch": "#302840"
+      }
+    ],
+    "source": "Monk (Female).png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        282,
+        3
+      ],
+      [
+        549,
+        4
+      ],
+      [
+        0,
+        303
+      ],
+      [
+        278,
+        308
+      ]
+    ],
+    "aiOnly": false
+  },
+  {
+    "id": "monk-male",
+    "name": "Monk · Male",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Azul",
+        "swatch": "#497bbd"
+      },
+      {
+        "id": 1,
+        "label": "Cian",
+        "swatch": "#6088a0"
+      },
+      {
+        "id": 2,
+        "label": "Jade",
+        "swatch": "#438c73"
+      },
+      {
+        "id": 3,
+        "label": "Oro",
+        "swatch": "#809038"
+      },
+      {
+        "id": 4,
+        "label": "Violeta",
+        "swatch": "#8870b0"
+      }
+    ],
+    "source": "Monk (Male).png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        279,
+        0
+      ],
+      [
+        556,
+        2
+      ],
+      [
+        1,
+        307
+      ],
+      [
+        277,
+        312
+      ]
+    ],
+    "aiOnly": false
+  },
+  {
+    "id": "thief-female",
+    "name": "Thief · Female",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Lima",
+        "swatch": "#384820"
+      },
+      {
+        "id": 1,
+        "label": "Cian",
+        "swatch": "#5890b0"
+      },
+      {
+        "id": 2,
+        "label": "Jade",
+        "swatch": "#438c73"
+      },
+      {
+        "id": 3,
+        "label": "Oro",
+        "swatch": "#708030"
+      },
+      {
+        "id": 4,
+        "label": "Azul",
+        "swatch": "#8070b8"
+      }
+    ],
+    "source": "Thief (Female).png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        280,
+        1
+      ],
+      [
+        566,
+        1
+      ],
+      [
+        1,
+        302
+      ],
+      [
+        274,
+        305
+      ]
+    ],
+    "aiOnly": false
+  },
+  {
+    "id": "thief-male",
+    "name": "Thief · Male",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Lima",
+        "swatch": "#406028"
+      },
+      {
+        "id": 1,
+        "label": "Cian",
+        "swatch": "#385878"
+      },
+      {
+        "id": 2,
+        "label": "Rojo",
+        "swatch": "#782820"
+      },
+      {
+        "id": 3,
+        "label": "Lima",
+        "swatch": "#485820"
+      },
+      {
+        "id": 4,
+        "label": "Azul",
+        "swatch": "#8878c8"
+      }
+    ],
+    "source": "Thief (Male).png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        278,
+        2
+      ],
+      [
+        557,
+        4
+      ],
+      [
+        0,
+        306
+      ],
+      [
+        274,
+        310
+      ]
+    ],
+    "aiOnly": false
+  },
+  {
+    "id": "archer-female",
+    "name": "Archer · Female",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Cian",
+        "swatch": "#304060"
+      },
+      {
+        "id": 1,
+        "label": "Cian",
+        "swatch": "#284858"
+      },
+      {
+        "id": 2,
+        "label": "Lima",
+        "swatch": "#405820"
+      },
+      {
+        "id": 3,
+        "label": "Verde",
+        "swatch": "#304828"
+      },
+      {
+        "id": 4,
+        "label": "Oro",
+        "swatch": "#b39543"
+      }
+    ],
+    "source": "Archer (Female).png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        282,
+        1
+      ],
+      [
+        558,
+        4
+      ],
+      [
+        0,
+        295
+      ],
+      [
+        274,
+        297
+      ]
+    ],
+    "aiOnly": false
+  },
+  {
+    "id": "archer-male",
+    "name": "Archer · Male",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Azul",
+        "swatch": "#5870b8"
+      },
+      {
+        "id": 1,
+        "label": "Turquesa",
+        "swatch": "#4898a0"
+      },
+      {
+        "id": 2,
+        "label": "Verde",
+        "swatch": "#304828"
+      },
+      {
+        "id": 3,
+        "label": "Oro",
+        "swatch": "#889840"
+      },
+      {
+        "id": 4,
+        "label": "Rojo",
+        "swatch": "#c03050"
+      }
+    ],
+    "source": "Archer (Male).png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        282,
+        1
+      ],
+      [
+        567,
+        2
+      ],
+      [
+        2,
+        302
+      ],
+      [
+        279,
+        304
+      ]
+    ],
+    "aiOnly": false
+  },
+  {
+    "id": "geomancer-female",
+    "name": "Geomancer · Female",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Lima",
+        "swatch": "#68a038"
+      },
+      {
+        "id": 1,
+        "label": "Turquesa",
+        "swatch": "#407080"
+      },
+      {
+        "id": 2,
+        "label": "Jade",
+        "swatch": "#438c73"
+      },
+      {
+        "id": 3,
+        "label": "Lima",
+        "swatch": "#688030"
+      },
+      {
+        "id": 4,
+        "label": "Rojo",
+        "swatch": "#b83020"
+      }
+    ],
+    "source": "Geomancer (Female).png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        276,
+        4
+      ],
+      [
+        552,
+        4
+      ],
+      [
+        0,
+        305
+      ],
+      [
+        274,
+        305
+      ]
+    ],
+    "aiOnly": false
+  },
+  {
+    "id": "geomancer-male",
+    "name": "Geomancer · Male",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Lima",
+        "swatch": "#507838"
+      },
+      {
+        "id": 1,
+        "label": "Oro",
+        "swatch": "#808840"
+      },
+      {
+        "id": 2,
+        "label": "Rojo",
+        "swatch": "#d05040"
+      },
+      {
+        "id": 3,
+        "label": "Oro",
+        "swatch": "#c8d090"
+      },
+      {
+        "id": 4,
+        "label": "Rojo",
+        "swatch": "#d04050"
+      }
+    ],
+    "source": "Geomancer (Male).png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        285,
+        3
+      ],
+      [
+        564,
+        4
+      ],
+      [
+        0,
+        314
+      ],
+      [
+        287,
+        318
+      ]
+    ],
+    "aiOnly": false
+  },
+  {
+    "id": "samurai-female",
+    "name": "Samurai · Female",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Cian",
+        "swatch": "#486078"
+      },
+      {
+        "id": 1,
+        "label": "Carmesí",
+        "swatch": "#ba4654"
+      },
+      {
+        "id": 2,
+        "label": "Jade",
+        "swatch": "#438c73"
+      },
+      {
+        "id": 3,
+        "label": "Oro",
+        "swatch": "#607030"
+      },
+      {
+        "id": 4,
+        "label": "Rojo",
+        "swatch": "#c85850"
+      }
+    ],
+    "source": "Samurai (Female).png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        278,
+        3
+      ],
+      [
+        559,
+        4
+      ],
+      [
+        0,
+        303
+      ],
+      [
+        277,
+        308
+      ]
+    ],
+    "aiOnly": false
+  },
+  {
+    "id": "samurai-male",
+    "name": "Samurai · Male",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Lima",
+        "swatch": "#305820"
+      },
+      {
+        "id": 1,
+        "label": "Cian",
+        "swatch": "#304050"
+      },
+      {
+        "id": 2,
+        "label": "Jade",
+        "swatch": "#438c73"
+      },
+      {
+        "id": 3,
+        "label": "Lima",
+        "swatch": "#506830"
+      },
+      {
+        "id": 4,
+        "label": "Rojo",
+        "swatch": "#803848"
+      }
+    ],
+    "source": "Samurai (Male).png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        281,
+        3
+      ],
+      [
+        566,
+        4
+      ],
+      [
+        0,
+        300
+      ],
+      [
+        278,
+        304
+      ]
+    ],
+    "aiOnly": false
+  },
+  {
+    "id": "ninja-female",
+    "name": "Ninja · Female",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Rojo",
+        "swatch": "#b03838"
+      },
+      {
+        "id": 1,
+        "label": "Turquesa",
+        "swatch": "#408080"
+      },
+      {
+        "id": 2,
+        "label": "Jade",
+        "swatch": "#438c73"
+      },
+      {
+        "id": 3,
+        "label": "Violeta",
+        "swatch": "#785898"
+      },
+      {
+        "id": 4,
+        "label": "Oro",
+        "swatch": "#b39543"
+      }
+    ],
+    "source": "Ninja (Female).png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        276,
+        1
+      ],
+      [
+        554,
+        1
+      ],
+      [
+        0,
+        306
+      ],
+      [
+        274,
+        308
+      ]
+    ],
+    "aiOnly": false
+  },
+  {
+    "id": "ninja-male",
+    "name": "Ninja · Male",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Cian",
+        "swatch": "#385078"
+      },
+      {
+        "id": 1,
+        "label": "Lima",
+        "swatch": "#485828"
+      },
+      {
+        "id": 2,
+        "label": "Jade",
+        "swatch": "#438c73"
+      },
+      {
+        "id": 3,
+        "label": "Amatista",
+        "swatch": "#9362b1"
+      },
+      {
+        "id": 4,
+        "label": "Rojo",
+        "swatch": "#602830"
+      }
+    ],
+    "source": "Ninja (Male).png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        274,
+        1
+      ],
+      [
+        557,
+        2
+      ],
+      [
+        0,
+        304
+      ],
+      [
+        273,
+        306
+      ]
+    ],
+    "aiOnly": false
+  },
+  {
+    "id": "cloud",
+    "name": "Cloud",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Cian",
+        "swatch": "#203038"
+      },
+      {
+        "id": 1,
+        "label": "Carmesí",
+        "swatch": "#ba4654"
+      },
+      {
+        "id": 2,
+        "label": "Jade",
+        "swatch": "#438c73"
+      },
+      {
+        "id": 3,
+        "label": "Amatista",
+        "swatch": "#9362b1"
+      },
+      {
+        "id": 4,
+        "label": "Oro",
+        "swatch": "#b39543"
+      }
+    ],
+    "source": "Cloud.png",
+    "origins": [
+      [
+        0,
+        0
+      ]
+    ],
+    "aiOnly": false
+  },
+  {
+    "id": "orlandu",
+    "name": "Orlandu",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Azul",
+        "swatch": "#606098"
+      },
+      {
+        "id": 1,
+        "label": "Carmesí",
+        "swatch": "#ba4654"
+      },
+      {
+        "id": 2,
+        "label": "Jade",
+        "swatch": "#438c73"
+      },
+      {
+        "id": 3,
+        "label": "Amatista",
+        "swatch": "#9362b1"
+      },
+      {
+        "id": 4,
+        "label": "Oro",
+        "swatch": "#b39543"
+      }
+    ],
+    "source": "Orlandu.png",
+    "origins": [
+      [
+        0,
+        0
+      ]
+    ],
+    "aiOnly": false
+  },
+  {
+    "id": "mustadio",
+    "name": "Mustadio",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Cian",
+        "swatch": "#283850"
+      },
+      {
+        "id": 1,
+        "label": "Carmesí",
+        "swatch": "#ba4654"
+      },
+      {
+        "id": 2,
+        "label": "Jade",
+        "swatch": "#438c73"
+      },
+      {
+        "id": 3,
+        "label": "Amatista",
+        "swatch": "#9362b1"
+      },
+      {
+        "id": 4,
+        "label": "Oro",
+        "swatch": "#b39543"
+      }
+    ],
+    "source": "Mustadio.png",
+    "origins": [
+      [
+        0,
+        0
+      ]
+    ],
+    "aiOnly": false
+  },
+  {
+    "id": "beowulf",
+    "name": "Beowulf",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Lima",
+        "swatch": "#488020"
+      },
+      {
+        "id": 1,
+        "label": "Carmesí",
+        "swatch": "#ba4654"
+      },
+      {
+        "id": 2,
+        "label": "Jade",
+        "swatch": "#438c73"
+      },
+      {
+        "id": 3,
+        "label": "Amatista",
+        "swatch": "#9362b1"
+      },
+      {
+        "id": 4,
+        "label": "Oro",
+        "swatch": "#b39543"
+      }
+    ],
+    "source": "Beowulf.png",
+    "origins": [
+      [
+        0,
+        0
+      ]
+    ],
+    "aiOnly": false
+  },
+  {
+    "id": "dycedarg",
+    "name": "Dycedarg",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Rojo",
+        "swatch": "#982820"
+      },
+      {
+        "id": 1,
+        "label": "Carmesí",
+        "swatch": "#ba4654"
+      },
+      {
+        "id": 2,
+        "label": "Jade",
+        "swatch": "#438c73"
+      },
+      {
+        "id": 3,
+        "label": "Amatista",
+        "swatch": "#9362b1"
+      },
+      {
+        "id": 4,
+        "label": "Oro",
+        "swatch": "#b39543"
+      }
+    ],
+    "source": "Dycedarg.png",
+    "origins": [
+      [
+        0,
+        0
+      ]
+    ],
+    "aiOnly": true
+  },
+  {
+    "id": "gaff-gafgarion",
+    "name": "Gaff Gafgarion",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Azul",
+        "swatch": "#497bbd"
+      },
+      {
+        "id": 1,
+        "label": "Carmesí",
+        "swatch": "#ba4654"
+      },
+      {
+        "id": 2,
+        "label": "Jade",
+        "swatch": "#438c73"
+      },
+      {
+        "id": 3,
+        "label": "Amatista",
+        "swatch": "#9362b1"
+      },
+      {
+        "id": 4,
+        "label": "Oro",
+        "swatch": "#b39543"
+      }
+    ],
+    "source": "Gaff Gafgarion.png",
+    "origins": [
+      [
+        0,
+        0
+      ]
+    ],
+    "aiOnly": true
+  },
+  {
+    "id": "ovelia",
+    "name": "Ovelia",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Rojo",
+        "swatch": "#782820"
+      },
+      {
+        "id": 1,
+        "label": "Carmesí",
+        "swatch": "#ba4654"
+      },
+      {
+        "id": 2,
+        "label": "Jade",
+        "swatch": "#438c73"
+      },
+      {
+        "id": 3,
+        "label": "Amatista",
+        "swatch": "#9362b1"
+      },
+      {
+        "id": 4,
+        "label": "Oro",
+        "swatch": "#b39543"
+      }
+    ],
+    "source": "Ovelia.png",
+    "origins": [
+      [
+        0,
+        0
+      ]
+    ],
+    "aiOnly": false
+  },
+  {
+    "id": "balmafula",
+    "name": "Balmafula",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Rojo",
+        "swatch": "#402020"
+      },
+      {
+        "id": 1,
+        "label": "Carmesí",
+        "swatch": "#ba4654"
+      },
+      {
+        "id": 2,
+        "label": "Jade",
+        "swatch": "#438c73"
+      },
+      {
+        "id": 3,
+        "label": "Amatista",
+        "swatch": "#9362b1"
+      },
+      {
+        "id": 4,
+        "label": "Oro",
+        "swatch": "#b39543"
+      }
+    ],
+    "source": "Balmafula.png",
+    "origins": [
+      [
+        0,
+        0
+      ]
+    ],
+    "aiOnly": false
+  },
+  {
+    "id": "dancer",
+    "name": "Dancer",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Rojo",
+        "swatch": "#882820"
+      },
+      {
+        "id": 1,
+        "label": "Cian",
+        "swatch": "#385878"
+      },
+      {
+        "id": 2,
+        "label": "Rojo",
+        "swatch": "#882820"
+      },
+      {
+        "id": 3,
+        "label": "Lima",
+        "swatch": "#486020"
+      },
+      {
+        "id": 4,
+        "label": "Rojo",
+        "swatch": "#502830"
+      }
+    ],
+    "source": "Dancer.png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        273,
+        1
+      ],
+      [
+        542,
+        3
+      ],
+      [
+        0,
+        304
+      ],
+      [
+        276,
+        308
+      ]
+    ],
+    "aiOnly": false
+  },
+  {
+    "id": "mime-female",
+    "name": "Mime (Female)",
+    "variants": [
+      {
+        "id": 0,
+        "label": "Rojo",
+        "swatch": "#e03830"
+      },
+      {
+        "id": 1,
+        "label": "Cian",
+        "swatch": "#3078a8"
+      },
+      {
+        "id": 2,
+        "label": "Rojo",
+        "swatch": "#b03020"
+      },
+      {
+        "id": 3,
+        "label": "Lima",
+        "swatch": "#607828"
+      },
+      {
+        "id": 4,
+        "label": "Azul",
+        "swatch": "#6060a0"
+      }
+    ],
+    "source": "Mime (Female).png",
+    "origins": [
+      [
+        0,
+        0
+      ],
+      [
+        271,
+        4
+      ],
+      [
+        544,
+        4
+      ],
+      [
+        0,
+        297
+      ],
+      [
+        265,
+        301
+      ]
+    ],
+    "aiOnly": false
   }
 ]

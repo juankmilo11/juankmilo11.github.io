@@ -12,7 +12,7 @@ export function createPiecePreview(host) {
   const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 20);
   camera.position.set(0, 1.25, 2.65);
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(0, 0.45, 0);
+  controls.target.set(0, 0.38, 0);
   controls.enablePan = false; controls.enableDamping = true;
   controls.minDistance = 1.8; controls.maxDistance = 4;
   controls.maxPolarAngle = Math.PI / 2;

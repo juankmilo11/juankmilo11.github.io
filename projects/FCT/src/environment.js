@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { terrainPalette, islandRadius } from './terrain.js';
+import { terrainPalette, islandRadius, groundHeight, shoulderAngles } from './terrain.js';
 
 // Seeded variation keeps the landscape stable between games and screenshots.
 function randomSource(seed) {
@@ -20,7 +20,7 @@ function surfaceTexture(kind) {
   for (let y = 0; y < 256; y++) {
     for (let x = 0; x < 256; x++) {
       const i = (y * 256 + x) * 4;
-      const grain = (random() - 0.5) * 36;
+      const grain = (random() - 0.5) * 16;
       const cloud = Math.sin(x * 0.047 + Math.sin(y * 0.035) * 2) * 9 + Math.cos(y * 0.061) * 6;
       const shade = 174 + grain + cloud;
       const tint = kind === 'grass' ? [0.94, 1, 0.88] : kind === 'earth' ? [1, 0.94, 0.81] : [1, 0.96, 0.87];
@@ -29,6 +29,11 @@ function surfaceTexture(kind) {
     }
   }
   ctx.putImageData(image, 0, 0);
+  if(kind==='grass')for(let i=0;i<5000;i++){
+    const x=random()*256,y=random()*256;
+    ctx.strokeStyle=i%3?'#d5ddb51c':'#33482d25';ctx.lineWidth=.5;
+    ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(random()-.5)*2,y-1-random()*3);ctx.stroke();
+  }
   // Fine fissures and mineral flecks give stone detail without noisy geometry.
   if (kind === 'stone') {
     for (let i = 0; i < 7; i++) {
@@ -72,23 +77,16 @@ function mesh(world, geometry, material, x, y, z) {
   return object;
 }
 
-function groundHeight(x, z) {
-  const radius = Math.hypot(x, z);
-  const edge = THREE.MathUtils.smoothstep(radius, 6.2, 8.7);
-  // Keep the chessboard and the two capture galleries clear and level.
-  return -0.055 - edge * 0.9 + edge * Math.sin(x * 2.2 + z * 1.6) * 0.09;
-}
-
 export function buildLandscape(world) {
   const random = randomSource(124);
   // A single closed cliff wall meets the turf boundary exactly; no stacked disks.
   const cliff = new THREE.BufferGeometry();
   const cliffPositions = [], cliffColors = [], cliffUvs = [], cliffIndices = [];
-  const cliffSegments = 112, cliffBands = 8;
+  const cliffSegments = shoulderAngles.length, cliffBands = 8;
   for (let band = 0; band <= cliffBands; band++) {
     const t = band / cliffBands;
     for (let segment = 0; segment <= cliffSegments; segment++) {
-      const angle = segment / cliffSegments * Math.PI * 2;
+      const angle = shoulderAngles[segment % cliffSegments];
       const rim = islandRadius(angle) + 0.3;
       const radius = rim * (1 - t * 0.13) + Math.sin(angle * 13 + band * 0.8) * Math.sin(t * Math.PI) * 0.1;
       const x = Math.cos(angle), z = Math.sin(angle);
@@ -110,24 +108,17 @@ export function buildLandscape(world) {
   mesh(world, cliff, stoneMaterial({ color: 0x827b63, bumpScale: 0.06, vertexColors: true }), 0, 0, 0);
   // Concentric rings avoid folded triangles around the circular perimeter.
   const surface = new THREE.BufferGeometry();
-  const vertices = [0, groundHeight(0, 0), 0];
-  const uvs = [0, 0];
-  const indices = [];
-  const segments = 112, rings = 32;
-  for (let ring = 1; ring <= rings; ring++) {
-    for (let segment = 0; segment < segments; segment++) {
-      const angle = segment / segments * Math.PI * 2;
-      const radius = ring / rings * (islandRadius(angle) + 0.3);
-      const x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
-      vertices.push(x, groundHeight(x, z), z);
-      uvs.push(x / 3, z / 3);
-      const current = 1 + (ring - 1) * segments + segment;
-      const next = 1 + (ring - 1) * segments + (segment + 1) % segments;
-      if (ring === 1) indices.push(0, next, current);
-      else {
-        const inner = current - segments, innerNext = next - segments;
-        indices.push(inner, next, current, inner, innerNext, next);
-      }
+  const vertices = [],uvs = [],indices = [];
+  const segments=shoulderAngles.length,rings=8;
+  for(let ring=0;ring<=rings;ring++)for(let segment=0;segment<segments;segment++){
+    const angle=shoulderAngles[segment],t=ring/rings;
+    const radius=7.8+(islandRadius(angle)+.3-7.8)*t;
+    const x=Math.cos(angle)*radius,z=Math.sin(angle)*radius;
+    vertices.push(x,groundHeight(x,z)+.002*(1-t),z);uvs.push(x/3,z/3);
+    if(ring>0){
+      const current=ring*segments+segment,next=ring*segments+(segment+1)%segments;
+      const inner=current-segments,innerNext=next-segments;
+      indices.push(inner,next,current,inner,innerNext,next);
     }
   }
   surface.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
@@ -135,7 +126,7 @@ export function buildLandscape(world) {
   surface.setIndex(indices);
   const colors = [];
   for (let i = 0; i < vertices.length / 3; i++) {
-    const variation = 0.86 + random() * 0.16;
+    const variation = 0.98 + random() * 0.04;
     colors.push(variation, variation, variation * 0.96);
   }
   surface.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
@@ -148,23 +139,6 @@ export function buildLandscape(world) {
   const sandstone = stoneMaterial({ color: 0xb1a084 });
   const paleStone = stoneMaterial({ color: 0xc0b295 });
   const darkStone = stoneMaterial({ color: 0x7e8069 });
-  // Grassy banks replace the two rigid stone rails, keeping capture slots clear.
-  for (const side of [-1, 1]) {
-    const bank = new THREE.PlaneGeometry(2.12, 8.8, 8, 32);
-    bank.rotateX(-Math.PI / 2);
-    const points = bank.attributes.position, uv = bank.attributes.uv;
-    for (let i = 0; i < points.count; i++) {
-      const x = points.getX(i), z = points.getZ(i);
-      const edge = Math.max(Math.abs(x) / 1.06, Math.abs(z) / 4.4);
-      const worldX = side * 5.15 + x + Math.sin(z * 2.1) * 0.055;
-      const worldZ = z + Math.sin(x * 3.2) * 0.06;
-      points.setXYZ(i, worldX, 0.105 - THREE.MathUtils.smoothstep(edge, 0.72, 1) * 0.15, worldZ);
-      uv.setXY(i, worldX / 3, worldZ / 3);
-    }
-    bank.computeVertexNormals();
-    mesh(world, bank, earthMaterial(), 0, 0, 0);
-  }
-
   // Uneven flagstones leading to the old monastery, away from playable squares.
   const flag = new RoundedBoxGeometry(0.74, 0.11, 0.62, 2, 0.045);
   for (let i = 0; i < 24; i++) {
@@ -200,13 +174,21 @@ export function buildLandscape(world) {
   }), sandstone, 0, 1.34, -6.4);
 
   // Smooth stones and scattered rubble share a single instanced draw call.
-  const rocks = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 8), darkStone, 90);
+  const rockGeometry=new THREE.IcosahedronGeometry(1,3);
+  const rockPoints=rockGeometry.attributes.position;
+  for(let i=0;i<rockPoints.count;i++){
+    const x=rockPoints.getX(i),y=rockPoints.getY(i),z=rockPoints.getZ(i);
+    const scale=1+.12*Math.sin(x*8+z*5)*Math.cos(y*7-x*3);
+    rockPoints.setXYZ(i,x*scale,y*scale,z*scale);
+  }
+  rockGeometry.computeVertexNormals();
+  const rocks = new THREE.InstancedMesh(rockGeometry, stoneMaterial({color:0x89887a}), 90);
   const transform = new THREE.Object3D();
   for (let i = 0; i < 90; i++) {
     const angle = random() * Math.PI * 2;
-    const radius = 7.0 + random() * 1.25;
+    const radius = Math.min(7.85 + random() * .25,islandRadius(angle)+.12);
     const x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
-    const size = 0.07 + random() * 0.22;
+    const size = 0.06 + random() * 0.15;
     transform.position.set(x, groundHeight(x, z) + size * 0.28, z);
     transform.scale.set(size * 1.5, size * 0.7, size);
     transform.rotation.set(random(), random() * Math.PI, random() * 0.3);
@@ -216,17 +198,24 @@ export function buildLandscape(world) {
   world.add(rocks);
 
   // Grass grows around the perimeter; no foliage enters the capture galleries.
-  const grass = new THREE.InstancedMesh(new THREE.ConeGeometry(0.055, 0.3, 5),
-    new THREE.MeshStandardMaterial({ color: 0x697c42, roughness: 1 }), 260);
+  const bladePositions=[];
+  for(let blade=0;blade<5;blade++){
+    const angle=blade*2.4,dx=Math.cos(angle)*.028,dz=Math.sin(angle)*.028;
+    const height=.11+(blade%3)*.045,lean=.035;
+    bladePositions.push(dx-.018,0,dz,dx+.018,0,dz,dx+Math.cos(angle)*lean,height,dz+Math.sin(angle)*lean);
+  }
+  const blades=new THREE.BufferGeometry();blades.setAttribute('position',new THREE.Float32BufferAttribute(bladePositions,3));blades.computeVertexNormals();
+  const grass = new THREE.InstancedMesh(blades,
+    new THREE.MeshStandardMaterial({ color: 0x7c9257, roughness: 1, side:THREE.DoubleSide }), 260);
   for (let i = 0; i < 260; i++) {
-    const angle = random() * Math.PI * 2, radius = 7.25 + random() * 1.0;
+    const angle = random() * Math.PI * 2, radius = Math.min(7.85 + random() * .3,islandRadius(angle)+.12);
     const x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
-    transform.position.set(x, groundHeight(x, z) + 0.07, z);
+    transform.position.set(x, groundHeight(x, z) + 0.003, z);
     transform.scale.set(1, 0.5 + random(), 1);
     transform.rotation.set((random() - 0.5) * 0.35, random() * 6, 0.2);
     transform.updateMatrix(); grass.setMatrixAt(i, transform.matrix);
   }
-  world.add(grass);
+  grass.receiveShadow=true;world.add(grass);
 
   const bark = stoneMaterial({ color: 0x61513a });
   const leafMaterials = [0x596e3d, 0x708049, 0x829058].map(color =>

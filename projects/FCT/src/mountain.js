@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { tileElevation } from './terrain.js';
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import { tileElevation, groundHeight } from './terrain.js';
 
 // Organic turf boundaries retain a flat, generously sized landing surface.
 export function tileOutline(row, file) {
@@ -39,8 +40,8 @@ export function createMountainGeometry() {
     return [file - 4, sum / count - 0.035 + Math.sin(row * 17 + file * 29) * 0.022, row - 4];
   }
   function triangle(a, b, c) {
-    const variation = 0.86 + (Math.sin(a[0] * 27 + c[2] * 13) + 1) * 0.065;
     for (const p of [a, b, c]) {
+      const variation = .98 + Math.sin(p[0]*1.7+p[2]*1.3)*.015;
       positions.push(...p); colors.push(variation, variation, variation);
       uvs.push(p[0] / 3, p[2] / 3);
     }
@@ -58,29 +59,35 @@ export function createMountainGeometry() {
       triangle([x, y, z], inner[edge], inner[next]);
       triangle(inner[edge], outer[edge], outer[next]);
       triangle(inner[edge], outer[next], inner[next]);
-      if ((edge < 2 && file === 0) || (edge >= 2 && edge < 4 && row === 7) ||
-          (edge >= 4 && edge < 6 && file === 7) || (edge >= 6 && row === 0)) {
-        // Broad irregular shoulders dissolve the square footprint into the field.
-        const shoulder = (p, t) => {
-          const angle = Math.atan2(p[2], p[0]);
-          const radius = Math.hypot(p[0], p[2]);
-          const endRadius = 6.25 + Math.sin(angle * 5 + 0.7) * 0.18 + Math.sin(angle * 9) * 0.08;
-          const r = radius + (endRadius - radius) * t;
-          const y = p[1] * (1 - t) - 0.045 * t + Math.sin(angle * 11) * Math.sin(t * Math.PI) * 0.035;
-          return [Math.cos(angle) * r, y, Math.sin(angle) * r];
-        };
-        for (let band = 0; band < 4; band++) {
-          const a = shoulder(outer[edge], band / 4), b = shoulder(outer[next], band / 4);
-          const c = shoulder(outer[edge], (band + 1) / 4), d = shoulder(outer[next], (band + 1) / 4);
-          triangle(a, c, d); triangle(a, d, b);
-        }
-      }
+
     }
+  }
+  // One closed perimeter joins all four sides, including their corner wedges.
+  const boundary=[];
+  for(let edge=0;edge<4;edge++)for(let step=0;step<16;step++){
+    const v=-4+step*.5;
+    const [x,z]=edge===0?[-4,v]:edge===1?[v,4]:edge===2?[4,-v]:[-v,-4];
+    const row=z+4,file=x+4;
+    const r0=Math.floor(row),f0=Math.floor(file);
+    const a=corner(r0,f0),b=corner(Math.ceil(row),Math.ceil(file));
+    boundary.push([x,(a[1]+b[1])/2,z]);
+  }
+  const shoulder=(p,t)=>{
+    const angle=Math.atan2(p[2],p[0]),start=Math.hypot(p[0],p[2]);
+    const radius=start+(7.8-start)*t;
+    const x=Math.cos(angle)*radius,z=Math.sin(angle)*radius;
+    const ground=groundHeight(x,z);
+    return [x,Math.max(p[1]*(1-t)+ground*t,ground)+.002*t,z];
+  };
+  for(let i=0;i<boundary.length;i++)for(let band=0;band<16;band++){
+    const a=shoulder(boundary[i],band/16),b=shoulder(boundary[(i+1)%boundary.length],band/16);
+    const c=shoulder(boundary[i],(band+1)/16),d=shoulder(boundary[(i+1)%boundary.length],(band+1)/16);
+    triangle(a,c,d);triangle(a,d,b);
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-  geometry.computeVertexNormals();
-  return geometry;
+  const smooth=mergeVertices(geometry);geometry.dispose();smooth.computeVertexNormals();
+  return smooth;
 }
