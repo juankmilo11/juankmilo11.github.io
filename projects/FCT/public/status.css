@@ -94,10 +94,11 @@
 .app-shell.is-reviewing .game-toolbar .game-status-badge { display: flex; }
 .app-shell.is-reviewing .turn-pulse { animation: none; background: #d9bf7e; box-shadow: none; }
 
-.app-shell.is-review-transitioning .board-stage { animation: review-soft-focus 360ms ease-out both; }
-@keyframes review-soft-focus {
-  from { filter: blur(4px); opacity: .76; }
-  to { filter: blur(0); opacity: 1; }
+.app-shell.is-reviewing .board-stage { --review-brightness: .92; filter: brightness(.92); }
+.app-shell.is-review-transitioning .board-stage { animation: review-soft-shade 360ms ease-out both; }
+@keyframes review-soft-shade {
+  from { filter: brightness(.82); }
+  to { filter: brightness(var(--review-brightness, 1)); }
 }
 @media (prefers-reduced-motion: reduce) {
   .app-shell.is-review-transitioning .board-stage { animation: none; }

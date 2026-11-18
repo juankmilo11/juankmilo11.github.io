@@ -11,8 +11,8 @@ const femaleRoyals = ['agrias', 'teta', 'dancer', 'mime-female', 'ovelia', 'balm
 const maleRoyals = ['ramza', 'delita', 'cloud', 'orlandu', 'mustadio', 'beowulf'];
 const families = { p: ['squire','monk','thief'], r: ['knight','samurai','ninja'], n: ['dragoon','archer','geomancer'], b: ['white-mage','black-mage','summoner'] };
 const defaults = {
-  female: { p:'squire-female', r:'knight-female', n:'dragoon-female', b:'white-mage-female', q:'agrias', k:'teta' },
-  male: { p:'squire-male', r:'knight-male', n:'dragoon-male', b:'white-mage-male', q:'delita', k:'ramza' },
+  female: { p:'squire-female', r:'knight-female', n:'dragoon-female', b:'white-mage-female', q:'agrias', k:'ramza' },
+  male: { p:'squire-male', r:'knight-male', n:'dragoon-male', b:'white-mage-male', q:'agrias', k:'ramza' },
 };
 export function characterGender(character) {
   const id=typeof character==='string'?character:character?.id??character?.character;
@@ -21,9 +21,9 @@ export function characterGender(character) {
 export function characterHeight(role) { return role==='k'?1.14:role==='q'?1.03:role==='p'?.84:.92; }
 export function availableCharacters(role, gender='female') {
   const armyGender=gender==='male'?'male':'female';
-  const royals=armyGender==='female'?femaleRoyals:maleRoyals;
-  return catalog.filter(character => !character.aiOnly && characterGender(character)===armyGender &&
-    (role==='q'||role==='k'?royals.includes(character.id):families[role]?.some(family=>character.id===`${family}-${armyGender}`)));
+  return catalog.filter(character => !character.aiOnly &&
+    (role==='q'?femaleRoyals.includes(character.id):role==='k'?maleRoyals.includes(character.id):
+      characterGender(character)===armyGender && families[role]?.some(family=>character.id===`${family}-${armyGender}`)));
 }
 export function defaultArmy(gender='female', palette=0) {
   const armyGender=gender==='male'?'male':'female';
@@ -66,7 +66,7 @@ export function oppositePalette(palette) {
 export function contrastingAppearance(look,role) {
   const palette=oppositePalette(look.palette);
   if(role==='k')return {character:['dycedarg','gaff-gafgarion'][(look.palette+[...look.character].reduce((n,c)=>n+c.charCodeAt(0),0))%2],palette};
-  if(role==='q')return {character:maleRoyals.includes(look.character)?look.character:defaults.male.q,palette};
+  if(role==='q')return {character:femaleRoyals[(femaleRoyals.indexOf(look.character)+1)%femaleRoyals.length],palette};
   const paired=look.character.replace(/-female$/,'-male');
   const character=catalog.find(c=>c.id===paired&&!c.aiOnly&&characterGender(c)==='male');
   return {character:character?.id??(role?defaults.male[role]:look.character),palette};

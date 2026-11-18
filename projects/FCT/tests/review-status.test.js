@@ -58,7 +58,7 @@ test('review pauses show a notice until returning to the live position or starti
   window.matchMedia = () => ({ matches: true });
   element('#review-first').click();
   assert.equal(notice.hidden, false);
-  assert.equal(timers.size, 0, 'reduced motion avoids scheduling a blur transition');
+  assert.equal(timers.size, 0, 'reduced motion avoids scheduling a shade transition');
   assert.equal(element('.app-shell').classList.contains('is-review-transitioning'), false);
   element('#review-return').click();
   assert.equal(notice.hidden, true);

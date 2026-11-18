@@ -62,6 +62,28 @@ function near(actual, expected, label, tolerance = 1.1) {
       await page.goto(origin + '/FCT/', { waitUntil: 'domcontentloaded' });
       console.log(`Review UI ${width}x${height}: loading game`);
       await page.waitForFunction(() => window.qaReviewUI && window.fctReview);
+      await page.locator('#select-pieces').click();
+      assert.equal(await page.locator('#army-opponent-color').count(),0);
+      for(const group of ['#appearance-genders','#appearance-colors']) {
+        const centered=await page.locator(group).evaluate(el=>{
+          const section=el.closest('section').getBoundingClientRect();
+          const first=el.firstElementChild.getBoundingClientRect(),last=el.lastElementChild.getBoundingClientRect();
+          return Math.abs((first.left+last.right)/2-(section.left+section.right)/2)<1.2;
+        });
+        assert.ok(centered,`${group} centered within its settings column`);
+      }
+      await page.locator('[data-role="k"]').click();
+      await page.locator('[data-character="cloud"]').click();
+      await page.locator('[data-role="q"]').click();
+      await page.locator('[data-character="ovelia"]').click();
+      await page.locator('[data-gender="male"]').click();
+      assert.equal(await page.locator('[data-character="ovelia"]').getAttribute('aria-pressed'),'true');
+      assert.equal(await page.locator('[data-character="cloud"]').count(),0);
+      await page.locator('[data-role="k"]').click();
+      assert.equal(await page.locator('[data-character="cloud"]').getAttribute('aria-pressed'),'true');
+      assert.equal(await page.locator('[data-character="ovelia"]').count(),0);
+      await page.locator('[data-gender="female"]').click();
+      await page.locator('#appearance-save').click();
       await page.locator('#new-game').click();
       await page.locator('#board-3d canvas').waitFor();
       await page.waitForFunction(() => document.querySelector('.app-shell').classList.contains('is-playing') && !document.querySelector('#battle-curtain').classList.contains('is-revealing'));
@@ -103,10 +125,11 @@ function near(actual, expected, label, tolerance = 1.1) {
       });
       assert.equal(start.status, 'Partida pausada');
       assert.equal(start.transitioning, !reduced);
-      assert.equal(start.animation.includes('review-soft-focus'), !reduced);
+      assert.equal(start.animation.includes('review-soft-shade'), !reduced);
       assert.equal(await page.locator('.game-status-badge').isVisible(), true);
       assert.equal(await page.locator('#review-pause-note').evaluate(el => getComputedStyle(el).textAlign), 'center');
       await page.waitForFunction(() => !document.querySelector('.app-shell').classList.contains('is-review-transitioning'));
+      assert.equal(await page.locator('.board-stage').evaluate(el=>getComputedStyle(el).filter),'brightness(0.92)');
       await page.locator('#review-last').click();
       assert.equal(await page.locator('#game-status').textContent(), 'Partida pausada', 'latest reviewed position stays paused');
       await page.screenshot({ path: path.join(output, `review-${width}x${height}.png`) });
@@ -123,7 +146,7 @@ function near(actual, expected, label, tolerance = 1.1) {
       assert.equal(await page.locator('#review-pause-note').isVisible(), false);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'no horizontal overflow');
       assert.deepEqual(errors, []);
-      console.log(`OK ${width}x${height}: full-width review, centered pause/badge, blur ${!reduced}, symmetric camera, 2D/3D deselection`);
+      console.log(`OK ${width}x${height}: full-width review, centered pause/badge, shade transition ${!reduced}, symmetric camera, 2D/3D deselection`);
       await page.close();
     }
     console.log('Screenshots: ' + output);

@@ -250,7 +250,7 @@ async function specialMoves(browser, width, height) {
       await page.locator('#appearance-save').click();
       await page.locator('#select-pieces').click();
       await page.locator('[data-role="k"]').click();await page.locator('[data-character="delita"]').click();await page.locator('[data-palette="1"]').click();
-      await page.locator('[data-role="q"]').click();await page.locator('[data-character="cloud"]').click();await page.locator('[data-palette="2"]').click();
+      await page.locator('[data-role="q"]').click();await page.locator('[data-character="teta"]').click();await page.locator('[data-palette="2"]').click();
       await page.locator('#appearance-save').click();
       await page.locator('#new-game').click();
       await page.locator('#board-3d canvas').waitFor();
@@ -261,7 +261,7 @@ async function specialMoves(browser, width, height) {
       await page.locator('[data-view="2d"]').click();
       assert.ok((await page.locator('[data-square="a1"]').getAttribute('aria-label')).includes('Caballero'));
       assert.ok((await page.locator('[data-square="e1"]').getAttribute('aria-label')).includes('Delita'));
-      assert.ok((await page.locator('[data-square="d1"]').getAttribute('aria-label')).includes('Cloud'));
+      assert.ok((await page.locator('[data-square="d1"]').getAttribute('aria-label')).includes('Teta'));
       for(const square of ['a1','a8','e2','e7']) {
         const cell=await page.locator(`[data-square="${square}"]`).boundingBox();
         const art=await page.locator(`[data-square="${square}"] .piece-art`).boundingBox();

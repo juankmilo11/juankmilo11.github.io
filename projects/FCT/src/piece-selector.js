@@ -1,4 +1,4 @@
-import { roles, availableCharacters, getLoadout, setLoadout, sanitizeLoadout, armyPalettes, oppositePalette, appearanceFor, characterInfo, thumbnailUrl } from './appearance.js';
+import { roles, availableCharacters, getLoadout, setLoadout, sanitizeLoadout, armyPalettes, appearanceFor, characterInfo, thumbnailUrl } from './appearance.js';
 import './piece-selector.css';
 
 export function initPieceSelector({ playSound, onApply }) {
@@ -66,9 +66,6 @@ export function initPieceSelector({ playSound, onApply }) {
       swatch.setAttribute('aria-pressed',String(draft.palette === variant.id)); swatch.dataset.palette = variant.id;
       return swatch;
     }));
-    const opponent=armyPalettes.find(p=>p.id===oppositePalette(draft.palette));
-    const opponentColor=dialog.querySelector('#army-opponent-color');
-    opponentColor.textContent=`Rival: ${opponent.label}`;opponentColor.style.setProperty('--opponent-color',opponent.swatch);
     updatePreview();
     if (focusSelector) dialog.querySelector(focusSelector)?.focus({ preventScroll: true });
   }

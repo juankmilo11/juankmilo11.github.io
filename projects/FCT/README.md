@@ -13,22 +13,23 @@ The menu's **Seleccionar piezas** dialog replaces the old player/rival card.
 The resource catalog has 38 characters with five colors each (190 variants).
 One shared color applies to the entire player's army. The five canonical colors
 are blue, crimson, jade, amethyst and gold. A second shared choice restricts the
-whole army to female or male characters; changing it pairs the ordinary classes
-and replaces royal choices that do not belong to that group.
+ordinary pieces to female or male characters; changing it pairs their classes
+and preserves the independent king/queen choices. Kings are always male and
+queens female, for either formation.
 The player can choose 180 distinct appearances in the following roles:
 
 - Pawns: Squire, Monk and Thief, female/male.
 - Rooks: Knight, Samurai and Ninja, female/male.
 - Knights: Dragoon, Archer and Geomancer, female/male.
 - Bishops: White Mage, Black Mage and Summoner, female/male.
-- Female kings/queens: Agrias, Teta, Dancer, Mime, Ovelia and Balmafula.
-- Male kings/queens: Ramza, Delita, Cloud, Orlandu, Mustadio and Beowulf.
+- Queens: Agrias, Teta, Dancer, Mime, Ovelia and Balmafula.
+- Kings: Ramza, Delita, Cloud, Orlandu, Mustadio and Beowulf.
 
 Dycedarg and Gaff Gafgarion are AI-only kings, with five colors each. They never
 appear in the player selector or pass player-loadout validation. AI king identity
 is stable for a given loadout and changes between these two exclusive characters;
 its palette contrasts against the player. The entire AI army uses that same
-contrasting color and male characters, including its queen.
+contrasting color; its ordinary characters and king are male and its queen female.
 Choices are cosmetic and kept only in page memory: **Guardar**
 applies the draft, **Salir**/Escape discards it, and reloading resets defaults.
 
@@ -158,8 +159,9 @@ pause notice. The floating turn badge also says **Partida pausada**.
 It stays visible even at the latest position until the player presses **Volver**.
 The HUD reserves its height above the scene so the notice cannot cover the
 opponent's piece strip. A ResizeObserver positions the floating turn notice below the HUD.
-Entering review and returning to play briefly blur the board; reduced-motion
-preferences disable that transition.
+Entering review and returning to play use a gentle dimming transition without
+blur. The board stays slightly dimmed during review; reduced-motion preferences
+disable the transition.
 
 Optional headless browser QA (requires Playwright and Microsoft Edge):
 
@@ -193,7 +195,7 @@ It saves screenshots; physical low-end device performance still needs device tes
 The motion check samples the real 3D board over several seconds after two
 captures, verifying independent bounded floats, cheering arms, fixed X/Z anchors,
 restoration through review and reduced-motion behavior.
-The review UI check covers full-width controls, centered notices, transitions,
+The review UI check covers full-width controls, centered settings without rival-color labels, independent royal choices, dimming transitions,
 camera/exit symmetry, and selection/deselection in both views. The king check
 uses real moves and FEN positions to verify check/mate, undo/replay, 2D pose assets,
 all 14 royal 3D rigs, floor alignment and reduced-motion postures. These last two

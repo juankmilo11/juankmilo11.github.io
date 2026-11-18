@@ -14,18 +14,20 @@ test('every character shares the same five team colors and gender-neutral displa
   }
 });
 
-test('each formation only exposes characters of one gender and valid families',()=>{
+test('ordinary pieces follow formation gender; kings stay male and queens female',()=>{
   for(const gender of ['female','male']){
     assert.deepEqual(roles.map(role=>availableCharacters(role,gender).length),[3,3,3,3,6,6]);
     for(const role of roles)for(const character of availableCharacters(role,gender)){
-      assert.equal(characterGender(character),gender);
+      assert.equal(characterGender(character),role==='k'?'male':role==='q'?'female':gender);
       assert.equal(character.aiOnly,false);
     }
   }
   assert.ok(availableCharacters('p','female').some(c=>c.id==='monk-female'));
   assert.ok(availableCharacters('r','male').some(c=>c.id==='ninja-male'));
-  assert.ok(availableCharacters('q','male').some(c=>c.id==='cloud'));
-  assert.ok(availableCharacters('k','female').some(c=>c.id==='ovelia'));
+  assert.ok(availableCharacters('q','male').some(c=>c.id==='ovelia'));
+  assert.ok(availableCharacters('k','female').some(c=>c.id==='cloud'));
+  assert.deepEqual(availableCharacters('q','male'),availableCharacters('q','female'));
+  assert.deepEqual(availableCharacters('k','male'),availableCharacters('k','female'));
   assert.equal(availableCharacters('missing').length,0);
 });
 
@@ -40,19 +42,26 @@ test('one palette setting overrides contradictory individual piece colors',()=>{
   assert.equal(sanitizeLoadout({...defaultLoadout,palette:99}).palette,0);
 });
 
-test('switching formation preserves paired classes but prevents mixed royal genders',()=>{
-  const female=sanitizeLoadout({...defaultLoadout,p:{character:'thief-female',palette:3},k:{character:'ovelia',palette:4},palette:2});
+test('switching formation pairs ordinary classes and preserves royal choices',()=>{
+  const female=sanitizeLoadout({...defaultLoadout,p:{character:'thief-female',palette:3},k:{character:'cloud',palette:4},q:{character:'ovelia',palette:4},palette:2});
   const male=sanitizeLoadout({...female,gender:'male'});
   assert.equal(male.p.character,'thief-male');
-  assert.ok(roles.every(role=>characterGender(characterInfo(male[role]))==='male'));
+  assert.ok(['p','r','n','b','k'].every(role=>characterGender(characterInfo(male[role]))==='male'));
+  assert.equal(male.k.character,'cloud');
+  assert.equal(male.q.character,'ovelia');
+  assert.equal(characterGender(characterInfo(male.q)),'female');
   assert.ok(roles.every(role=>male[role].palette===2));
   const feminine=sanitizeLoadout({...male,gender:'female'});
   assert.equal(feminine.p.character,'thief-female');
-  assert.ok(roles.every(role=>characterGender(characterInfo(feminine[role]))==='female'));
+  assert.ok(['p','r','n','b','q'].every(role=>characterGender(characterInfo(feminine[role]))==='female'));
+  assert.equal(feminine.k.character,'cloud');
+  assert.equal(feminine.q.character,'ovelia');
+  assert.equal(sanitizeLoadout({...female,k:{character:'ovelia'}}).k.character,'ramza');
+  assert.equal(sanitizeLoadout({...female,q:{character:'cloud'}}).q.character,'agrias');
   assert.deepEqual(sanitizeLoadout({b:{character:'knight-male',palette:-1}}),defaultLoadout);
 });
 
-test('each side has a uniform color and the opponent is a uniform male army',()=>{
+test('each side has a uniform color with male kings and female queens',()=>{
   const enemyKings=new Set();
   for(const gender of ['female','male'])for(const palette of armyPalettes){
     const army=defaultArmy(gender,palette.id);
@@ -61,8 +70,8 @@ test('each side has a uniform color and the opponent is a uniform male army',()=
       assert.equal(ally.palette,palette.id);
       assert.equal(enemy.palette,oppositePalette(palette.id));
       assert.notEqual(enemy.palette,ally.palette);
-      assert.equal(characterGender(characterInfo(ally)),gender);
-      assert.equal(characterGender(characterInfo(enemy)),'male');
+      assert.equal(characterGender(characterInfo(ally)),role==='k'?'male':role==='q'?'female':gender);
+      assert.equal(characterGender(characterInfo(enemy)),role==='q'?'female':'male');
       if(role==='k'){
         assert.ok(['dycedarg','gaff-gafgarion'].includes(enemy.character));
         enemyKings.add(enemy.character);
