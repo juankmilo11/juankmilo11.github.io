@@ -1,7 +1,6 @@
 """Extract original front/back/side palettes. Requires Pillow; never alters sheets."""
 from pathlib import Path
 from collections import deque
-from collections import Counter
 import json
 import colorsys
 from PIL import Image, ImageChops
@@ -12,7 +11,7 @@ OUT = SPRITES / 'characters'
 OUT.mkdir(exist_ok=True)
 
 characters = []
-PALETTES = json.loads((ROOT / 'scripts' / 'character-palettes.json').read_text(encoding='utf-8'))
+ARMY_PALETTES = json.loads((ROOT / 'scripts' / 'army-palettes.json').read_text(encoding='utf-8'))
 FEMININE = {'Squire':'Escudera','Knight':'Caballera','Dragoon':'Dragoon','White Mage':'Maga blanca','Black Mage':'Maga negra','Summoner':'Invocadora'}
 MASCULINE = {'Squire':'Escudero','Knight':'Caballero','Dragoon':'Dragoon','White Mage':'Mago blanco','Black Mage':'Mago negro','Summoner':'Invocador'}
 for stem, label in [('Squire', 'Escudero'), ('Knight', 'Caballero'), ('Dragoon', 'Dragón'),
@@ -38,7 +37,6 @@ for name in ['Cloud','Orlandu','Mustadio','Beowulf','Dycedarg','Gaff Gafgarion',
     key=name.lower().replace(' (female)','-female').replace(' ','-')
     characters.append((key,name,name+'.png',5 if name in ['Dancer','Mime (Female)'] else 1))
 
-EXTRA_COLORS=[('Azul','#497bbd'),('Carmesí','#ba4654'),('Jade','#438c73'),('Amatista','#9362b1'),('Oro','#b39543')]
 def recolor(image, color):
     result=image.copy()
     hue=colorsys.rgb_to_hls(*(int(color[i:i+2],16)/255 for i in [1,3,5]))[0]
@@ -47,10 +45,13 @@ def recolor(image, color):
             r,g,b,a=result.getpixel((x,y))
             if not a: continue
             h,l,s=colorsys.rgb_to_hls(r/255,g/255,b/255)
-            # Retain skin, blond/brown hair, white highlights and the dark outline.
-            protected=.02<h<.18 and l>.32 and s>.25
-            if .08<l<.79 and not protected:
-                rgb=colorsys.hls_to_rgb(hue,l,max(.35,min(.68,s)))
+            # Preserve face/hair and exposed skin. Cloth, armor and pale robes
+            # share the team hue; avoid the old per-character palette meanings.
+            skin=.025<h<.13 and l>.44 and s>.3
+            hair=y<22 and .025<h<.19 and l>.22 and s>.25
+            if .075<l<.94 and not (skin or hair):
+                lightness=min(.78,max(.13,l*.88+.035))
+                rgb=colorsys.hls_to_rgb(hue,lightness,.58)
                 result.putpixel((x,y),tuple(round(c*255) for c in rgb)+(a,))
     return result
 
@@ -118,12 +119,16 @@ def origins(image, count):
     return result[:count]
 
 catalog = []
+FEMALE_ROYALS={'agrias','teta','dancer','mime-female','ovelia','balmafula'}
+DISPLAY_NAMES={'squire':'Escudero','knight':'Caballero','dragoon':'Dragoon','white-mage':'Mago blanco','black-mage':'Mago negro','summoner':'Invocador','monk':'Monje','thief':'Ladrón','archer':'Arquero','geomancer':'Geomante','samurai':'Samurái','ninja':'Ninja','dancer':'Danzante','mime':'Mimo'}
 for key, label, filename, count in characters:
     sheet = Image.open(SPRITES / filename).convert('RGB')
     offsets = origins(sheet,count)
     variants = []
     for index in range(5):
-        ox,oy=offsets[index%len(offsets)]
+        # Every color starts from the same native costume, so blue always means
+        # blue for the whole army rather than a different sheet palette per role.
+        ox,oy=offsets[0]
         atlas = Image.new('RGBA',(96,40))
         for direction, column in enumerate([2,4,0]):
             crop = transparent(sheet.crop((ox+column*32,oy,ox+(column+1)*32,oy+40)))
@@ -133,26 +138,18 @@ for key, label, filename, count in characters:
             normalized = Image.new('RGBA',(32,40))
             normalized.alpha_composite(content, ((32-content.width)//2,40-content.height))
             atlas.alpha_composite(normalized, (direction*32,0))
-        if index>=len(offsets): atlas=recolor(atlas,EXTRA_COLORS[index][1])
+        atlas=recolor(atlas,ARMY_PALETTES[index]['swatch'])
         atlas.save(OUT / f'{key}-{index}.png', optimize=True)
         front = atlas.crop((0,0,32,40))
         tight = front.crop(front.getbbox())
         thumb = Image.new('RGBA',(32,40))
         thumb.alpha_composite(tight,((32-tight.width)//2,(40-tight.height)//2))
         thumb.save(OUT / f'{key}-{index}-thumb.png', optimize=True)
-        name,color = PALETTES.get(key,EXTRA_COLORS)[index] if index<len(PALETTES.get(key,EXTRA_COLORS)) else EXTRA_COLORS[index]
-        if key not in PALETTES and index<len(offsets):
-            clothing=Counter()
-            for r,g,b,a in atlas.getdata():
-                h,l,s=colorsys.rgb_to_hls(r/255,g/255,b/255)
-                if a and s>.22 and .12<l<.7 and not (.02<h<.18):clothing[(r,g,b)]+=1
-            if clothing:
-                rgb=clothing.most_common(1)[0][0]
-                color='#'+''.join(f'{v:02x}' for v in rgb)
-                hue=colorsys.rgb_to_hls(*(v/255 for v in rgb))[0]
-                name=['Rojo','Ámbar','Oro','Lima','Verde','Jade','Turquesa','Cian','Azul','Violeta','Magenta','Rosa'][round(hue*12)%12]
+        name,color = ARMY_PALETTES[index]['label'],ARMY_PALETTES[index]['swatch']
         variants.append({'id': index, 'label': name, 'swatch': color})
-    catalog.append({'id':key, 'name':label, 'variants':variants, 'source':filename, 'origins':offsets, 'aiOnly':key in ['dycedarg','gaff-gafgarion']})
+    family=key.removesuffix('-female').removesuffix('-male')
+    gender='female' if key in FEMALE_ROYALS or key.endswith('-female') else 'male'
+    catalog.append({'id':key, 'name':DISPLAY_NAMES.get(family,label), 'gender':gender, 'variants':variants, 'source':filename, 'origins':offsets, 'aiOnly':key in ['dycedarg','gaff-gafgarion']})
     print(key, offsets)
 (OUT / 'catalog.json').write_text(json.dumps(catalog,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
 print(f'{len(catalog)} characters, {sum(len(c["variants"]) for c in catalog)} palettes (original and derived)')

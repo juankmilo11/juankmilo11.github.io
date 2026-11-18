@@ -1,4 +1,4 @@
-import { roles, availableCharacters, getLoadout, setLoadout, appearanceFor, characterInfo, thumbnailUrl } from './appearance.js';
+import { roles, availableCharacters, getLoadout, setLoadout, sanitizeLoadout, armyPalettes, oppositePalette, appearanceFor, characterInfo, thumbnailUrl } from './appearance.js';
 import './piece-selector.css';
 
 export function initPieceSelector({ playSound, onApply }) {
@@ -6,6 +6,7 @@ export function initPieceSelector({ playSound, onApply }) {
   const roleList = dialog.querySelector('#appearance-roles');
   const characterList = dialog.querySelector('#appearance-characters');
   const colors = dialog.querySelector('#appearance-colors');
+  const genders = dialog.querySelector('#appearance-genders');
   const status = dialog.querySelector('#appearance-status');
   const saveButton = dialog.querySelector('#appearance-save');
   let draft = getLoadout(), role = 'r', preview, previewPromise, request = 0;
@@ -41,26 +42,33 @@ export function initPieceSelector({ playSound, onApply }) {
     }
   }
   function render(focusSelector) {
+    genders.replaceChildren(...[['female','Femeninos'],['male','Masculinos']].map(([gender,label])=>{
+      const choice=button(label,()=>{draft=sanitizeLoadout({...draft,gender});render(`[data-gender="${gender}"]`);},'army-gender');
+      choice.dataset.gender=gender;choice.setAttribute('aria-pressed',String(draft.gender===gender));return choice;
+    }));
     roleList.replaceChildren(...roles.map(item => {
       const tab = button(`${item.glyph} ${item.name}`, () => { role = item.id; render(`[data-role="${role}"]`); }, 'appearance-role');
       tab.setAttribute('aria-pressed',String(role === item.id)); tab.dataset.role = item.id; return tab;
     }));
-    characterList.replaceChildren(...availableCharacters(role).map(info => {
+    characterList.replaceChildren(...availableCharacters(role,draft.gender).map(info => {
       const chosen = draft[role].character === info.id;
-      const entry = button('', () => { draft[role] = { character: info.id, palette: 0 }; render(`[data-character="${info.id}"]`); }, 'character-choice');
+      const entry = button('', () => { draft[role] = { character: info.id, palette: draft.palette }; render(`[data-character="${info.id}"]`); }, 'character-choice');
       entry.setAttribute('aria-label',info.name);
       const image = document.createElement('img');
-      image.src = thumbnailUrl({ character: info.id, palette: chosen ? draft[role].palette : 0 }); image.alt = ''; image.width = 48; image.height = 60;
+      image.src = thumbnailUrl({ character: info.id, palette: draft.palette }); image.alt = ''; image.width = 48; image.height = 60;
       entry.prepend(image); entry.setAttribute('aria-pressed',String(chosen)); entry.dataset.character = info.id;
       return entry;
     }));
-    colors.replaceChildren(...characterInfo(draft[role]).variants.map(variant => {
-      const swatch = button('', () => { draft[role].palette = variant.id; render(`[data-palette="${variant.id}"]`); }, 'palette-choice','menu3');
+    colors.replaceChildren(...armyPalettes.map(variant => {
+      const swatch = button('', () => { draft=sanitizeLoadout({...draft,palette:variant.id}); render(`[data-palette="${variant.id}"]`); }, 'palette-choice','menu3');
       swatch.setAttribute('aria-label',variant.label); swatch.title = variant.label;
       swatch.style.setProperty('--swatch',variant.swatch);
-      swatch.setAttribute('aria-pressed',String(draft[role].palette === variant.id)); swatch.dataset.palette = variant.id;
+      swatch.setAttribute('aria-pressed',String(draft.palette === variant.id)); swatch.dataset.palette = variant.id;
       return swatch;
     }));
+    const opponent=armyPalettes.find(p=>p.id===oppositePalette(draft.palette));
+    const opponentColor=dialog.querySelector('#army-opponent-color');
+    opponentColor.textContent=`Rival: ${opponent.label}`;opponentColor.style.setProperty('--opponent-color',opponent.swatch);
     updatePreview();
     if (focusSelector) dialog.querySelector(focusSelector)?.focus({ preventScroll: true });
   }

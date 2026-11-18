@@ -19,6 +19,22 @@ new ResizeObserver(([entry]) => {
 let isReviewing = false;
 let currentMove = 0;
 let totalMoves = 0;
+let transitionTimeout;
+
+function softenReviewChange() {
+  window.clearTimeout(transitionTimeout);
+  appShell.classList.remove("is-review-transitioning");
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return;
+  // Flush the previous animation so a quick Volver click starts a fresh fade.
+  void appShell.offsetWidth;
+  appShell.classList.add("is-review-transitioning");
+  transitionTimeout = window.setTimeout(() => appShell.classList.remove("is-review-transitioning"), 360);
+}
+
+function clearReviewTransition() {
+  window.clearTimeout(transitionTimeout);
+  appShell.classList.remove("is-review-transitioning");
+}
 
 
 
@@ -77,6 +93,7 @@ function startReview() {
   isReviewing = true;
   window.fctReview.setReviewing(true);
   appShell.classList.add("is-reviewing");
+  softenReviewChange();
   checkmateOverlay.hidden = true;
   reviewControls.hidden = false;
   updatePositionControls();
@@ -112,11 +129,13 @@ document.querySelector("#review-return").addEventListener("click", () => {
   window.fctReview.setReviewing(false);
   isReviewing = false;
   appShell.classList.remove("is-reviewing");
+  softenReviewChange();
   checkmateOverlay.hidden = !/^(?:Checkmate|Jaque mate|Tablas)\b/i.test(statusText.textContent.trim());
   updateGameStatus();
 });
 
 newGameButton.addEventListener("click", () => {
+  clearReviewTransition();
   isReviewing = false;
   reviewPauseNote.hidden = true;
   appShell.classList.remove("is-reviewing");
@@ -127,6 +146,7 @@ newGameButton.addEventListener("click", () => {
 });
 
 window.addEventListener("fct:new-game", () => {
+  clearReviewTransition();
   isReviewing = false;
   currentMove = totalMoves = 0;
   reviewPauseNote.hidden = true;

@@ -102,6 +102,7 @@ function render2D() {
     cell.classList.add(`terrain-${tileDetail(row,file)}`);
     cell.dataset.square = square;
     cell.setAttribute('role', 'gridcell');
+    cell.setAttribute('aria-selected', String(square === selectedSquare));
     cell.setAttribute('aria-label', `${square}${piece ? `, ${pieceNames[piece.type]} ${piece.color === 'w' ? 'blanca' : 'negra'}, clase ${characterClassName(piece)}` : ''}`);
     if (square === selectedSquare) cell.classList.add('selected');
     if (targets.has(square)) cell.classList.add(piece ? 'capture-target' : 'move-target');
@@ -110,10 +111,13 @@ function render2D() {
     if (piece) {
       const token = document.createElement('span');
       token.className = `piece-token ${piece.color === 'w' ? 'piece-white' : 'piece-black'}`;
+      const kingPose=piece.type==='k'&&square===checkedKing?(game.isCheckmate()?'defeated':'check'):'standing';
+      token.dataset.kingPose=kingPose;
+      if(kingPose!=='standing')token.classList.add(`king-${kingPose}`);
       token.style.setProperty('--role-size',piece.type==='k'?'1.12':piece.type==='q'?'1.06':piece.type==='p'?'.92':'1');
       const art = document.createElement('img');
       art.className = 'piece-art'; art.alt = ''; art.draggable = false;
-      art.src = thumbnailUrl(appearanceFor(piece.type,piece.color));
+      art.src = thumbnailUrl(appearanceFor(piece.type,piece.color),kingPose);
       token.append(art);
       token.draggable = false;
       token.dataset.from = square;
@@ -147,6 +151,7 @@ function render2D() {
     lastMove,
     lastMoveIndex: history.length - 1,
     checkedKing,
+    matedKing: game.isCheckmate()?checkedKing:null,
     animationMove: recentMoveAnimation,
   });
 }
@@ -205,7 +210,7 @@ function findKing(color) {
 }
 
 function handleSquare(square) {
-  if (!square) return;
+  if (!square) { clearBoardSelection(); return; }
   const piece = game.get(square);
   const canMove = !thinking && !isReviewing && !game.isGameOver() && game.turn() === 'w';
   if (selectedSquare && canMove) {
@@ -225,14 +230,27 @@ function handleSquare(square) {
     selectedSquare = square;
     describePiece(piece);
   } else if (piece) {
-    selectedSquare = null;
+    selectedSquare = square;
     describePiece(piece);
   } else {
-    selectedSquare = null;
+    selectedSquare = square;
     describePiece(null);
   }
   renderAll();
 }
+
+function clearBoardSelection() {
+  if (!selectedSquare && !dragTargets.size) return;
+  selectedSquare = null;
+  dragTargets.clear();
+  describePiece(null);
+  renderAll();
+}
+
+document.addEventListener('pointerdown',event=>{
+  if (!appShell.classList.contains('is-playing')) return;
+  if (event.target instanceof Element && !event.target.closest('#board-2d,#board-3d')) clearBoardSelection();
+});
 
 function handleDragMove(from, to) {
   if (!from || !to || thinking || isReviewing || game.isGameOver() || game.turn() !== 'w') return false;
@@ -246,6 +264,7 @@ function handleDragMove(from, to) {
   if (moves.some((move) => move.promotion)) {
     pendingPromotion = { from, to };
     promotionDialog.showModal();
+    return 'promotion';
   } else {
     commitMove({ from, to });
   }
@@ -382,6 +401,7 @@ window.fctReview = {
       thinking = false;
       aiRequestId += 1;
       isReviewing = true;
+      renderStatus();
       return;
     }
     isReviewing = false;
@@ -391,6 +411,7 @@ window.fctReview = {
       renderStatus();
     }
     resumeAiAfterReview = false;
+    renderStatus();
   },
   reset() { isReviewing = false; resumeAiAfterReview = false; reviewMoves = []; reviewPosition = 0; },
 };
@@ -401,7 +422,9 @@ function commitMove(move) {
 
 function renderStatus() {
   const winner = game.turn() === 'w' ? 'El estratega' : 'Tú';
-  if (game.isCheckmate()) {
+  if (isReviewing) {
+    statusEl.textContent = 'Partida pausada';
+  } else if (game.isCheckmate()) {
     statusEl.textContent = `Checkmate · ${winner} gana`;
   } else if (game.isStalemate()) {
     statusEl.textContent = 'Tablas · rey ahogado';
@@ -428,6 +451,7 @@ function paintDragTargets() {
     const square = cell.dataset.square;
     cell.classList.remove('move-target', 'capture-target');
     cell.classList.toggle('selected', square === selectedSquare);
+    cell.setAttribute('aria-selected', String(square === selectedSquare));
     if (!dragTargets.has(square)) return;
     cell.classList.add(game.get(square) ? 'capture-target' : 'move-target');
   });

@@ -15,7 +15,7 @@ const FILES = 'abcdefgh';
 const palette = {
   light: terrainPalette.light,
   dark: terrainPalette.dark,
-  selected: 0xffc83f,
+  selected: 0x69d5ff,
   target: 0x32d18a,
   capture: 0xe94f43,
   lastMove: 0xe4bb39,
@@ -37,6 +37,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;
   renderer.domElement.setAttribute('aria-label', 'Tablero tridimensional; clic o arrastra una pieza para moverla y arrastra el fondo para girar la cámara.');
+  renderer.domElement.style.cursor = 'default';
   host.append(renderer.domElement);
 
   scene.add(new THREE.HemisphereLight(0xe0e9d2, 0x394339, 2.1));
@@ -50,6 +51,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
   sun.shadow.camera.bottom = -10;
   sun.shadow.normalBias = 0.035;
   sun.shadow.bias = -0.0002;
+  sun.shadow.intensity = 0.55;
   scene.add(sun);
   const fill = new THREE.DirectionalLight(0x88a7ba, 1.35);
   fill.position.set(8, 5, -7);
@@ -90,7 +92,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
     const highlightMaterial = new THREE.MeshBasicMaterial({
       color: palette.target,
       transparent: true,
-      opacity: 0.7,
+      opacity: 0.3,
       depthWrite: false,
       side: THREE.DoubleSide,
       polygonOffset: true,
@@ -104,6 +106,15 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
     world.add(highlight);
     tileHighlights.set(square, highlight);
   }
+
+  const selectionOutline=new THREE.Shape();
+  selectionOutline.moveTo(-.47,-.47);selectionOutline.lineTo(.47,-.47);selectionOutline.lineTo(.47,.47);selectionOutline.lineTo(-.47,.47);selectionOutline.closePath();
+  const selectionHole=new THREE.Path();
+  selectionHole.moveTo(-.43,-.43);selectionHole.lineTo(-.43,.43);selectionHole.lineTo(.43,.43);selectionHole.lineTo(.43,-.43);selectionHole.closePath();
+  selectionOutline.holes.push(selectionHole);
+  const selectionMarker=new THREE.Mesh(new THREE.ShapeGeometry(selectionOutline),new THREE.MeshBasicMaterial({color:palette.selected,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false}));
+  selectionMarker.name='selected-square-indicator';selectionMarker.rotation.x=-Math.PI/2;
+  selectionMarker.visible=false;selectionMarker.renderOrder=4;world.add(selectionMarker);
   const windParticles = buildWindParticles(world, reducedMotion);
 
   const dropIndicatorMaterial = new THREE.MeshBasicMaterial({
@@ -121,9 +132,9 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
   dropIndicator.renderOrder = 3;
   world.add(dropIndicator);
   const dropShadowMaterial = new THREE.MeshBasicMaterial({
-    color: 0x151b12,
+    color: 0x797247,
     transparent: true,
-    opacity: 0.66,
+    opacity: 0.25,
     alphaTest: 0.06,
     depthWrite: false,
     side: THREE.DoubleSide,
@@ -142,6 +153,8 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
   let legalTargets = new Set();
   let dragPlane = null;
   let originalPosition = null;
+  let pendingDragDrop = null;
+  const dragLift = 0.14;
 
   function setPointer(event) {
     const rect = renderer.domElement.getBoundingClientRect();
@@ -165,6 +178,23 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
     return null;
   }
 
+  function updateCursor(event) {
+    if (pointerDown) { renderer.domElement.style.cursor = 'grabbing'; return; }
+    const result = hit(event);
+    const piece = result?.object.userData;
+    renderer.domElement.style.cursor = piece?.kind === 'piece'
+      ? piece.color === 'w' && !piece.moveAnimation && canDragPiece(piece) ? 'grab' : 'pointer'
+      : 'default';
+  }
+
+  function settleDroppedPiece(piece, position) {
+    if (!piece || !position) return;
+    piece.userData.moveAnimation = {
+      from: piece.position.clone(), to: position.clone(), startTime: performance.now(),
+      duration: reducedMotion ? 1 : 190, drop: true,
+    };
+  }
+
   function squareAtPointer(event) {
     setPointer(event);
     const intersections = raycaster.intersectObjects([...tileMeshes, terrainMesh], false);
@@ -186,7 +216,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
     const legal = legalTargets.has(square);
     dropIndicator.position.set(file - 3.5, tileHeights.get(square) + 0.012, row - 3.5);
     dropIndicatorMaterial.color.setHex(legal ? palette.target : palette.capture);
-    dropIndicatorMaterial.opacity = legal ? 0.58 : 0.48;
+    dropIndicatorMaterial.opacity = legal ? 0.4 : 0.32;
     dropIndicator.visible = true;
     if (draggedPiece) {
       dropShadowMaterial.map = getSpriteTexture(draggedPiece.userData.type, draggedPiece.userData.color);
@@ -198,7 +228,9 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
 
   renderer.domElement.addEventListener('pointerdown', (event) => {
     if (event.button !== 0) return;
+    pendingDragDrop = null;
     pointerDown = { x: event.clientX, y: event.clientY };
+    renderer.domElement.style.cursor = 'grabbing';
     const result = hit(event);
     if (result?.object.userData.kind === 'piece' &&
       (result.object.userData.color !== 'w' || !canDragPiece(result.object.userData))) {
@@ -208,8 +240,8 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
       draggedPiece = result.object;
       draggedFrom = draggedPiece.userData.square;
       dragging = false;
-      originalPosition = draggedPiece.position.clone();
-      dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(tileElevation(3, 3) + 0.32));
+      originalPosition = draggedPiece.userData.basePosition.clone();
+      dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(originalPosition.y + dragLift));
       controls.enabled = false;
       renderer.domElement.setPointerCapture(event.pointerId);
       onSquare(draggedFrom);
@@ -217,17 +249,21 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
   }, true);
 
   renderer.domElement.addEventListener('pointermove', (event) => {
-    if (!draggedPiece || !pointerDown) return;
+    if (!draggedPiece || !pointerDown) { updateCursor(event); return; }
     const distance = Math.hypot(event.clientX - pointerDown.x, event.clientY - pointerDown.y);
     if (distance > 6) dragging = true;
     if (!dragging) return;
-    showDropIndicator(squareAtPointer(event));
+    const square = squareAtPointer(event);
+    showDropIndicator(square);
+    // Follow each terrace with a small, constant clearance above its surface.
+    const height = square ? tileHeights.get(square) + 0.008 : originalPosition.y;
+    dragPlane.constant = -(height + dragLift);
     setPointer(event);
     const point = new THREE.Vector3();
     if (raycaster.ray.intersectPlane(dragPlane, point)) {
       draggedPiece.position.x = THREE.MathUtils.clamp(point.x, -4.1, 4.1);
       draggedPiece.position.z = THREE.MathUtils.clamp(point.z, -4.1, 4.1);
-      draggedPiece.position.y = tileElevation(3, 3) + 0.32;
+      draggedPiece.position.y = height + dragLift;
     }
   });
 
@@ -237,26 +273,36 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
     if (draggedPiece) {
       const from = draggedFrom;
       const to = dragging ? squareAtPointer(event) : from;
+      const piece = draggedPiece;
+      const releasePosition = piece.position.clone();
+      const wasDragging = dragging;
       showDropIndicator(null);
-      draggedPiece.position.copy(originalPosition);
+      if (wasDragging) settleDroppedPiece(piece, originalPosition);
+      else piece.position.copy(originalPosition);
       draggedPiece = null;
       draggedFrom = null;
       dragging = false;
       originalPosition = null;
       dragPlane = null;
       controls.enabled = true;
-      if (distance < 6) onSquare(from);
-      else if (to) onDragMove(from, to);
+      pendingDragDrop = wasDragging ? { mesh: piece, from, to, position: releasePosition } : null;
+      let result;
+      if (!wasDragging) onSquare(from);
+      else if (to) result = onDragMove(from, to);
+      // Promotion waits for its dialog; keep the release point for the new model.
+      if (result !== 'promotion') pendingDragDrop = null;
     } else if (distance < 6) {
       const result = hit(event);
       const square = result?.object.userData.square;
-      if (square) onSquare(square);
+      onSquare(square || null);
     }
     pointerDown = null;
+    if (renderer.domElement.hasPointerCapture(event.pointerId)) renderer.domElement.releasePointerCapture(event.pointerId);
+    updateCursor(event);
   }, true);
 
   renderer.domElement.addEventListener('pointercancel', () => {
-    if (draggedPiece && originalPosition) draggedPiece.position.copy(originalPosition);
+    if (draggedPiece && originalPosition) settleDroppedPiece(draggedPiece, originalPosition);
     showDropIndicator(null);
     draggedPiece = null;
     draggedFrom = null;
@@ -265,6 +311,11 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
     originalPosition = null;
     dragPlane = null;
     controls.enabled = true;
+    renderer.domElement.style.cursor = 'default';
+  });
+
+  renderer.domElement.addEventListener('pointerleave', () => {
+    if (!pointerDown) renderer.domElement.style.cursor = 'default';
   });
 
   function update(board, state) {
@@ -306,6 +357,11 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
     const captureSquare = state.animationMove?.returnCapturedTo ?? state.lastMove?.to;
     const capturedMesh = !reversingCapture && state.lastMove?.captured ? previousBySquare.get(captureSquare) : null;
     const lastSquares = new Set(state.lastMove ? [state.lastMove.from, state.lastMove.to] : []);
+    selectionMarker.visible=Boolean(state.selectedSquare);
+    if(state.selectedSquare){
+      const square=state.selectedSquare;
+      selectionMarker.position.set(FILES.indexOf(square[0])-3.5,(tileHeights.get(square)||0)+.014,8-Number(square[1])-3.5);
+    }
     for (const tile of tileMeshes) {
       const square = tile.userData.square;
       const material = tileMaterials.get(square);
@@ -318,19 +374,19 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
       highlight.visible = isLastMove || isLegalTarget;
       if (isLastMove) {
         highlight.material.color.setHex(0xf4ca37);
-        highlight.material.opacity = 0.82;
+        highlight.material.opacity = 0.3;
       } else if (isLegalTarget) {
         const occupied = board[8 - Number(square[1])][FILES.indexOf(square[0])];
         highlight.material.color.setHex(occupied ? palette.capture : palette.target);
-        highlight.material.opacity = 0.7;
+        highlight.material.opacity = occupied ? 0.36 : 0.28;
       }
       if (lastSquares.has(square)) {
         material.emissive.setHex(palette.lastMove);
-        material.emissiveIntensity = 0.42;
+        material.emissiveIntensity = 0.16;
       }
       if (square === state.selectedSquare) {
         material.emissive.setHex(palette.selected);
-        material.emissiveIntensity = 0.98;
+        material.emissiveIntensity = 0.25;
       }
       if (square === state.checkedKing) {
         material.emissive.setHex(palette.check);
@@ -356,22 +412,26 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
       const previousSquare = mesh.userData.square;
       const previousPosition = mesh.userData.basePosition?.clone() ?? mesh.position.clone();
       const isMovingPiece = mesh === movingMesh && previousSquare === movement?.from && square === movement?.to;
+      const droppedPromotion = Boolean(movement?.promotion && pendingDragDrop?.from === movement.from && pendingDragDrop.to === square);
       const isMovingRook = mesh === rookMesh && square === movement?.rookTo;
       const targetPosition = new THREE.Vector3(file - 3.5, tileHeights.get(square) + 0.008, row - 3.5);
       retained.add(mesh);
       Object.assign(mesh.userData, { kind: 'piece', square, color: piece.color, type: piece.type });
       mesh.userData.selected = square === state.selectedSquare;
+      mesh.userData.kingPose = piece.type==='k' ? square===state.matedKing?'defeated':square===state.checkedKing?'check':'standing' : 'standing';
       if (mesh.userData.basePosition) mesh.userData.basePosition.copy(targetPosition);
       else mesh.userData.basePosition = targetPosition.clone();
-      if (isMovingPiece || isMovingRook || isRestoredCapture) {
-        const moveFrom = isRestoredCapture ? recoveredFrom : previousPosition;
+      if (isMovingPiece || isMovingRook || isRestoredCapture || droppedPromotion) {
+        const dropped = droppedPromotion || (pendingDragDrop?.mesh === mesh && pendingDragDrop.to === square);
+        const moveFrom = dropped ? pendingDragDrop.position : isRestoredCapture ? recoveredFrom : previousPosition;
         mesh.position.copy(moveFrom);
         mesh.userData.moveAnimation = {
           from: moveFrom.clone(),
           to: targetPosition.clone(),
           startTime: performance.now(),
-          duration: reducedMotion ? 160 : 380 + Math.random() * 180,
+          duration: reducedMotion ? (dropped ? 1 : 160) : dropped ? 190 : 380 + Math.random() * 180,
           capture: Boolean(movement.captured),
+          drop: dropped,
         };
       } else if (!mesh.userData.moveAnimation) {
         mesh.position.copy(targetPosition);
@@ -418,6 +478,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
       }
     }
     pieceMeshes.splice(0, pieceMeshes.length, ...nextPieces);
+    if (pendingDragDrop && (!retained.has(pendingDragDrop.mesh) || (movement?.from === pendingDragDrop.from && movement.to === pendingDragDrop.to))) pendingDragDrop = null;
   }
 
   function resize() {
@@ -517,16 +578,20 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
       const idle = piece.userData.idleAnimation;
       const motion = piece.userData.moveAnimation;
       if (!base || !idle) continue;
-      animateCharacter(piece.userData.visual, time, { moving: Boolean(motion), selected: piece.userData.selected, reducedMotion, phase: idle.phase });
+      animateCharacter(piece.userData.visual, time, { moving: Boolean(motion), selected: piece.userData.selected, reducedMotion, phase: idle.phase, kingPose:piece.userData.kingPose });
 
       if (motion) {
         const progress = Math.min(1, (now - motion.startTime) / motion.duration);
         const eased = 1 - (1 - progress) ** 3;
         piece.position.lerpVectors(motion.from, motion.to, eased);
         // Use the same progress as X/Z so long moves clear the central terraces.
-        piece.position.y += Math.sin(Math.PI * eased) * 0.65;
-        piece.rotation.y = Math.sin(Math.PI * progress) * 0.18;
-        piece.scale.setScalar(1 + Math.sin(Math.PI * progress) * 0.035);
+        if (motion.drop) {
+          piece.position.y = THREE.MathUtils.lerp(motion.from.y, motion.to.y, progress * progress);
+        } else {
+          piece.position.y += Math.sin(Math.PI * eased) * 0.65;
+          piece.rotation.y = Math.sin(Math.PI * progress) * 0.18;
+          piece.scale.setScalar(1 + Math.sin(Math.PI * progress) * 0.035);
+        }
         if (progress >= 1) {
           piece.userData.moveAnimation = null;
           piece.position.copy(base);
@@ -537,7 +602,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
       }
 
       piece.position.copy(base);
-      if (!reducedMotion) piece.position.y += floatOffset(time,idle);
+      if (!reducedMotion && piece.userData.kingPose==='standing') piece.position.y += floatOffset(time,idle);
       piece.rotation.set(0,0,0);
       piece.scale.setScalar(1);
     }

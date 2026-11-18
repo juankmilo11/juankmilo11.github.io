@@ -35,6 +35,13 @@ Las hojas originales se conservan en `projects/FCT/sprites/` con sus créditos.
 Las miniaturas derivadas se centran por su contenido opaco; los atlas mantienen
 la misma base para reconstruir el volumen 3D.
 
+Los cinco colores comunes de los bandos se definen en
+`projects/FCT/scripts/army-palettes.json`. El generador de personajes recolorea
+la ropa y conserva los tonos de piel y cabello. Las posturas de jaque y derrota
+se derivan de esos sprites mediante `projects/FCT/scripts/build-king-poses.py`:
+140 PNG transparentes para los 14 personajes reales y sus cinco colores. En 3D
+las mismas posturas se aplican al modelo articulado y se ajustan al suelo.
+
 Los cuatro WAV `menu1`–`menu4` aportados por el usuario se conservan en
 `projects/FCT/public/audio/`, su fuente de publicación. Uso exclusivo: selector
 de piezas. No añadir recursos nuevos directamente a `FCT/` sin trasladarlos

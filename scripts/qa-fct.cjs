@@ -76,6 +76,7 @@ async function inspectViewer(browser) {
   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   await page.screenshot({path:path.join(output,'models-back.png')});
   await page.locator('[data-role="k"]').click();
+  await page.locator('[data-gender="male"]').click();
   await page.locator('[data-character="ramza"]').click();
   await page.locator('[data-palette="0"]').click();
   await page.waitForFunction(()=>document.querySelector('#appearance-status').dataset.state==='ready');
@@ -198,10 +199,14 @@ async function specialMoves(browser, width, height) {
       assert.ok(footer.y>=fixedBox.y&&footer.y+footer.height<=fixedBox.y+fixedBox.height,'footer stays inside fixed dialog');
       if (width === 1440) {
         let variants = 0;
-        for(const [role,count] of [['p',6],['r',6],['n',6],['b',6],['q',6],['k',6]]) {
+        for(const gender of ['female','male']) {
+        await page.locator(`[data-gender="${gender}"]`).click();
+        for(const [role,count] of [['p',3],['r',3],['n',3],['b',3],['q',6],['k',6]]) {
           await page.locator(`[data-role="${role}"]`).click();
           const characters = await page.locator('[data-character]').evaluateAll(items => items.map(item => item.dataset.character));
           assert.equal(characters.length,count,'role must only expose allowed character families');
+          assert.ok(!characters.some(id=>['dycedarg','gaff-gafgarion'].includes(id)),'AI kings never appear in the selector');
+          assert.ok(await page.locator('[data-character]').evaluateAll(items=>items.every(item=>!/(?:male|female)/i.test(item.getAttribute('aria-label')))),'accessible names omit gender suffixes');
           for (const character of characters) {
             await page.locator(`[data-character="${character}"]`).click();
             const palettes = await page.locator('[data-palette]').evaluateAll(items => items.map(item => item.dataset.palette));
@@ -216,9 +221,11 @@ async function specialMoves(browser, width, height) {
             }
           }
         }
-        assert.equal(variants,180);
-        console.log('OK: all 180 player palettes, including Delita/Teta, restricted roles and single preview');
+        }
+        assert.equal(variants,240);
+        console.log('OK: both uniform armies, all 240 role/color assignments, exclusive AI kings and neutral labels');
       }
+      await page.locator('[data-gender="male"]').click();
       await page.locator('[data-role="r"]').click();
       await page.locator('[data-character="knight-male"]').click();
       await page.locator('[data-palette="2"]').click();
@@ -228,6 +235,7 @@ async function specialMoves(browser, width, height) {
       await page.locator('#appearance-save').click();
       await page.locator('#select-pieces').click();
       assert.equal(await page.locator('[data-character="knight-male"]').getAttribute('aria-pressed'),'true');
+      await page.locator('[data-gender="female"]').click();
       await page.locator('[data-character="knight-female"]').click();
       await page.locator('#appearance-close').click();
       await page.locator('#select-pieces').click();
@@ -237,11 +245,12 @@ async function specialMoves(browser, width, height) {
       await page.waitForFunction(() => window.fctReview);
       await page.locator('#select-pieces').click();
       assert.equal(await page.locator('[data-character="knight-female"]').getAttribute('aria-pressed'),'true','reload resets session appearance');
+      await page.locator('[data-gender="male"]').click();
       await page.locator('[data-character="knight-male"]').click();
       await page.locator('#appearance-save').click();
       await page.locator('#select-pieces').click();
       await page.locator('[data-role="k"]').click();await page.locator('[data-character="delita"]').click();await page.locator('[data-palette="1"]').click();
-      await page.locator('[data-role="q"]').click();await page.locator('[data-character="teta"]').click();await page.locator('[data-palette="2"]').click();
+      await page.locator('[data-role="q"]').click();await page.locator('[data-character="cloud"]').click();await page.locator('[data-palette="2"]').click();
       await page.locator('#appearance-save').click();
       await page.locator('#new-game').click();
       await page.locator('#board-3d canvas').waitFor();
@@ -252,7 +261,7 @@ async function specialMoves(browser, width, height) {
       await page.locator('[data-view="2d"]').click();
       assert.ok((await page.locator('[data-square="a1"]').getAttribute('aria-label')).includes('Caballero'));
       assert.ok((await page.locator('[data-square="e1"]').getAttribute('aria-label')).includes('Delita'));
-      assert.ok((await page.locator('[data-square="d1"]').getAttribute('aria-label')).includes('Teta'));
+      assert.ok((await page.locator('[data-square="d1"]').getAttribute('aria-label')).includes('Cloud'));
       for(const square of ['a1','a8','e2','e7']) {
         const cell=await page.locator(`[data-square="${square}"]`).boundingBox();
         const art=await page.locator(`[data-square="${square}"] .piece-art`).boundingBox();

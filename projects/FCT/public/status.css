@@ -60,6 +60,7 @@
   color: #f1d99f;
   font: 10px/1.5 var(--font-ui);
   pointer-events: none;
+  text-align: center;
 }
 .review-pause-note[hidden] { display: none; }
 .app-shell:not(.is-reviewing) #review-return { display: none; }
@@ -90,7 +91,17 @@
   font: 9px/1.2 var(--font-ui);
 }
 
-.app-shell.is-reviewing .game-status-badge { display: none; }
+.app-shell.is-reviewing .game-toolbar .game-status-badge { display: flex; }
+.app-shell.is-reviewing .turn-pulse { animation: none; background: #d9bf7e; box-shadow: none; }
+
+.app-shell.is-review-transitioning .board-stage { animation: review-soft-focus 360ms ease-out both; }
+@keyframes review-soft-focus {
+  from { filter: blur(4px); opacity: .76; }
+  to { filter: blur(0); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.is-review-transitioning .board-stage { animation: none; }
+}
 
 .review-match-button {
   margin: 8px 0 14px;
