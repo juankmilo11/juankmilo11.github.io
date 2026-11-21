@@ -7,6 +7,30 @@ Install dependencies with `npm ci`, run the local preview with `npm run dev`, an
 Run `npm test` to check terrain geometry, the four central summit squares, and
 move/capture audio for both sides (including en passant).
 
+## Órdenes de guerra
+
+The menu also opens `tactics.html`: an independent 8-vs-8 mode with hidden
+deployment and programmed orders, against AI or by local device handover.
+Opening rounds allow one movement and one action in 7 seconds; later rounds
+allow three actions in 10 seconds. Both plans resolve in alternating slots,
+with initiative alternating each round. HP, facing, guard, focus, class
+ultimates, friendly fire, healing, traps, temporary barricades and permanent
+fractures are handled by a deterministic rules engine. The king's death ends
+combat. Planning forecasts and enemy AI never consult the opponent's sealed plan.
+
+See [the Spanish rules and initial balance study](TACTICS.md) for exact numbers
+and the scope of the initial AI simulations. `tactics-engine.js` is DOM-free;
+`tactics-ui.js` owns active planning time and privacy; `tactics-board3d.js` reuses
+FCT's character rigs and landscape for sequential move/strike/shield/fall effects.
+The classic game remains a separate entry, built together by Vite.
+
+Run `node scripts/qa-fct-tactics.cjs` from the repository root with Playwright
+and Edge configured as below. It builds isolated test fixtures, covers actual
+7-second deadlines, concealed setup, local handovers, rounds 1–3, stationary
+attacks and king death in 3D, and desktop/mobile layout. Test hooks are absent
+from production. Run `node projects/FCT/scripts/simulate-tactics.mjs --games=64`
+for the reproducible AI balance smoke test.
+
 ## Character appearances
 
 The menu's **Seleccionar piezas** dialog replaces the old player/rival card.

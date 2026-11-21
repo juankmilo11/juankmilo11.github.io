@@ -1,7 +1,7 @@
 import { Chess } from 'chess.js';
 import './style.css';
 import { moveSound } from './audio-cues.js';
-import { appearanceFor, characterInfo, thumbnailUrl } from './appearance.js';
+import { appearanceFor, characterInfo, thumbnailUrl, getLoadout } from './appearance.js';
 import { initPieceSelector } from './piece-selector.js';
 import { tileDetail } from './terrain.js';
 import './menu-theme.css';
@@ -21,6 +21,9 @@ const promotionDialog = document.querySelector('#promotion-dialog');
 const exitConfirmation = document.querySelector('#exit-confirmation');
 const aiWorker = new Worker(new URL('./ai-worker.js', import.meta.url), { type: 'module' });
 const audioSystem = createAudioSystem();
+document.querySelector('.tactics-mode-link')?.addEventListener('click',()=>{
+  try { sessionStorage.setItem('fct:tactics:loadout',JSON.stringify(getLoadout())); } catch { /* Cosmetic defaults remain available. */ }
+});
 function playUiSound(name,gain=1) { audioSystem.playSound(name,gain); }
 window.playFctSound = playUiSound;
 

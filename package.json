@@ -9,6 +9,7 @@
     "build:paca": "node scripts/build-paca.mjs",
     "qa:online": "node scripts/qa-online.mjs",
     "qa:paca": "node scripts/qa-paca.cjs",
-    "qa:fct": "node scripts/qa-fct-performance.cjs"
+    "qa:fct": "node scripts/qa-fct-performance.cjs",
+    "qa:tactics": "node scripts/qa-fct-tactics.cjs"
   }
 }
