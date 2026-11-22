@@ -1,7 +1,9 @@
 import './tactics.css';
-import { createMatch, autoDeploy, confirmDeployment, rollInitiative, chooseInitiative, roundRules, submitPlan, resolveNext, getLegalMoves, getAttackTargets, validateOrder, previewPlan, publicView, UNIT_NAMES, ABILITIES, orderCategory } from './tactics-engine.js';
+import { createMatch, autoDeploy, confirmDeployment, rollInitiative, chooseInitiative, roundRules, submitPlan, resolveNext, getLegalMoves, getAttackSquares, attackOrderFor, unitAt, validatePlan, previewPlan, publicView, UNIT_NAMES, ABILITIES, orderCategory } from './tactics-engine.js';
 import { planAI } from './tactics-ai.js';
-import { appearanceFor, thumbnailUrl, setLoadout } from './appearance.js';
+import { tacticalValues } from './tactics-values.js';
+import { describeBattleEvent, directionArrow } from './tactics-presentation.js';
+import { appearanceFor, thumbnailUrl, setLoadout, armyPalettes } from './appearance.js';
 import { createAudioSystem } from './audio-system.js';
 
 try { const saved=sessionStorage.getItem('fct:tactics:loadout');if(saved)setLoadout(JSON.parse(saved)); } catch { /* Appearance preferences are optional. */ }
@@ -17,7 +19,7 @@ const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<'
 const other=side=>side==='w'?'b':'w';
 const isAlive=unit=>unit.hp>0&&unit.square;
 const squares=Array.from({length:64},(_,i)=>String.fromCharCode(97+i%8)+(8-Math.floor(i/8)));
-let match=null, viewer='w', selectedId=null, draft=[], intent=null, pendingTarget=null, abilityMode=null;
+let match=null, viewer='w', selectedId=null, inspectedId=null, draft=[], intent=null, pendingTarget=null, abilityMode=null;
 let phaseToken=0, privacy=false, planning=false, resolving=false, roundPrepared=0, secondsLeft=0, totalSeconds=15, lastTick=0;
 let view='3d', three=null, threePromise=null, lastEvent=null, toastTimer, furthestOrder=0;
 let history=[],reviewIndex=null,facingOrderIndex=null,facingTimer=0,aiWorker=null,aiJob=0,aiPending=null;
@@ -39,102 +41,88 @@ function visibleState(){return forecast();}
 function clearIntent(){clearTimeout(facingTimer);facingOrderIndex=null;intent=null;pendingTarget=null;abilityMode=null;}
 function checkPlan(orders){
   if(checkMatch!==match||checkRevision!==match.revision){checkMemo.clear();checkMatch=match;checkRevision=match.revision;}
-  const key=JSON.stringify(orders);if(checkMemo.has(key))return checkMemo.get(key);
-  const result=check();checkMemo.set(key,result);return result;
-  function check(){
-    const rules=roundRules(match);if(orders.length>rules.actions)return {ok:false,error:'La secuencia ya está completa.'};
-    let moves=0,others=0,projected=match;
-    for(const order of orders){
-      if(projected.winner)return {ok:false,error:'La partida ya terminaría con la orden anterior.'};
-      const valid=validateOrder(projected,viewer,order);if(!valid.ok)return valid;
-      const category=orderCategory(projected,valid.order);moves+=category==='move';others+=category==='other';
-      if(moves>rules.maxMoves||others>rules.maxOther)return {ok:false,error:'En las dos primeras rondas solo se permite un movimiento.'};
-      projected=previewPlan(projected,viewer,[valid.order]);
-    }return {ok:true};
-  }
+  const key=JSON.stringify(orders);if(!checkMemo.has(key)){const result=validatePlan(match,viewer,orders);checkMemo.set(key,{ok:result.ok,error:result.error});}return checkMemo.get(key);
 }
 
-function attackDirections(unit){return unit.type==='p'?(unit.color==='w'?['NW','NE']:['SW','SE']):unit.type==='n'||unit.type==='b'?['NW','NE','SW','SE']:unit.type==='r'?['N','E','S','W']:Object.keys(DIR);}
 function targetSquares(state,unit){
-  if(!unit?.square||!planning||reviewIndex!==null)return [];
-  if(intent==='facing')return [];
-  return [...new Set([...getLegalMoves(state,unit).filter(target=>checkPlan([...draft,{unitId:unit.id,kind:'move',target}]).ok),...attackDirections(unit).filter(direction=>checkPlan([...draft,{unitId:unit.id,kind:'attack',direction}]).ok).flatMap(d=>getAttackTargets(state,unit,d))])];
+  if(!unit?.square||unit.color!==viewer||!planning||resolving||reviewIndex!==null||intent==='facing')return [];
+  const moves=getLegalMoves(state,unit).filter(target=>!unitAt(state,target)&&checkPlan([...draft,{unitId:unit.id,kind:'move',target}]).ok);
+  const attacks=getAttackSquares(state,unit).filter(target=>checkPlan([...draft,attackOrderFor(state,unit,target)]).ok);
+  return [...new Set([...moves,...attacks])];
 }
 function renderBoard(){
   const state=visibleState();if(!state)return;
-  const selected=unitFrom(state),targets=new Set(targetSquares(state,selected)),moveTargets=selected&&planning?getLegalMoves(state,selected):[],attackTargets=selected&&planning?attackDirections(selected).flatMap(d=>getAttackTargets(state,selected,d)):[];
+  const selected=unitFrom(state),targets=new Set(targetSquares(state,selected));
   if(!board.children.length)board.innerHTML=squares.map(square=>`<button type="button" class="tactical-cell" data-square="${square}" role="gridcell"><span class="cell-coordinate">${square}</span></button>`).join('');
-  const occupants=new Map(state.units.filter(isAlive).map(u=>[u.square,u]));
+  const occupants=new Map(state.units.filter(u=>isAlive(u)||u.type==='k'&&u.hp<=0&&state.phase==='finished').map(u=>[u.square,u]));
   for(const [index,cell]of [...board.children].entries()){
     const square=squares[index],unit=occupants.get(square),classes=['tactical-cell',(Math.floor(index/8)+index%8)%2?'dark':'light'];
     if(unit?.id===selectedId)classes.push('is-selected');
-    if(targets.has(square)){if(moveTargets.includes(square))classes.push('is-target');if(attackTargets.includes(square))classes.push('is-attack-target');}
-    if(draft.some(o=>o.target===square)&&reviewIndex===null)classes.push('is-order-target');
+    if(targets.has(square))classes.push('is-target');
     if(state.tiles[square])classes.push('terrain-'+state.tiles[square].kind);
     cell.querySelectorAll('.combat-number').forEach(n=>n.remove());const oldToken=cell.querySelector('.tactical-token');if(oldToken){oldToken.getAnimations().forEach(a=>a.cancel());oldToken.classList.remove('is-focusing','is-striking','is-falling');}
     cell.className=classes.join(' ');cell.setAttribute('aria-selected',String(unit?.id===selectedId));
     cell.setAttribute('aria-label',`${square}${unit?`, ${UNIT_NAMES[unit.type]}, ${sideName(unit.color)}, ${unit.hp} de vida, mira ${unit.facing}`:''}`);
     const signature=unit?`${unit.id}:${unit.hp}:${unit.charged}:${unit.guard}:${unit.counterUntil}`:'';
-    if(cell.dataset.piece!==signature){cell.querySelector('.tactical-token')?.remove();cell.dataset.piece=signature;if(unit){const token=document.createElement('span');token.className='tactical-token';token.dataset.unit=unit.id;const img=document.createElement('img');img.src=thumbnailUrl(look(unit));img.alt='';img.draggable=false;token.append(img);if(unit.charged){const charge=document.createElement('span');charge.className='token-charge';charge.textContent='✦';token.append(charge);}if(unit.guard||unit.counterUntil===state.round){const mark=document.createElement('span');mark.className='token-resource';mark.textContent='◇';token.append(mark);}cell.append(token);}}
+    if(cell.dataset.piece!==signature){cell.querySelector('.tactical-token')?.remove();cell.dataset.piece=signature;if(unit){const token=document.createElement('span');token.className='tactical-token';token.dataset.unit=unit.id;const img=document.createElement('img');img.src=thumbnailUrl(look(unit),unit.hp<=0?'defeated':'standing');img.alt='';img.draggable=false;token.append(img);if(unit.charged){const charge=document.createElement('span');charge.className='token-charge';charge.textContent='✦';token.append(charge);}if(unit.guard||unit.counterUntil===state.round){const mark=document.createElement('span');mark.className='token-resource';mark.textContent='◇';token.append(mark);}cell.append(token);}}
   }
-  if(three&&view==='3d')three.render(state,{selectedSquare:selected?.square,targets:[...targets],moveTargets,attackTargets,lastEvent:reviewIndex!==null?history[reviewIndex].event:lastEvent,interactive:reviewIndex===null});
+  if(three&&view==='3d')three.render(state,{selectedSquare:selected?.square,targets:[...targets],lastEvent:reviewIndex!==null?history[reviewIndex].event:lastEvent,interactive:planning&&!resolving&&reviewIndex===null&&draft.length<roundRules(match).actions});
 }
 
 function renderPhase(){
   if(!match)return;const panel=$('#phase-panel'),reviewing=reviewIndex!==null,show=match.phase==='planning'&&planning&&!reviewing;
   document.body.classList.toggle('is-planning',show);document.body.classList.toggle('is-reviewing',reviewing);
-  $('#planning-panel').hidden=!(show||reviewing);$('#queue-panel').hidden=!show;
+  $('#planning-panel').hidden=false;$('#queue-panel').hidden=!show;
   $('#review-controls').hidden=!reviewing;$('#review-open').disabled=resolving||history.length<2||(intent==='facing'&&draft.length>=roundRules(match).actions);
   $('#round-counter').textContent=`Ronda ${reviewing?history[reviewIndex].state.round:match.round||'—'}`;$('#action-clock').textContent='';
   if(reviewing){$('#phase-kicker').textContent='REVISIÓN';$('#battle-status').textContent='Partida pausada';panel.innerHTML='<h2>Revisando partida</h2><p>Recorre cada acción sin cambiar el resultado.</p>';renderReview();return;}
   if(match.phase==='initiative'){
     $('#phase-kicker').textContent='INICIATIVA';$('#battle-status').textContent='Dos ejércitos. Una corona.';
     const dice=match.dice,canChoose=dice?.winner==='w';
-    panel.innerHTML=`<h2>${dice?`${escape(sideName(dice.winner))} gana`:'Lanza los dados'}</h2>${dice?`<div class="dice-pair"><div><span class="dice-face">${dice.w}</span>Tu ejército</div><div><span class="dice-face">${dice.b}</span>El estratega</div></div><p>El rey del segundo jugador empieza con la definitiva cargada.</p>${canChoose?'<div class="choice-pair"><button type="button" data-command="choose-first">Jugar primero</button><button type="button" data-command="choose-second">Jugar segundo</button></div>':'<p>El estratega elige…</p>'}`:'<p>16 piezas por bando. Posición inicial de ajedrez.</p><button type="button" class="primary-button" data-command="roll">Lanzar dados</button>'}`;
+    panel.innerHTML=`<h2>${dice?`${escape(sideName(dice.winner))} gana`:'Lanza los dados'}</h2>${dice?`<div class="dice-pair"><div><span class="dice-face">${dice.w}</span>Tu ejército</div><div><span class="dice-face">${dice.b}</span>El estratega</div></div><p>Todas las piezas empiezan sin carga.</p>${canChoose?'<div class="choice-pair"><button type="button" data-command="choose-first">Jugar primero</button><button type="button" data-command="choose-second">Jugar segundo</button></div>':'<p>El estratega elige…</p>'}`:'<p>16 piezas por bando. Posición inicial de ajedrez.</p><button type="button" class="primary-button" data-command="roll">Lanzar dados</button>'}`;
   }else if(show){
-    $('#phase-kicker').textContent=match.round<=2?'APERTURA':'PREPARA TU SECUENCIA';$('#battle-status').textContent=intent==='facing'?'Movimiento listo · orientación opcional':'Elige tu siguiente orden';
-    panel.innerHTML=`<div class="timer" id="planning-timer"><p>Tiempo de esta acción</p><strong id="timer-seconds"></strong></div><div class="timer-track"><i id="timer-progress"></i></div><p>${match.round<=2?'Un solo movimiento por bando.':'Tres acciones, ejecutadas intercaladamente.'}</p>`;updateTimer();
+    $('#phase-kicker').textContent='PREPARA TU SECUENCIA';$('#battle-status').textContent=intent==='facing'?'Movimiento listo · orientación opcional':'Elige tu siguiente orden';
+    panel.innerHTML=`<div class="timer" id="planning-timer"><p>Tiempo de esta acción</p><strong id="timer-seconds"></strong></div><div class="timer-track"><i id="timer-progress"></i></div><p>Dos acciones por bando. Una pieza no puede repetir el mismo tipo.</p>`;updateTimer();
   }else if(match.phase==='resolution'){
-    $('#phase-kicker').textContent='COMBATE';$('#battle-status').textContent=lastEvent?.message??'Ejecutando órdenes…';panel.innerHTML='<h2>¡En combate!</h2><p>Tu secuencia se cruza con la del rival.</p>';
+    $('#phase-kicker').textContent='COMBATE';$('#battle-status').textContent=lastEvent?describeBattleEvent(lastEvent,match):'Ejecutando órdenes…';panel.innerHTML='<h2>¡En combate!</h2><p>Tu secuencia se cruza con la del rival.</p>';
   }else if(match.phase==='finished'){$('#phase-kicker').textContent='RESULTADO';$('#battle-status').textContent=winnerText();panel.innerHTML=`<h2>${escape(winnerText())}</h2><button type="button" data-command="review">Revisar partida</button><button type="button" data-command="restart">Otra partida</button>`;}
 }
-function renderControls(){
-  const unit=match&&unitFrom(forecast());$('#unit-name').textContent=unit?UNIT_NAMES[unit.type]:'Tu siguiente decisión';$('#unit-health').textContent=unit?`${unit.hp} / 6 ♥`:'';
-  $('#unit-details').textContent=unit?`${unit.square} · mira ${unit.facing} · ${unit.charged?'Definitiva lista':'Sin carga'}`:reviewIndex!==null?'Recorre las acciones de ambos bandos.':match?.round<=2?'Elige una pieza y muévela.':'Toca una pieza para actuar.';
-  renderFieldActions();if(match)renderQueue();
+function renderControls(){renderInspector();renderFieldActions();if(match)renderQueue();}
+function teamInfo(side){const palette=armyPalettes.find(p=>p.id===appearanceFor('p',side).palette);return {...palette,name:`${sideName(side)} · ${palette.label}`};}
+function teamBadge(side,compact=false){const team=teamInfo(side);return `<span class="team-badge" title="${escape(team.name)}" style="--team-color:${team.swatch}"><i aria-hidden="true"></i>${escape(compact?`${side==='w'?'Tú':'Rival'} · ${team.label}`:team.name)}</span>`;}
+function renderInspector(){
+  const unit=match&&unitFrom(forecast(),inspectedId);$('#unit-name').textContent=unit?UNIT_NAMES[unit.type]:'Consulta';$('#unit-health').textContent=unit?`${unit.hp} / 6 ♥`:'';
+  $('#unit-team').innerHTML=unit?teamBadge(unit.color,true):'';
+  $('#unit-details').innerHTML=unit?`<span>${unit.square} · ${directionArrow[unit.facing]}</span><span>${unit.hp<=0?'Fuera de combate':unit.charged?'Definitiva lista':'Sin carga'}</span><span>${unit.type==='k'?'Proteger al rey':`Valor táctico ${tacticalValues[unit.type]}`}</span>`:'<span>Toca una ficha.</span><span>Consulta ambos</span><span>bandos.</span>';
+}
+function inspectSquare(square){
+  if(!match||!square)return;const state=forecast(),unit=state.units.find(u=>u.square===square&&(isAlive(u)||u.type==='k'&&state.phase==='finished'));
+  if(unit&&unit.id!==inspectedId){inspectedId=unit.id;renderInspector();}
 }
 function renderFieldActions(){
-  const menu=$('#unit-actions'),destination=$('#destination-actions'),unit=match&&unitFrom(forecast());menu.hidden=destination.hidden=true;
-  if(!planning||resolving||reviewIndex!==null||!unit||view==='3d'&&!three)return;
+  const menu=$('#unit-actions'),destination=$('#destination-actions'),unit=match&&unitFrom(forecast(),intent==='facing'?draft[facingOrderIndex]?.unitId:selectedId);menu.hidden=destination.hidden=true;document.body.classList.remove('has-field-actions');
+  if(!planning||resolving||reviewIndex!==null||!unit||unit.color!==viewer||view==='3d'&&!three)return;
   if(intent==='facing'){destination.innerHTML=`<div class="field-compass">${['N','W','E','S'].map(d=>`<button type="button" data-field-facing="${d}" aria-label="Mirar ${d}">${FACE[d]}</button>`).join('')}</div>`;destination.hidden=false;}
-  else if(pendingTarget){
-    const state=forecast(),move=!state.units.some(u=>isAlive(u)&&u.square===pendingTarget)&&checkPlan([...draft,{unitId:unit.id,kind:'move',target:pendingTarget}]).ok,rawAttack=attackOrder(state,unit,pendingTarget),attack=rawAttack&&checkPlan([...draft,rawAttack]).ok;
-    destination.innerHTML=`${move?'<button type="button" data-field-choice="move">Mover</button>':''}${attack?'<button type="button" data-field-choice="attack">Atacar</button>':''}<button type="button" data-field-cancel aria-label="Cancelar destino">×</button>`;destination.hidden=false;
-  }else if(roundRules(match).maxOther){
-    const canAct=checkPlan([...draft,{unitId:unit.id,kind:'block'}]).ok;
-    menu.innerHTML=`<button type="button" data-field-action="block" ${canAct?'':'disabled'}>Bloquear</button><button type="button" data-field-action="focus" ${unit.charged||!canAct?'disabled':''}>Focus</button><button type="button" data-field-action="ultimate" ${unit.charged&&canAct?'':'disabled'}>Definitiva</button>`;menu.hidden=false;
-  }positionFieldActions();
+  else{
+    const available=kind=>checkPlan([...draft,{unitId:unit.id,kind}]).ok;
+    menu.innerHTML=`<button type="button" data-field-action="block" ${available('block')?'':'disabled'}>Bloquear</button><button type="button" data-field-action="focus" ${available('focus')?'':'disabled'}>Focus</button><button type="button" data-field-action="ultimate" ${available('ultimate')?'':'disabled'}>Definitiva</button>`;menu.hidden=false;
+  }if(!menu.hidden&&view==='2d')document.body.classList.add('has-field-actions');positionFieldActions();
 }
 function positionFieldActions(){
-  if(!match)return;const unit=unitFrom(forecast());if(!unit?.square)return;
+  if(!match)return;const unit=unitFrom(forecast(),intent==='facing'?draft[facingOrderIndex]?.unitId:selectedId);if(!unit?.square)return;
   const wrap=$('.tactical-board-wrap'),box=wrap.getBoundingClientRect();
   for(const [id,square]of [['unit-actions',unit.square],['destination-actions',pendingTarget??unit.square]]){
-    const el=$('#'+id);if(el.hidden)continue;let point;
+    const el=$('#'+id);if(el.hidden)continue;if(id==='unit-actions'){el.style.left=`${box.width/2}px`;el.style.top=`${view==='3d'?box.height-el.offsetHeight-12:box.height+8}px`;continue;}let point;
     if(view==='3d'&&three)point=three.projectSquare(square);
     else{const rect=board.querySelector(`[data-square="${square}"]`).getBoundingClientRect();point={x:rect.x-box.x+rect.width/2,y:rect.y-box.y+rect.height/2};}
     if(!point)continue;const half=Math.min(el.offsetWidth/2+6,box.width/2);el.style.left=`${Math.max(half,Math.min(box.width-half,point.x))}px`;el.style.top=`${Math.max(8,Math.min(box.height-el.offsetHeight-8,(id==='unit-actions'?point.y+30:point.y-el.offsetHeight-28)))}px`;
   }
 }
-function attackOrder(state,unit,target){
-  const direction=attackDirections(unit).find(d=>getAttackTargets(state,unit,d).includes(target));
-  if(direction)return{unitId:unit.id,kind:'attack',direction,target};
-  if(getLegalMoves(state,unit).includes(target)&&state.units.some(u=>isAlive(u)&&u.square===target))return{unitId:unit.id,kind:'move',target};
-  return null;
-}
-function commitOrder(order){const result=checkPlan([...draft,order]);if(!result.ok){toast(result.error);return;}draft.push(order);clearIntent();sound('menu4');advanceOrder();}
-function confirmMove(){
-  const unit=unitFrom(forecast()),order={unitId:unit.id,kind:'move',target:pendingTarget,facing:unit.facing},result=checkPlan([...draft,order]);if(!result.ok){toast(result.error);return;}
-  draft.push(order);clearIntent();facingOrderIndex=draft.length-1;pendingTarget=order.target;intent='facing';sound('menu4');
+
+function commitOrder(order){const result=checkPlan([...draft,order]);if(!result.ok){toast(result.error);return;}draft.push(order);clearIntent();selectedId=null;sound('menu4');advanceOrder();}
+function confirmMove(order){
+  const result=checkPlan([...draft,order]);if(!result.ok){toast(result.error);return;}
+  draft.push(order);clearIntent();selectedId=null;facingOrderIndex=draft.length-1;pendingTarget=order.target;intent='facing';sound('menu4');
   if(draft.length<roundRules(match).actions){furthestOrder=draft.length;secondsLeft=totalSeconds;lastTick=performance.now();}
   else facingTimer=setTimeout(()=>finishFacing(),2500);
   render();
@@ -148,24 +136,32 @@ function renderQueue(){
   const max=roundRules(match).actions;$('#queue-count').textContent=`${draft.length} / ${max}`;
   $('#order-queue').innerHTML=draft.length?draft.map((order,index)=>`<li><span class="queue-number">${index+1}</span><span>${escape(orderLabel(order,index))}</span></li>`).join(''):'<li class="queue-empty">Elige las órdenes directamente sobre el tablero.</li>';
 }
-function renderLog(){
-  if(!match)return;
-  const entries=match.log.slice(-12).reverse();$('#battle-log').innerHTML=entries.length?entries.map(event=>`<li><strong>${escape(sideName(event.side))}</strong> · ${escape(event.message)}${event.targets?.some(target=>target.damage)?` <span>${event.targets.filter(target=>target.damage).map(target=>`−${target.damage}${target.reflected?' reflejado':''}`).join(', ')}</span>`:''}</li>`).join(''):'<li>La próxima decisión todavía es un secreto.</li>';
-}
-function render(){renderPhase();renderBoard();renderControls();renderLog();}
-function selectUnit(id){if(reviewIndex!==null||!planning)return;const full=intent==='facing'&&draft.length>=roundRules(match).actions;if(intent==='facing')finishFacing();if(full)return;const unit=unitFrom(forecast(),id);if(!unit||unit.color!==viewer||unit.hp<=0)return;selectedId=id;clearIntent();sound();render();}
+
+function render(){renderPhase();renderBoard();renderControls();}
+function selectUnit(id){if(!planning||resolving||reviewIndex!==null)return;const full=intent==='facing'&&draft.length>=roundRules(match).actions;if(intent==='facing')finishFacing();if(full)return;const unit=unitFrom(forecast(),id);if(!unit||unit.color!==viewer||unit.hp<=0)return;selectedId=id;inspectedId=id;clearIntent();sound();render();}
 function handleSquare(square){
-  if(!match||!planning||resolving||reviewIndex!==null)return;
+  if(!match)return;inspectSquare(square);
+  if(!planning||resolving||reviewIndex!==null)return;
   if(intent==='facing'){const full=draft.length>=roundRules(match).actions;finishFacing();if(full)return;}
   if(!square){selectedId=null;clearIntent();render();return;}
-  const state=forecast(),unit=unitFrom(state);
-  const clickedOwn=state.units.find(u=>u.color===viewer&&isAlive(u)&&u.square===square);if(clickedOwn&&clickedOwn.id!==selectedId){selectUnit(clickedOwn.id);return;}
-  if(unit&&targetSquares(state,unit).includes(square)&&square!==unit.square){pendingTarget=square;intent='destination';sound('menu3');render();return;}
-  const own=state.units.find(u=>u.color===viewer&&isAlive(u)&&u.square===square);if(own)selectUnit(own.id);else{selectedId=null;clearIntent();render();}
+  const state=forecast(),unit=unitFrom(state),clicked=unitAt(state,square);
+  if(unit&&square!==unit.square&&targetSquares(state,unit).includes(square)){
+    if(clicked)commitOrder(attackOrderFor(state,unit,square));
+    else confirmMove({unitId:unit.id,kind:'move',target:square,facing:unit.facing});
+    return;
+  }
+  if(clicked?.color===viewer)selectUnit(clicked.id);else{selectedId=null;clearIntent();render();}
+}
+function beginBoardDrag(square){
+  if(!planning||resolving||reviewIndex!==null)return;
+  if(intent==='facing'){const full=draft.length>=roundRules(match).actions;finishFacing();if(full)return;}
+  const unit=unitAt(forecast(),square);if(!unit||unit.color!==viewer)return;
+  selectedId=unit.id;inspectedId=unit.id;clearIntent();render();
 }
 function handleBoardDrag(from,to){
-  if(!planning||reviewIndex!==null||!to)return;const unit=forecast().units.find(u=>u.color===viewer&&isAlive(u)&&u.square===from);if(!unit)return;
-  selectedId=unit.id;clearIntent();if(targetSquares(forecast(),unit).includes(to)){pendingTarget=to;intent='destination';}render();
+  if(!planning||resolving||reviewIndex!==null||!to)return;
+  const unit=unitAt(forecast(),from);if(!unit||unit.color!==viewer)return;
+  selectedId=unit.id;clearIntent();handleSquare(to);
 }
 function advanceOrder(){
   if(draft.length>=roundRules(match).actions||forecast().winner){void sealPlan();return;}
@@ -179,7 +175,7 @@ function expireOrder(){
 function setAction(kind){if(!planning||reviewIndex!==null)return;const unit=unitFrom(forecast());if(!unit)return;commitOrder({unitId:unit.id,kind,...(kind==='ultimate'?{mode:'sweep'}:{})});}
 function newMatch(){
   phaseToken++;planning=false;resolving=false;privacy=false;roundPrepared=0;reviewIndex=null;history=[];forecastMemo=null;aiWorker?.terminate();aiWorker=null;aiPending=null;
-  match=createMatch({seed:crypto.getRandomValues(new Uint32Array(1))[0]});viewer='w';draft=[];lastEvent=null;selectedId=null;clearIntent();
+  match=createMatch({seed:crypto.getRandomValues(new Uint32Array(1))[0]});viewer='w';draft=[];lastEvent=null;selectedId=null;inspectedId=null;clearIntent();
   for(const side of ['w','b']){autoDeploy(match,side);confirmDeployment(match,side);}
   render();void setView('3d');
 }
@@ -210,7 +206,8 @@ function recordPosition(event){
 }
 function enterReview(){if(resolving||history.length<2)return;$('#result-dialog').close();clearIntent();selectedId=null;reviewIndex=history.length-1;render();}
 function renderReview(){
-  const entry=history[reviewIndex];$('#review-range').max=String(history.length-1);$('#review-range').value=String(reviewIndex);$('#review-position').textContent=`Acción ${reviewIndex} / ${history.length-1}`;$('#review-description').textContent=entry.event?.message??'Posición inicial';
+  const entry=history[reviewIndex];$('#review-range').max=String(history.length-1);$('#review-range').value=String(reviewIndex);$('#review-position').textContent=`Acción ${reviewIndex} / ${history.length-1}`;
+  $('#review-description').textContent=describeBattleEvent(entry.event,entry.state);$('#review-side').innerHTML=entry.event?teamBadge(entry.event.side):'';
   $('#review-return').textContent=match.phase==='finished'?'Resultado':'Volver';
   for(const button of document.querySelectorAll('[data-review]'))button.disabled=['first','prev'].includes(button.dataset.review)?reviewIndex===0:reviewIndex===history.length-1;
 }
@@ -243,9 +240,9 @@ async function runResolution(){
   const token=phaseToken;resolving=true;planning=false;privacy=false;board.removeAttribute('aria-hidden');viewer=match.opponent==='ai'?'w':match.firstSide;render();
   while(match.phase==='resolution'&&token===phaseToken){
     const result=resolveNext(match);if(!result.ok){toast(result.error);break;}const event=result.event;lastEvent=event;recordPosition(event);
-    $('#battle-status').textContent=event.message;audio.playSound(event.targets?.some(target=>target.damage)?'user_piece_move':event.kind==='move'?'AI_piece_move':'menu3',.7);
+    $('#battle-status').textContent=describeBattleEvent(event,match);audio.playSound(event.targets?.some(target=>target.damage)?'user_piece_move':event.kind==='move'?'AI_piece_move':'menu3',.7);
     if(view==='3d'&&three)await three.play(event,forecast());else await animate2D(event);
-    if(token!==phaseToken)return;renderBoard();renderLog();await delay(reduced?20:110);
+    if(token!==phaseToken)return;renderBoard();renderInspector();await delay(reduced?20:110);
   }
   resolving=false;if(token!==phaseToken)return;
   if(match.phase==='finished'){render();await delay(reduced?80:300);if(token!==phaseToken)return;$('#result-title').textContent=winnerText();$('#result-description').textContent=match.winner==='draw'?'Los dos reyes cayeron en el mismo intercambio.':`El rey de ${sideName(other(match.winner)).toLowerCase()} ha caído en la ronda ${match.round}.`;$('#result-dialog').showModal();audio.playSound('checkmate');}
@@ -254,7 +251,7 @@ async function runResolution(){
 function winnerText(){return match.winner==='draw'?'Ambas coronas han caído':match.winner==='w'?'Tu ejército vence':'El estratega vence';}
 async function setView(next){
   if(next==='3d'){
-    if(!threePromise)threePromise=import('./tactics-board3d.js').then(module=>module.createTacticsBoard3D(host3d,handleSquare,{onDrag:handleBoardDrag,onProject:positionFieldActions}));
+    if(!threePromise)threePromise=import('./tactics-board3d.js').then(module=>module.createTacticsBoard3D(host3d,handleSquare,{onDrag:handleBoardDrag,onDragStart:beginBoardDrag,onInspect:inspectSquare,onProject:positionFieldActions}));
     try{three=await threePromise;}catch{threePromise=null;toast('Vista 2D activada: este dispositivo no pudo iniciar 3D.');next='2d';}
   }
   view=next;board.hidden=view!=='2d';host3d.hidden=view!=='3d';three?.setActive(view==='3d'&&!privacy);if(view==='3d'){three.setQuality(liteGraphics);three.resize();}renderBoard();renderControls();
@@ -269,15 +266,15 @@ $('#board-actions').addEventListener('click',event=>{
   event.stopPropagation();const button=event.target.closest('button');if(!button||reviewIndex!==null)return;
   if(button.hasAttribute('data-field-cancel')){clearIntent();render();return;}
   if(button.dataset.fieldAction){setAction(button.dataset.fieldAction);return;}
-  if(button.dataset.fieldChoice==='move'){confirmMove();return;}
-  if(button.dataset.fieldChoice==='attack'){const order=attackOrder(forecast(),unitFrom(forecast()),pendingTarget);if(order)commitOrder(order);return;}
   if(button.dataset.fieldFacing)finishFacing(button.dataset.fieldFacing);
 });
 let drag2d=null,suppressClick=false;
 function clearDragGhost(){drag2d?.ghost?.remove();if(drag2d?.token)drag2d.token.style.opacity='';}
-board.addEventListener('pointerdown',e=>{const cell=e.target.closest('[data-square]');if(!planning||reviewIndex!==null||!cell)return;const unit=forecast().units.find(u=>u.square===cell.dataset.square&&u.color==='w'&&u.hp>0);if(unit)drag2d={from:unit.square,x:e.clientX,y:e.clientY,token:cell.querySelector('.tactical-token')};});
-board.addEventListener('pointermove',e=>{if(!drag2d||Math.hypot(e.clientX-drag2d.x,e.clientY-drag2d.y)<=6)return;if(!drag2d.ghost){drag2d.ghost=drag2d.token.querySelector('img').cloneNode();drag2d.ghost.className='field-drag-ghost';const r=drag2d.token.getBoundingClientRect();drag2d.ghost.style.width=r.width+'px';drag2d.ghost.style.height=r.height+'px';document.body.append(drag2d.ghost);drag2d.token.style.opacity='.3';}drag2d.ghost.style.left=e.clientX+'px';drag2d.ghost.style.top=e.clientY+'px';});
-board.addEventListener('pointerup',e=>{if(!drag2d)return;const start=drag2d;clearDragGhost();drag2d=null;if(Math.hypot(e.clientX-start.x,e.clientY-start.y)>6){const to=document.elementFromPoint(e.clientX,e.clientY)?.closest('[data-square]')?.dataset.square;suppressClick=true;handleBoardDrag(start.from,to);setTimeout(()=>suppressClick=false,0);}});
+board.addEventListener('pointerdown',e=>{const cell=e.target.closest('[data-square]');if(!planning||resolving||reviewIndex!==null||!cell)return;const unit=forecast().units.find(u=>u.square===cell.dataset.square&&u.color==='w'&&u.hp>0);if(unit)drag2d={from:unit.square,x:e.clientX,y:e.clientY,token:cell.querySelector('.tactical-token')};});
+board.addEventListener('pointermove',e=>{if(!drag2d||Math.hypot(e.clientX-drag2d.x,e.clientY-drag2d.y)<=6)return;if(!drag2d.ghost){beginBoardDrag(drag2d.from);if(!planning||!selectedId){drag2d=null;return;}board.setPointerCapture(e.pointerId);drag2d.ghost=drag2d.token.querySelector('img').cloneNode();drag2d.ghost.className='field-drag-ghost';const r=drag2d.token.getBoundingClientRect();drag2d.ghost.style.width=r.width+'px';drag2d.ghost.style.height=r.height+'px';document.body.append(drag2d.ghost);drag2d.token.style.opacity='.3';}drag2d.ghost.style.left=e.clientX+'px';drag2d.ghost.style.top=e.clientY+'px';});
+board.addEventListener('pointerup',e=>{if(!drag2d)return;const start=drag2d;clearDragGhost();drag2d=null;if(board.hasPointerCapture(e.pointerId))board.releasePointerCapture(e.pointerId);if(Math.hypot(e.clientX-start.x,e.clientY-start.y)>6){const to=document.elementFromPoint(e.clientX,e.clientY)?.closest('[data-square]')?.dataset.square;suppressClick=true;handleBoardDrag(start.from,to);setTimeout(()=>suppressClick=false,0);}});
+board.addEventListener('pointerover',e=>{if(!drag2d)inspectSquare(e.target.closest('[data-square]')?.dataset.square);});
+board.addEventListener('focusin',e=>inspectSquare(e.target.closest('[data-square]')?.dataset.square));
 board.addEventListener('pointercancel',()=>{clearDragGhost();drag2d=null;});document.addEventListener('pointerup',()=>{if(drag2d){clearDragGhost();drag2d=null;}});
 $('#phase-panel').addEventListener('click',event=>{const command=event.target.closest('[data-command]')?.dataset.command;if(command==='roll')rollDice();else if(command==='choose-first')choosePrivilege(true);else if(command==='choose-second')choosePrivilege(false);else if(command==='restart')restart();else if(command==='review')enterReview();});
 document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>setView(button.dataset.view)));

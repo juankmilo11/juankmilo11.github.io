@@ -7,27 +7,29 @@ caballos, 2 alfiles, reina y rey. Se colocan en las posiciones iniciales del
 ajedrez: torres en las esquinas, reina en d, rey en e y peones en la segunda
 fila de cada bando. No hay despliegue manual ni aleatorio. Se juega contra IA.
 
-El ganador de la tirada elige jugar primero o segundo. El rey del primer
-jugador comienza sin carga; el del segundo, con su definitiva disponible.
-Ninguna otra pieza comienza cargada. La prioridad alterna en las rondas
-posteriores; esta ventaja inicial no se reasigna al alternar la iniciativa.
+El ganador de la tirada elige jugar primero o segundo. Todas las piezas,
+incluidos ambos reyes, comienzan sin definitiva cargada. La prioridad alterna
+entre bandos después de cada ronda.
 
 ## Rondas y órdenes
 
-- Rondas 1–2: un solo movimiento por bando, sin ataques, bloqueo, focus ni
-  definitivas. Si otra pieza ocupa el destino antes de ejecutar, la orden falla.
-- Desde la ronda 3: tres acciones libres por bando, incluso con la misma pieza.
-- Cada acción dispone de 15 segundos activos para prepararla. Si se agota ese
-  hueco se convierte en espera. Preparar una acción reinicia el tiempo siguiente.
-- Ambos preparan en secreto; se ejecutan A1, B1, A2, B2, A3, B3 según el cupo.
-- Al completar la secuencia, el combate y la siguiente ronda son automáticos.
+Todas las rondas permiten dos acciones por bando, con 15 segundos activos para
+cada acción. Se preparan en secreto y se ejecutan A1, B1, A2, B2. Al completar
+la secuencia, el combate y la siguiente ronda comienzan automáticamente.
+Si el tiempo se agota, ese hueco se convierte en espera.
 
-Las acciones son Mover, Atacar, Bloquear, Focus y Definitiva. Seleccionar una
-pieza muestra casillas y botones translúcidos sobre el tablero. Elegir Mover
-ya confirma la orden con la orientación anterior. Las cuatro flechas permiten
-cambiarla opcionalmente; no elegir una nunca cancela el movimiento. En el último
-hueco las flechas duran 2,5 segundos y luego empieza el combate automáticamente.
-Los paneles de pieza y secuencia son informativos, sin botones de confirmación.
+Una misma pieza no puede repetir el mismo tipo de acción en la misma ronda.
+Puede Mover + Atacar, Bloquear + Atacar o Focus + Definitiva; dos piezas distintas
+sí pueden realizar el mismo tipo. La validación se comparte entre el tablero,
+el motor y la IA. Las esperas no se vinculan a una pieza.
+
+Seleccionar o empezar a arrastrar una pieza muestra sus casillas disponibles,
+todas del mismo color, con la casilla seleccionada en otro. Elegir una casilla
+vacía guarda un movimiento; elegir una pieza aliada o enemiga al alcance guarda
+un ataque. La confirmación es inmediata. La ficha se deselecciona después de
+actuar y hay que volver a elegirla para otra acción. Las cuatro flechas al mover
+son opcionales: la orientación anterior se conserva si no se elige otra; en el
+último hueco duran 2,5 segundos antes de comenzar el combate.
 
 ## Movimiento y ataque
 
@@ -38,7 +40,9 @@ piezas no atraviesan cuerpos. No hay jaque, enroque, promoción ni captura al pa
 
 Atacar no mueve al atacante. Se elige una dirección y el primer cuerpo de esa
 línea recibe el daño, aliado o enemigo. El caballo golpea los dos destinos en L
-de un cuadrante. Desde la ronda 3, mover hacia un cuerpo se convierte en ataque.
+de un cuadrante. Declarar un ataque exige elegir un cuerpo. Una orden de movimiento cuyo destino
+se ocupe antes de ejecutarse, o un ataque cuyo destino quede vacío, falla y
+consume su hueco, sin cambiar de tipo automáticamente.
 
 ## Vida y bloqueo
 
@@ -70,33 +74,52 @@ Los rayos no atraviesan cuerpos. Un obstáculo frontal impide al peón alcanzar
 la segunda casilla frontal. Gana quien elimina al rey enemigo; se detiene la
 secuencia en cuanto el motor determina el resultado.
 
-## Revisión y rendimiento
+## Consulta y revisión
 
-La revisión guarda una posición por acción resuelta. Se puede recorrer desde
-el inicio hasta el resultado con botones y deslizador. Conserva vida, carga,
-orientación, bloqueos y bajas, sin modificar la partida; el reloj se pausa.
+Pieza en foco muestra datos de ambos bandos durante preparación, planificación,
+combate y revisión. Se consulta al pasar el cursor o tocar una ficha sin otra
+preparada para actuar. Con una ficha propia seleccionada, tocar un cuerpo al
+alcance declara un ataque y también permite consultar sus datos.
 
-La IA calcula en un Worker sin leer órdenes contrarias. El HUD reutiliza las
-casillas y las previsiones de órdenes. El escenario agrupa geometría estática;
-las apariencias se descargan según se usan. El perfil automático reduce
-resolución, sombras y animaciones según memoria/procesadores; Ligero fuerza
-ese presupuesto. En ese perfil, el tablero táctico no se vuelve a dibujar en
-reposo y se limita a 30 fps durante cambios. Vistas ocultas detienen su bucle.
+La revisión sustituye al antiguo panel de crónica, debajo del inspector, y se
+muestra solo al revisar. Guarda una posición por acción resuelta. Sus botones
+y deslizador permiten recorrerla sin alterar la partida. El reloj se pausa.
+Cada acción identifica al bando por nombre y color, con flechas de dirección.
+
+## Valores y modelo de IA
+
+| Clase | Valor de combate |
+| --- | --- |
+| Peón | 2 |
+| Caballo | 4 |
+| Alfil | 4 |
+| Torre | 5 |
+| Reina | 8 |
+| Rey | Objetivo de victoria; prioridad terminal |
+
+La IA y el inspector comparten estos valores. La evaluación añade vida,
+orientación, amenazas, carga y devolución de daño. La búsqueda compara las dos
+acciones de cada secuencia y conserva ramas de preparación para poder valorar
+Focus + Definitiva o Movimiento + Ataque. Evita el fuego aliado perjudicial y
+considera el daño reflejado. No consulta las órdenes contrarias.
+
+La búsqueda está limitada a cuatro ramas de preparación y a 96/48 candidatos
+por profundidad. Se ejecuta en un Worker. El HUD reutiliza casillas y previsiones;
+el escenario agrupa geometría estática. El perfil Ligero reduce resolución,
+sombras y animación, y el tablero táctico no se redibuja en reposo. Vistas
+ocultas detienen su bucle; las apariencias se descargan conforme se usan.
 
 ## Validación
 
-Las pruebas controladas cubren posición inicial, cupos, reloj, orientación
-opcional, daño frontal/lateral, fuego aliado, áreas, devolución sin bucles,
-resolución intercalada, revisión y muerte del rey. Las partidas automatizadas
-sirven para detectar bloqueos y órdenes inválidas, no para afirmar equilibrio
-competitivo ni sustituir pruebas con personas o equipos físicos modestos.
+Las pruebas cubren despliegue estándar, carga inicial, dos acciones desde la
+primera ronda, restricción por pieza, objetivos ocupados obligatorios, arrastre,
+deselección, colores, consulta del rival, revisión y finales de partida.
 
-Reproducir: `node projects/FCT/scripts/simulate-tactics.mjs --games=16` desde
-la raíz. La posición inicial es fija y la IA determinista; distintas semillas
-de dado no equivalen a posiciones o estrategias independientes.
-
-La regresión de esta revisión terminó 16/16 simulaciones sin órdenes inválidas
-ni llegar al límite de rondas, con media de 9,5 rondas. En los dos patrones de
-iniciativa repetidos por esta IA determinista ganó quien empezó primero; es una
-señal de ventaja de apertura que requiere contraste humano y no una estimación
-estadística de equilibrio. Se conservan las reglas de iniciativa solicitadas.
+Reproducir la regresión: `node projects/FCT/scripts/simulate-tactics.mjs --games=8`.
+Las ocho simulaciones de esta revisión terminaron sin planes inválidos ni límite
+de rondas (media de 15 rondas; unos 217 ms por plan en el entorno de desarrollo).
+Usaron bloqueo, focus y definitivas además de movimiento/ataque. En los dos
+patrones de iniciativa deterministas repetidos siguió ganando quien comenzó:
+el balance requiere contraste humano. Las semillas de dado no representan
+posiciones o estrategias independientes. La emulación móvil comprueba los
+presupuestos gráficos; quedan pendientes mediciones en equipos físicos modestos.

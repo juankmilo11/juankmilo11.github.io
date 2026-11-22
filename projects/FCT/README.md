@@ -9,50 +9,64 @@ move/capture audio for both sides (including en passant).
 
 ## Fantasy Chess Tactics
 
-The main **JUGAR** button opens `tactics.html` directly in 3D. There are 16
-units per side in the standard chess opening position. The dice winner chooses
-first or second; only the second player's king starts charged. Initiative
-alternates after each round. The first two rounds allow one movement and no
-other actions per side. Later rounds allow three secret orders, with **15 active
-seconds per order**, executed interleaved against the AI.
+The main **JUGAR** button opens `tactics.html` directly in 3D. Both sides use
+16 pieces in the standard chess starting position. The dice winner chooses
+first or second, with alternating initiative each round. All units, including
+both kings, start without a charged ultimate.
 
-Selecting or dragging a unit shows translucent Move/Attack buttons on the field.
-Move confirms the order immediately using the previous facing; four optional
-arrows allow a change. On the last slot they remain for 2.5 seconds, after which
-combat starts automatically even if no facing was chosen. Earlier slots allow
-continuing to another piece directly. There is no roster, board legend, queue
-confirmation or unit-action sidebar. The compact cream/dark-outline HUD takes
-inspiration from Nintendo handheld battle screens without copying game artwork.
+Every round allows **two secret actions per side**, with **15 active seconds
+per action**. The same unit cannot repeat a kind within that round; different
+units may share a kind. Examples: one unit may Move + Attack or Focus + Ultimate;
+two different units may each Move. Expired slots become waits. Completing the
+sequence starts combat and the next round automatically.
 
-All ultimates attack the class's complete area, including allies. Sliding rays
-stop at the first body; knights hit all eight L destinations, kings all adjacent
-squares, and pawns the two front squares plus forward diagonals. Pawns retain
-their extended one/two-square and diagonal movement. Blocking absorbs 2 on the
-next hit (minimum damage 1) and reflects actual received damage throughout the
-current round, with no reflection chains. The game ends when a king falls.
+Selecting or dragging a unit reveals one uniform destination color and a
+contrasting selected square. Clicking/dropping on an empty legal square queues
+a movement; on a reachable allied/enemy unit it queues a stationary attack.
+There is no confirmation popup. Action buttons sit at the lower battlefield
+edge, clear of destinations. A unit deselects after each order and must be
+selected again for another action. Movement keeps the previous facing unless
+an optional arrow is chosen; final-slot arrows close after 2.5 seconds.
+A queued attack whose target square becomes empty, or a movement whose square
+becomes occupied, fizzles without changing the declared action type.
 
-**Revisar partida** is available from the result screen and the toolbar. Its
-history stores one compact board snapshot per resolved action, including deaths,
-charge, facing and blocks. Start/previous/next/end and a slider traverse the
-history without changing the live match. Reviewing pauses the order clock.
+All ultimates attack the class's full area with friendly fire. Sliding rays
+stop at the first body; knights hit all eight L squares, kings adjacent squares,
+and pawns both front squares and forward diagonals. Pawns retain one/two-square
+and diagonal movement. Blocking absorbs 2 on the next hit (minimum received 1)
+and returns actual received damage during that round, without reflection chains.
 
-The homepage embeds FCT in an orange window; all app windows provide a new-tab
-action. **Partida clásica** remains available.
+The inspector works for either army during preparation, planning, combat and
+review: hover a figure or click it without an acting unit selected to inspect
+it. It shows HP, charge, facing, team color and combat value. Review controls
+occupy the sidebar below the inspector only while reviewing. The colored team
+badge identifies the actor; event descriptions use direction arrows. Compact
+snapshots retain every resolved action, and review never mutates the live game.
+
+The AI uses a bounded two-action beam search, including movement/attack and
+focus/ultimate combinations, incoming threats, reflection and friendly-fire
+costs. Setup branches remain in the beam instead of being discarded before
+their second order pays off. Tactical values in `src/tactics-values.js` are
+pawn 2, knight/bishop 4, rook 5, queen 8; the king has terminal priority.
+The inspector and AI use that same table. Planning reads only the public round
+position and respects the per-unit action restriction.
+
+FCT's homepage window, bubble and Yin Yang accent are green. Every application
+window also offers a new-tab action. The cream/dark-outline HUD is inspired by
+Nintendo handheld battle screens without using copied game artwork.
 
 Rendering uses automatic hardware budgets and a manual **Ligero** option.
 Low-power tactical boards disable shadows/idle motion and render on changes,
 with animations capped at 30 fps. Hidden/inactive tactical views stop their
-render loop. Classic boards and previews share resolution/frame budgets.
-Static scenery is merged by material; character geometry remains cached.
-Sprite palettes and poses are separate cacheable assets, so entering a match
-loads only the appearances it uses. AI planning runs in a Web Worker; repeated
-board forecasts are cached and the 64 DOM squares are reused. Low-end physical
-devices still require device testing; browser emulation verifies these budgets.
+render loop. Static scenery is merged by material; geometry stays cached.
+Appearances are separate assets, so only those used by a match are downloaded.
+AI planning runs in a Worker; forecasts are cached and the DOM squares reused.
+Physical low-end devices still require device testing.
 
-See [the Spanish rules](TACTICS.md). Run `node scripts/qa-fct-tactics.cjs` from
-the root with Playwright/Edge configured below for desktop/mobile rules, HUD,
-dragging, optional facing, review and render-budget checks. Test hooks stay out
-of production.
+See [the Spanish rules](TACTICS.md). `node scripts/qa-fct-tactics.cjs` from the
+root checks direct actions, reselection, highlighted dragging, both-army
+inspection, sidebar review and render budgets at desktop/mobile sizes. Its
+fixture hooks never ship in production.
 
 ## Character appearances
 

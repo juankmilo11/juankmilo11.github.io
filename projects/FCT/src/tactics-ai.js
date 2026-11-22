@@ -1,130 +1,97 @@
-import { publicView, previewPlan, validateOrder, roundRules, getLegalMoves, getAttackTargets, unitAt } from './tactics-engine.js';
+import { publicView, previewPlan, validateOrder, roundRules, getLegalMoves, getAttackSquares, getAttackTargets, getUltimateTargets, attackOrderFor, incomingDamage, unitAt } from './tactics-engine.js';
+import { tacticalValues as VALUES } from './tactics-values.js';
 
-const DIRECTIONS = ['N','NE','E','SE','S','SW','W','NW'];
-const VALUES = { p:3, n:5, b:5, r:6, q:9, k:80 };
-const CARDINAL = { N:[0,1], E:[1,0], S:[0,-1], W:[-1,0] };
-const point = square => [square.charCodeAt(0)-97, Number(square[1])-1];
-const square = (x,y) => x>=0&&x<8&&y>=0&&y<8 ? String.fromCharCode(97+x)+(y+1) : null;
-const alive = unit => unit.hp>0 && typeof unit.square==='string';
-const distance = (a,b) => { const [x,y]=point(a),[u,v]=point(b); return Math.max(Math.abs(x-u),Math.abs(y-v)); };
-const neighbors = position => { const [x,y]=point(position);return DIRECTIONS.map((_,i)=>{const [dx,dy]=[[0,1],[1,1],[1,0],[1,-1],[0,-1],[-1,-1],[-1,0],[-1,1]][i];return square(x+dx,y+dy);}).filter(Boolean); };
-
-function faceThreat(unit, destination, enemies) {
-  const [x,y]=point(destination);
-  const nearest=[...enemies].sort((a,b)=>distance(destination,a.square)-distance(destination,b.square)||a.id.localeCompare(b.id))[0];
-  if(!nearest)return unit.facing;
-  const [u,v]=point(nearest.square),dx=u-x,dy=v-y;
-  return Math.abs(dy)>=Math.abs(dx)?dy>=0?'N':'S':dx>=0?'E':'W';
-}
-
-function basicDirections(unit) {
-  if(unit.type==='n'||unit.type==='b')return ['NE','SE','SW','NW'];
-  if(unit.type==='r')return ['N','E','S','W'];
-  return DIRECTIONS;
-}
-
-function candidates(state,side) {
-  const units=state.units.filter(alive), allies=units.filter(unit=>unit.color===side),enemies=units.filter(unit=>unit.color!==side);
-  const orders=[];
-  for(const unit of allies){
-    for(const target of getLegalMoves(state,unit))orders.push({unitId:unit.id,kind:'move',target,facing:faceThreat(unit,target,enemies)});
-    for(const direction of basicDirections(unit)){
-      const targets=getAttackTargets(state,unit,direction);
-      // Empty shots cannot help against a snapshot; the AI cannot see future orders.
-      if(targets.some(target=>units.some(piece=>piece.square===target)))orders.push({unitId:unit.id,kind:'attack',direction});
+const DIRECTIONS=['N','NE','E','SE','S','SW','W','NW'];
+const CARDINAL={N:[0,1],E:[1,0],S:[0,-1],W:[-1,0]};
+const point=square=>[square.charCodeAt(0)-97,Number(square[1])-1];
+const alive=unit=>unit.hp>0&&typeof unit.square==='string';
+const distance=(a,b)=>{const[x,y]=point(a),[u,v]=point(b);return Math.max(Math.abs(x-u),Math.abs(y-v));};
+const directions=unit=>unit.type==='p'?(unit.color==='w'?['NW','NE']:['SW','SE']):unit.type==='n'||unit.type==='b'?['NE','SE','SW','NW']:unit.type==='r'?['N','E','S','W']:DIRECTIONS;
+function faceThreat(unit,destination,enemies,lanes){
+  const[x,y]=point(destination);let best=unit.facing,bestRisk=Infinity;
+  for(const [facing,[fx,fy]]of Object.entries(CARDINAL)){
+    let risk=0;
+    for(const enemy of enemies){const[u,v]=point(enemy.square),dx=u-x,dy=v-y,dot=dx*fx+dy*fy,front=dot>0&&Math.abs(dx*fy-dy*fx)<=dot;
+      const reach=lanes.get(enemy.id).has(destination);
+      risk+=(front?2:4)*(reach?3:1/(1+distance(destination,enemy.square)));
     }
-    orders.push({unitId:unit.id,kind:'block'},{unitId:unit.id,kind:'focus'});
-    if(!unit.charged)continue;
-    orders.push({unitId:unit.id,kind:'ultimate'});
-
+    if(risk<bestRisk){bestRisk=risk;best=facing;}
+  }return best;
+}
+function damage(attacker,defender){return Math.max(1,incomingDamage(attacker,defender)-(defender.guard?2:0)-(defender.armor?1:0));}
+function areaPriority(state,unit,side){
+  return getUltimateTargets(state,unit).reduce((sum,square)=>{const target=unitAt(state,square);if(!target)return sum;const value=damage(unit,target)*(target.type==='k'?100:VALUES[target.type]+2);return sum+(target.color===side?-1.5:1)*value;},0);
+}
+function candidates(state,side,orders){
+  const units=state.units.filter(alive),allies=units.filter(u=>u.color===side),enemies=units.filter(u=>u.color!==side),used=new Set(orders.map(o=>`${o.unitId}:${o.kind}`)),result=[];
+  const lanes=new Map(enemies.map(e=>[e.id,new Set(directions(e).flatMap(d=>getAttackTargets(state,e,d)))])),attacks=new Map(enemies.map(e=>[e.id,new Set(getAttackSquares(state,e))]));
+  for(const unit of allies){
+    const add=(order,priority)=>{if(!used.has(`${unit.id}:${order.kind}`))result.push({order:{unitId:unit.id,...order},priority});};
+    if(!used.has(`${unit.id}:move`))for(const target of getLegalMoves(state,unit))if(!unitAt(state,target)){
+      const nearest=Math.min(8,...enemies.map(e=>distance(target,e.square))),facing=faceThreat(unit,target,enemies,lanes);
+      add({kind:'move',target,facing},8-nearest);
+    }
+    for(const target of getAttackSquares(state,unit)){const victim=unitAt(state,target);if(victim.color===side)continue;const order=attackOrderFor(state,unit,target),hit=damage(unit,victim);add(order,hit*(victim.type==='k'?200:VALUES[victim.type]*2)+(hit>=victim.hp?400:0));}
+    const exposed=enemies.some(e=>attacks.get(e.id).has(unit.square));
+    if(exposed&&!unit.guard)add({kind:'block'},12+(unit.type==='k'?20:0));
+    const potential=areaPriority(state,unit,side);
+    if(!unit.charged)add({kind:'focus'},Math.max(0,potential)*.4);
+    else if(potential>0)add({kind:'ultimate',mode:'sweep'},potential);
   }
-  return orders;
+  return result.sort((a,b)=>b.priority-a.priority||JSON.stringify(a.order).localeCompare(JSON.stringify(b.order))).map(v=>v.order);
 }
-
-function threatDamage(attacker, defender) {
-  const [x,y]=point(attacker.square),[u,v]=point(defender.square),[fx,fy]=CARDINAL[defender.facing]??[0,1];
-  const dx=x-u,dy=y-v,dot=dx*fx+dy*fy,perp=Math.abs(dx*fy-dy*fx);
-  return Math.max(1,(dot>0&&dot>=perp?2:4)+(attacker.boost?1:0)-(defender.armor?1:0)-(defender.guard?2:0));
-}
-
-function positionScore(state,side) {
-  const units=state.units.filter(alive),allies=units.filter(unit=>unit.color===side),enemies=units.filter(unit=>unit.color!==side);
-  if(!allies.some(unit=>unit.type==='k'))return -100000;
-  if(!enemies.some(unit=>unit.type==='k'))return 100000;
+function scorePosition(state,side){
+  if(state.winner)return state.winner==='draw'?0:state.winner===side?1e6:-1e6;
+  const units=state.units.filter(alive),allies=units.filter(u=>u.color===side),enemies=units.filter(u=>u.color!==side),king=enemies.find(u=>u.type==='k');
+  if(!allies.some(u=>u.type==='k'))return -1e6;if(!king)return 1e6;
+  const attacks=new Map(units.map(u=>[u.id,new Set(getAttackSquares(state,u))])),ultimates=new Map(enemies.filter(u=>u.charged).map(u=>[u.id,new Set(getUltimateTargets(state,u))]));
   let score=0;
   for(const unit of units){
-    const friendly=unit.color===side, weight=VALUES[unit.type];
-    score+=(friendly?1.2:-1)*(weight*9+unit.hp*(unit.type==='k'?23:weight+5));
-    const nearest=Math.min(8,...units.filter(other=>other.color!==unit.color).map(other=>distance(unit.square,other.square)));
-    if(friendly){
-      score+=Math.min(unit.armor||0,2)*.9+Math.min(unit.reflect||0,2)*.7+(unit.guard?.8:0)+(unit.counterUntil===state.round?1:0)+(unit.boost?1.2:0);
-      if(unit.charged)score+=unit.type==='q'?2.2:nearest<=4?1.1:.35;
-      if(unit.type!=='k')score+=(8-nearest)*.85;
-      else if(allies.some(ally=>!['k','p'].includes(ally.type)))score+=Math.min(nearest,3)*.45;
-      else score+=(8-nearest)*.9;
-      // Reward setting up a line of attack, not just immediate damage. Without
-      // this term a greedy planner can keep refreshing guard instead of taking
-      // the one repositioning step needed to threaten an exposed king.
-      const reachable=new Set(basicDirections(unit).flatMap(direction=>getAttackTargets(state,unit,direction)));
-      for(const enemy of enemies)if(reachable.has(enemy.square))score+=enemy.type==='k'?8:2;
-    }
+    const friendly=unit.color===side,weight=VALUES[unit.type],sign=friendly?1.05:-1;
+    score+=sign*(weight*(.4+.6*unit.hp/6)*12+(unit.type==='k'?unit.hp*23:unit.hp*2));
+    if(!friendly)continue;
+    const nearest=Math.min(8,...enemies.map(e=>distance(unit.square,e.square)));
+    score+=(8-nearest)*(unit.type==='k'?allies.some(a=>!['p','k'].includes(a.type))?.15:.9:.65);
+    const threats=attacks.get(unit.id);for(const enemy of enemies)if(threats.has(enemy.square))score+=enemy.type==='k'?12:1.5;
+    if(unit.charged)score+=1+Math.max(0,areaPriority(state,unit,side))*.12;
   }
-  // Penalize exposing allies to the opponent's current legal attack lanes.
-  // We deliberately do not inspect an opponent's queued instructions.
-  for(const enemy of enemies){
-    const threatened=new Set(basicDirections(enemy).flatMap(direction=>getAttackTargets(state,enemy,direction)));
-    for(const ally of allies)if(threatened.has(ally.square)){
-      const damage=threatDamage(enemy,ally);
-      score-=damage*(ally.type==='k'?3.5:.48);
-      if(damage>=ally.hp)score-=ally.type==='k'?90:VALUES[ally.type]*1.1;
-    }
-  }
-  for(const [position,tile]of Object.entries(state.tiles??{})){
-    if(tile.kind==='trap'&&tile.owner===side){
-      const near=Math.min(8,...enemies.map(unit=>distance(unit.square,position)));
-      score+=near<=2?1.4:.15;
-    }
+  for(const ally of allies){
+    const hits=[];
+    for(const enemy of enemies){const basic=attacks.get(enemy.id).has(ally.square),ultimate=enemy.charged&&ultimates.get(enemy.id).has(ally.square);if(basic||ultimate)hits.push(damage(enemy,ally));}
+    hits.sort((a,b)=>b-a);const danger=(hits[0]??0)+(hits[1]??0)*.45;
+    score-=danger*(ally.type==='k'?12:VALUES[ally.type]*.6);
+    if(danger>=ally.hp)score-=ally.type==='k'?160:VALUES[ally.type]*8;
+    if(hits.length&&ally.counterUntil===state.round)score+=Math.min(ally.hp,danger)*2;
   }
   return score;
 }
+function tieBreak(order,round,side){let hash=2166136261;for(const c of `${round}:${side}:${JSON.stringify(order)}`)hash=Math.imul(hash^c.charCodeAt(0),16777619)>>>0;return hash/4294967296*.01;}
 
-function tieBreak(order,round,side) {
-  let hash=2166136261;
-  for(const letter of `${round}:${side}:${JSON.stringify(order)}`)hash=Math.imul(hash^letter.charCodeAt(0),16777619)>>>0;
-  return hash/4294967296*.025;
-}
-
-/** Plan against a public round snapshot, never against another player's plan. */
-export function planAI(state,side='b') {
+/** Bounded two-action beam search. Only the public position enters the model. */
+export function planAI(state,side='b'){
   if(!['w','b'].includes(side)||state.phase!=='planning')return [];
-  const observation=publicView(state,side);
-  // Redaction is enforced here as well as at the engine boundary. Neither an
-  // already submitted enemy plan nor old combat logs influence the strategy.
-  observation.plans={w:[],b:[]};observation.log=[];
-  const rules=roundRules(observation), orders=[];
-  let movesUsed=0,otherUsed=0;
-  for(let index=0;index<rules.actions;index++){
-    const projected=previewPlan(observation,side,orders);
-    if(projected.winner)break;
-    let best=null,bestScore=-Infinity,bestMoves=0,bestOthers=0;
-    const seen=new Set();
-    for(const candidate of candidates(projected,side)){
-      const validation=validateOrder(projected,side,candidate);
-      if(!validation.ok)continue;
-      const order=validation.order??candidate,key=JSON.stringify(order);
-      if(seen.has(key))continue;seen.add(key);
-      const moves=movesUsed+(order.kind==='move'&&!unitAt(projected,order.target)?1:0);
-      const others=otherUsed+(order.kind!=='pass'&&!(order.kind==='move'&&!unitAt(projected,order.target))?1:0);
-      if(moves>rules.maxMoves||others>rules.maxOther)continue;
-      const forecast=previewPlan(projected,side,[order]);
-      if(forecast.forecastErrors?.length)continue;
-      if(forecast.phase==='finished'&&forecast.winner!==side)continue;
-      const score=positionScore(forecast,side)+tieBreak(order,observation.round,side);
-      if(score>bestScore){best=order;bestScore=score;bestMoves=moves;bestOthers=others;}
+  const observation=publicView(state,side);observation.plans={w:[],b:[]};observation.log=[];
+  const baseline=scorePosition(observation,side);let beam=[{orders:[],state:observation,score:baseline,firstScore:baseline}],finished=[];
+  for(let depth=0;depth<roundRules(state).actions;depth++){
+    const next=[];
+    for(const node of beam){
+      if(node.state.winner){finished.push(node);continue;}
+      const proposals=candidates(node.state,side,node.orders).slice(0,depth?48:96);
+      proposals.push({kind:'pass'});
+      for(const raw of proposals){
+        const check=validateOrder(node.state,side,raw);if(!check.ok)continue;
+        const forecast=previewPlan(node.state,side,[check.order]);if(forecast.forecastErrors.length||forecast.winner&&![side,'draw'].includes(forecast.winner))continue;
+        const value=scorePosition(forecast,side),firstScore=depth?node.firstScore:value;
+        next.push({orders:[...node.orders,check.order],state:forecast,firstScore,score:value+(firstScore-baseline)*.12+tieBreak(check.order,state.round,side)});
+      }
     }
-    if(!best)break;
-    orders.push(best);
-    movesUsed=bestMoves;otherUsed=bestOthers;
+    const ranked=next.sort((a,b)=>b.score-a.score);
+    if(depth===0){
+      // Preserve setup actions that pay off on order two. A purely greedy beam
+      // would discard Focus before it gets to evaluate the charged area strike.
+      beam=ranked.slice(0,2);
+      for(const kind of ['move','focus']){const setup=ranked.find(n=>n.orders[0].kind===kind);if(setup&&!beam.includes(setup))beam.push(setup);}
+    }else beam=ranked.slice(0,3);
   }
-  return orders;
+  return [...finished,...beam].sort((a,b)=>b.score-a.score)[0]?.orders??[];
 }

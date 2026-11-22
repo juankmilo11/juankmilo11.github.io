@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createMatch, autoDeploy, roundRules, previewPlan, submitPlan, publicView, unitAt } from '../src/tactics-engine.js';
+import { createMatch, autoDeploy, roundRules, previewPlan, submitPlan, publicView, validateOrder } from '../src/tactics-engine.js';
+import { tacticalValues } from '../src/tactics-values.js';
 import { planAI } from '../src/tactics-ai.js';
 
 function battlefield(seed=17,round=3) {
@@ -37,13 +38,10 @@ test('sealed enemy plans and logs cannot influence the deterministic AI',()=>{
   assert.deepEqual(planAI(hidden,'b'),[]);
 });
 
-test('AI can repeat stationary attacks to finish the opposing king in three front hits',()=>{
-  const state=fixture({'w-k':{square:'a1',facing:'N'},'b-k':{square:'h8'},'b-r':{square:'a8'}});
-  const plan=planAI(state,'b'),result=previewPlan(state,'b',plan);
-  assert.equal(result.winner,'b');
-  assert.equal(result.units.find(unit=>unit.id==='b-r').square,'a8');
-  assert.equal(plan.length,3);
-  assert.ok(plan.every(order=>order.unitId==='b-r'));
+test('AI attacks an exposed king but never repeats the same action with that piece',()=>{
+ const state=fixture({'w-k':{square:'a1',facing:'N'},'b-k':{square:'h8'},'b-r':{square:'a8'}},1);
+ const orders=planAI(state,'b'),result=previewPlan(state,'b',orders),keys=orders.filter(o=>o.kind!=='pass').map(o=>`${o.unitId}:${o.kind}`);
+ assert.equal(orders.length,2);assert.equal(new Set(keys).size,keys.length);assert.ok(result.units.find(u=>u.id==='w-k').hp<6);assert.ok(result.units.find(u=>u.id==='w-k').hp>0);
 });
 
 test('AI attacks an exposed enemy instead of striking allies that stop its diagonal',()=>{
@@ -54,16 +52,11 @@ test('AI attacks an exposed enemy instead of striking allies that stop its diago
   assert.equal(result.units.find(unit=>unit.id==='b-p1').hp,2);
 });
 
-test('opening plans do not disguise a second attack as an occupied movement',()=>{
-  const state=fixture({'w-k':{square:'a1',facing:'N'},'b-k':{square:'h8'},'b-r':{square:'a8'}},1);
-  const orders=planAI(state,'b');let projected=structuredClone(state),attacks=0,moves=0;
-  for(const order of orders){
-    if(order.kind==='move'&&!unitAt(projected,order.target))moves++;
-    else if(order.kind!=='pass')attacks++;
-    projected=previewPlan(projected,'b',[order]);
-  }
-  assert.ok(moves<=1&&attacks===0);
-  assert.equal(submitPlan(state,'b',orders).ok,true);
+test('round-one attacks have real piece targets; empty-square orders are movements',()=>{
+ const state=fixture({'w-k':{square:'a1',facing:'N'},'b-k':{square:'h8'},'b-r':{square:'a8'}},1),orders=planAI(state,'b');let projected=structuredClone(state);
+ assert.ok(orders.some(o=>o.kind==='attack'));
+ for(const order of orders){assert.equal(validateOrder(projected,'b',order).ok,true);if(order.kind==='attack')assert.ok(projected.units.some(u=>u.hp>0&&u.square===order.target));projected=previewPlan(projected,'b',[order]);}
+ assert.equal(submitPlan(state,'b',orders).ok,true);
 });
 
 test('AI repositions to create an attack instead of refreshing guard indefinitely',()=>{
@@ -81,9 +74,18 @@ test('AI uses a charged bishop area attack without obsolete healing modes',()=>{
   assert.equal(result.units.find(u=>u.id==='w-r').hp,0);assert.ok(orders.every(o=>!['heal','fracture','obstacle','rally'].includes(o.mode)));
 });
 
-test('a king approaches the opponent when no supporting special pieces remain',()=>{
-  const state=fixture({'w-k':{square:'a1'},'b-k':{square:'h8'},'b-p1':{square:'f4'}});
-  const orders=planAI(state,'b'),result=previewPlan(state,'b',orders);
-  const king=result.units.find(unit=>unit.id==='b-k');
-  assert.ok(king.square!=='h8','endgames must not consist only of refreshing guard');
+test('endgames make progress after initial charging rather than refreshing guard indefinitely',()=>{
+ const state=fixture({'w-k':{square:'a1'},'b-k':{square:'h8'},'b-p1':{square:'f4'}});
+ const first=previewPlan(state,'b',planAI(state,'b'));first.round++;
+ const next=previewPlan(first,'b',planAI(first,'b'));assert.ok(next.units.find(u=>u.id==='b-k').square!=='h8');
+});
+
+test('two-action search combines Focus and an area ultimate when it wins more material',()=>{
+ const state=fixture({'w-k':{square:'a1'},'w-p2':{square:'a3'},'w-p3':{square:'b1'},'w-q':{square:'f4',hp:4},'w-r':{square:'d6',hp:4},'b-k':{square:'h8'},'b-r':{square:'d4'}});
+ const orders=planAI(state,'b'),result=previewPlan(state,'b',orders);
+ assert.deepEqual(orders.map(o=>o.kind),['focus','ultimate']);assert.equal(result.units.find(u=>u.id==='w-q').hp,0);assert.equal(result.units.find(u=>u.id==='w-r').hp,0);
+});
+
+test('combat values reflect stationary attacks and are independent from classic chess scores',()=>{
+ assert.equal(tacticalValues.p,2);assert.equal(tacticalValues.n,4);assert.equal(tacticalValues.r,5);assert.equal(tacticalValues.q,8);assert.ok(tacticalValues.k>10*tacticalValues.q);
 });

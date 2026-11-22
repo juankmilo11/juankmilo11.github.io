@@ -27,7 +27,6 @@ export const unitAt=(state,square)=>state.units.find(unit=>alive(unit)&&unit.squ
 export const livingUnits=(state,side)=>state.units.filter(unit=>alive(unit)&&(!side||unit.color===side));
 const findUnit=(state,unit)=>typeof unit==='string'?state.units.find(item=>item.id===unit):unit;
 const solid=(state,square)=>['void','obstacle'].includes(state.tiles[square]?.kind);
-const adjacent=(a,b)=>{const[x,y]=xy(a),[u,v]=xy(b);return Math.max(Math.abs(x-u),Math.abs(y-v))<=1;};
 const directionBetween=(a,b)=>{const[x,y]=xy(a),[u,v]=xy(b);return ALL.find(dir=>DIRECTIONS[dir][0]===Math.sign(u-x)&&DIRECTIONS[dir][1]===Math.sign(v-y));};
 const attackDirections=unit=>unit.type==='p'?(unit.color==='w'?['NW','NE']:['SW','SE']):unit.type==='n'?DIAGONALS:unit.type==='b'?DIAGONALS:unit.type==='r'?ORTHOGONALS:ALL;
 
@@ -35,18 +34,15 @@ function nextRandom(state) {
   let x=state.rng>>>0;x^=x<<13;x^=x>>>17;x^=x<<5;state.rng=x>>>0;
   return state.rng/4294967296;
 }
-export function roundRules(input) {
-  const round=typeof input==='number'?input:input.round;
-  return round<=2?{seconds:15,actions:1,maxMoves:1,maxOther:0}:{seconds:15,actions:3,maxMoves:3,maxOther:3};
-}
+export function roundRules(){return {seconds:15,actions:2,maxMoves:2,maxOther:2};}
 export function createMatch({seed=Date.now(),opponent='ai'}={}) {
   let normalized=typeof seed==='number'?seed: [...String(seed)].reduce((n,c)=>Math.imul(n,31)+c.charCodeAt(0),7);
   const units=[];
   for(const color of ['w','b']) {
     const counts={};
-    TYPES.forEach((type,index)=>{const count=counts[type]=(counts[type]??0)+1;units.push({id:`${color}-${type}${type==='p'||count>1?count:''}`,color,type,homeSquare:sq(index%8,(color==='w'?(index<8?2:1):(index<8?7:8))-1),square:null,hp:6,maxHp:6,facing:color==='w'?'N':'S',charged:type==='k',armor:0,guard:0,guardUntil:0,counterUntil:0,reflect:0,boost:0,hasMoved:false});});
+    TYPES.forEach((type,index)=>{const count=counts[type]=(counts[type]??0)+1;units.push({id:`${color}-${type}${type==='p'||count>1?count:''}`,color,type,homeSquare:sq(index%8,(color==='w'?(index<8?2:1):(index<8?7:8))-1),square:null,hp:6,maxHp:6,facing:color==='w'?'N':'S',charged:false,armor:0,guard:0,guardUntil:0,counterUntil:0,reflect:0,boost:0,hasMoved:false});});
   }
-  return {version:2,opponent:'ai',rng:(normalized>>>0)||0x9e3779b9,units,tiles:{},phase:'deployment',round:0,firstSide:'w',activePlanner:'w',ready:{w:false,b:false},deployed:{w:false,b:false},plans:{w:[],b:[]},winner:null,log:[],dice:null,diceWinner:null,fractures:0,resolution:[],resolutionIndex:0,revision:0};
+  return {version:3,opponent:'ai',rng:(normalized>>>0)||0x9e3779b9,units,tiles:{},phase:'deployment',round:0,firstSide:'w',activePlanner:'w',ready:{w:false,b:false},deployed:{w:false,b:false},plans:{w:[],b:[]},winner:null,log:[],dice:null,diceWinner:null,fractures:0,resolution:[],resolutionIndex:0,revision:0};
 }
 export function placeUnit(state,side,id,square) {
   if(state.phase!=='deployment'||state.deployed[side])return bad('El despliegue ya está cerrado.');
@@ -79,7 +75,7 @@ export function rollInitiative(state) {
 export function chooseInitiative(state,side,{first=true}={}) {
   if(state.phase!=='initiative'||!state.dice||state.dice.winner!==side)return bad('Solo el ganador de la tirada puede elegir.');
   state.firstSide=first?side:other(side);state.dice.choice={side,first:Boolean(first)};
-  for(const unit of state.units)unit.charged=unit.type==='k'&&unit.color!==state.firstSide;
+  for(const unit of state.units)unit.charged=false;
   startRound(state);return good();
 }
 export function startRound(state) {
@@ -134,6 +130,14 @@ export function getUltimateTargets(state,input){
   const unit=findUnit(state,input);if(!alive(unit))return [];
   return unit.type==='p'?getPawnArea(state,unit):[...new Set(attackDirections(unit).flatMap(direction=>getAttackTargets(state,unit,direction)))];
 }
+export function getAttackSquares(state,input){
+  const unit=findUnit(state,input);if(!alive(unit))return [];
+  return [...new Set([...attackDirections(unit).flatMap(d=>getAttackTargets(state,unit,d)),...getLegalMoves(state,unit)])].filter(square=>{const target=unitAt(state,square);return target&&target.id!==unit.id;});
+}
+export function attackOrderFor(state,input,target){
+  const unit=findUnit(state,input);if(!unit||!getAttackSquares(state,unit).includes(target))return null;
+  return {unitId:unit.id,kind:'attack',target,direction:directionBetween(unit.square,target)};
+}
 export function validateOrder(state,side,raw) {
   if(!raw||!['move','attack','block','focus','ultimate','pass'].includes(raw.kind))return bad('Acción desconocida.');
   const order={...raw};
@@ -142,10 +146,12 @@ export function validateOrder(state,side,raw) {
   const unit=findUnit(state,order.unitId);
   if(!alive(unit)||unit.color!==side)return bad('La pieza ya no está disponible.');
   if(order.facing&&!FACINGS.includes(order.facing))return bad('Orientación no válida.');
-  if(order.kind==='move'&&!getLegalMoves(state,unit).includes(order.target))return bad('Movimiento fuera del alcance o bloqueado.');
+  if(order.kind==='move'&&(!getLegalMoves(state,unit).includes(order.target)||unitAt(state,order.target)))return bad('Movimiento fuera del alcance o bloqueado.');
   if(order.kind==='attack'){
-    if(!order.direction&&validSquare(order.target))order.direction=directionBetween(unit.square,order.target);
-    if(!attackDirections(unit).includes(order.direction))return bad('Elige una dirección de ataque válida.');
+    const aimed=attackOrderFor(state,unit,order.target);
+    if(!aimed)return bad('Selecciona una pieza aliada o enemiga al alcance para atacar.');
+    if(order.direction&&order.direction!==aimed.direction)return bad('La dirección no coincide con la pieza elegida.');
+    order.direction=aimed.direction;
   }
   if(order.kind==='focus'&&unit.charged)return bad('Esta definitiva ya está cargada.');
   if(order.kind==='ultimate'){
@@ -181,7 +187,7 @@ function strike(state,attacker,defender,event,bonus=0,fixed=null) {
   const damage=Math.max(1,base-armor-guard);
   defender.hp=Math.max(0,defender.hp-damage);
   event.targets.push({id:defender.id,square:defender.square,damage,hp:defender.hp,dead:defender.hp===0,front:fixed===null?incomingDamage(attacker,defender)===2:null,absorbed:armor+guard});
-  if(defender.counterUntil===state.round&&attacker&&attacker.id!==defender.id&&attacker.hp>0){
+  if(defender.counterUntil>0&&defender.counterUntil===state.round&&attacker&&attacker.id!==defender.id&&attacker.hp>0){
     attacker.hp=Math.max(0,attacker.hp-damage);
     event.targets.push({id:attacker.id,square:attacker.square,damage,hp:attacker.hp,dead:attacker.hp===0,reflected:true});
   }
@@ -196,28 +202,15 @@ function applyOrder(state,side,raw) {
   if(order.kind==='focus'){unit.charged=true;event.message=`${name}: definitiva cargada.`;}
   if(order.kind==='block'){unit.guard=1;unit.guardUntil=state.round;unit.counterUntil=state.round;event.message=`${name}: bloqueo y devolución de daño durante esta ronda.`;}
   if(order.kind==='move'){
-    const target=unitAt(state,order.target);
-    if(target){
-      if(state.round<=2){event.kind='fizzle';event.message='Destino ocupado: en la apertura solo se permite mover.';return event;}
-      event.kind='attack';event.convertedMove=true;event.direction=directionBetween(unit.square,order.target);
-      const targets=unit.type==='n'?getAttackTargets(state,unit,event.direction).map(square=>unitAt(state,square)).filter(Boolean):[target];
-      const bonus=unit.boost?1:0;unit.boost=0;
-      for(const victim of targets)if(unit.hp>0){strike(state,unit,victim,event,bonus);checkWinner(state,event);if(state.winner)break;}
-      event.message=`${name}: movimiento ocupado, ataque básico.`;
-    }else{
-      unit.square=order.target;unit.hasMoved=true;event.to=unit.square;event.message=`${name}: ${event.from} → ${event.to}.`;
-      const trap=state.tiles[unit.square];
-      if(trap?.kind==='trap'){
-        delete state.tiles[unit.square];unit.hp=Math.max(0,unit.hp-2);event.targets.push({id:unit.id,square:unit.square,damage:2,hp:unit.hp,dead:unit.hp===0,trap:true});event.message+=' Trampa: 2 de daño.';checkWinner(state,event);
-      }
-    }
+    unit.square=order.target;unit.hasMoved=true;event.to=unit.square;event.message=`${name}: ${event.from} → ${event.to}.`;
+    const trap=state.tiles[unit.square];
+    if(trap?.kind==='trap'){delete state.tiles[unit.square];unit.hp=Math.max(0,unit.hp-2);event.targets.push({id:unit.id,square:unit.square,damage:2,hp:unit.hp,dead:unit.hp===0,trap:true});checkWinner(state,event);}
   }
   if(order.kind==='attack'){
-    event.direction=order.direction;const bonus=unit.boost?1:0;unit.boost=0;
-    for(const target of getAttackTargets(state,unit,order.direction).map(square=>unitAt(state,square)).filter(Boolean)){
-      if(unit.hp<=0||state.winner)break;strike(state,unit,target,event,bonus);checkWinner(state,event);
-    }
-    event.message=`${name}: ataque ${order.direction}${event.targets.length?'':' sin objetivo'}.`;
+    event.direction=order.direction;event.target=order.target;const bonus=unit.boost?1:0;unit.boost=0;
+    const victims=unit.type==='n'?getAttackTargets(state,unit,order.direction).map(square=>unitAt(state,square)).filter(Boolean):[unitAt(state,order.target)];
+    for(const target of victims){if(unit.hp<=0||state.winner)break;strike(state,unit,target,event,bonus);checkWinner(state,event);}
+    event.message=`${name}: ataque ${order.direction}.`;
   }
   if(order.kind==='ultimate'){
     unit.charged=false;event.message=`${name}: ${ABILITIES[unit.type].name}.`;
@@ -238,22 +231,27 @@ export function previewPlan(state,side,orders=[]) {
   }
   return projected;
 }
+export function validatePlan(state,side,orders=[]){
+  if(!['w','b'].includes(side)||!Array.isArray(orders))return bad('Plan no válido.');
+  if(orders.length>roundRules(state).actions)return bad('Dispones de dos acciones por ronda.');
+  const projected=clone({...state,log:[],plans:{w:[],b:[]},resolution:[]}),used=new Set(),normalized=[];
+  for(const raw of orders){
+    if(projected.winner)return bad('No puedes preparar órdenes después de terminar la partida.');
+    const result=validateOrder(projected,side,raw);if(!result.ok)return result;const order=result.order;
+    if(order.kind!=='pass'){
+      const key=`${order.unitId}:${order.kind}`;
+      if(used.has(key))return bad('Una misma pieza no puede repetir la misma acción en esta ronda.');
+      used.add(key);
+    }
+    normalized.push(order);applyOrder(projected,side,order);
+  }
+  return good({orders:normalized,forecast:projected});
+}
 export function submitPlan(state,side,orders=[]) {
   if(state.phase!=='planning'||state.ready[side])return bad('Este plan ya está cerrado.');
-  if(!['w','b'].includes(side)||!Array.isArray(orders))return bad('Plan no válido.');
+  const validation=validatePlan(state,side,orders);if(!validation.ok)return validation;
   const rules=roundRules(state);
-  if(orders.length>rules.actions)return bad(`Dispones de ${rules.actions} acciones.`);
-  const projected=clone(state);
-  let moveCount=0,otherCount=0;
-  for(const order of orders){
-    const result=validateOrder(projected,side,order);if(!result.ok)return result;
-    const category=orderCategory(projected,result.order);
-    moveCount+=category==='move'?1:0;otherCount+=category==='other'?1:0;
-    if(moveCount>rules.maxMoves||otherCount>rules.maxOther)return bad('En las dos primeras rondas solo puedes preparar un movimiento.');
-    applyOrder(projected,side,result.order);
-    if(projected.winner&&order!==orders.at(-1))return bad('No puedes preparar órdenes después de terminar la partida.');
-  }
-  state.plans[side]=clone(orders);state.ready[side]=true;state.activePlanner=other(side);
+  state.plans[side]=clone(validation.orders);state.ready[side]=true;state.activePlanner=other(side);
   if(state.ready.w&&state.ready.b){
     state.phase='resolution';state.activePlanner=null;state.resolution=[];state.resolutionIndex=0;
     for(let index=0;index<rules.actions;index++)for(const color of [state.firstSide,other(state.firstSide)])state.resolution.push({side:color,order:clone(state.plans[color][index]??{kind:'pass'})});

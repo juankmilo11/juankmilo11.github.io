@@ -30,7 +30,7 @@ for(let index=0;index<games;index++){
       const result=resolveNext(state);if(!result.ok)throw new Error(result.error);
     }
   }
-  const result={seed:1103+index*137,winner:state.winner??'round-limit',round:Math.min(state.round,maxRounds),firstSide:initialFirstSide,lastRoundFirstSide:state.firstSide,dieWinner:state.diceWinner,choice:first?'initiative':'second-king-charge'};
+  const result={seed:1103+index*137,winner:state.winner??'round-limit',round:Math.min(state.round,maxRounds),firstSide:initialFirstSide,lastRoundFirstSide:state.firstSide,dieWinner:state.diceWinner,choice:first?'play-first':'play-second'};
   results.push(result);console.error(`Simulation ${index+1}/${games}: ${JSON.stringify(result)}`);
 }
 const decided=results.filter(result=>['w','b'].includes(result.winner));
