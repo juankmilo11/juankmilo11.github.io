@@ -209,7 +209,7 @@ function centrarVentana(ventana) {
 
 function habilitarArrastre(ventana, encabezado) {
   encabezado.addEventListener("pointerdown", (evento) => {
-    if (evento.button !== 0 || evento.target.closest("button")) return;
+    if (evento.button !== 0 || evento.target.closest("button, a")) return;
 
     enfocarVentana(ventana);
     const rect = ventana.getBoundingClientRect();
@@ -259,6 +259,13 @@ function crearVentana(enlace) {
   const nombreVentana = ventana.querySelector('h2').textContent;
   ventana.setAttribute('aria-label', nombreVentana);
   iframe.title = nombreVentana;
+  const abrirPestana = ventana.querySelector('.abrir-pestana');
+  abrirPestana.href = enlace.getAttribute('href');
+  abrirPestana.setAttribute('aria-label', `Abrir ${nombreVentana} en una pestaña nueva`);
+  abrirPestana.addEventListener('click', () => {
+    // Prefer the route currently open in the app; cross-origin frames use their entry URL.
+    try { const actual = iframe.contentWindow.location.href; if (/^https?:\/\//.test(actual)) abrirPestana.href = actual; } catch { /* Cross-origin app. */ }
+  });
   enlacesOrigen.set(ventana, enlace);
   if (enlace.getAttribute('href') === 'pages/sura/index.html') {
     ventana.classList.add('ventana-lbds');
@@ -268,6 +275,7 @@ function crearVentana(enlace) {
     idiomaVentanaPaca(ventana, 'en');
   }
   if (enlace.getAttribute('href') === 'pages/admin/index.html') ventana.classList.add('ventana-admin');
+  if (enlace.getAttribute('href') === '/FCT/') ventana.classList.add('ventana-fct');
   iframe.src = enlace.getAttribute("href");
   document.body.append(ventana);
   ventanasAbiertas.add(ventana);

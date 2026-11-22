@@ -36,12 +36,6 @@ function candidates(state,side) {
     orders.push({unitId:unit.id,kind:'block'},{unitId:unit.id,kind:'focus'});
     if(!unit.charged)continue;
     orders.push({unitId:unit.id,kind:'ultimate'});
-    if(unit.type==='p'){
-      for(const target of [unit.square,...neighbors(unit.square)]){
-        orders.push({unitId:unit.id,kind:'ultimate',mode:'heal',target});
-        orders.push({unitId:unit.id,kind:'ultimate',mode:'trap',target});
-      }
-    }
     if(unit.type==='b')for(const ally of allies)orders.push({unitId:unit.id,kind:'ultimate',mode:'heal',target:ally.square});
     if(unit.type==='r')for(const target of neighbors(unit.square))orders.push({unitId:unit.id,kind:'ultimate',mode:'obstacle',target});
     if(unit.type==='q')for(const direction of DIRECTIONS)for(const target of getAttackTargets(state,unit,direction)){

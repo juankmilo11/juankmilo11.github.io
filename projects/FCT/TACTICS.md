@@ -9,7 +9,8 @@ los personajes y el campo 8×8 de FCT. No hay mazo, robo ni cartas consumibles.
 
 Cada bando tiene 3 peones y un caballo, alfil, torre, reina y rey: 8 unidades.
 Ambos ejércitos se colocan automáticamente y al azar en las filas 1–2 y 7–8.
-Las posiciones son visibles desde el inicio. Se juega contra la IA; no hay
+Las posiciones son visibles desde el inicio. El botón JUGAR entra directamente
+en la partida con vista 3D, sin una segunda confirmación. Se juega contra la IA; no hay
 selección de adversario, despliegue manual ni modo local de dos jugadores.
 
 Cada bando lanza un dado de seis caras. Los empates se repiten. El ganador
@@ -21,7 +22,7 @@ bandos en cada ronda posterior.
 ## Rondas
 
 1. Preparar órdenes secretas sobre la previsión de tus propias acciones.
-2. Confirmar el plan o esperar a que termine el tiempo.
+2. Completar la secuencia con órdenes que se confirman sobre el tablero.
 3. Ejecutar A1, B1, A2, B2 y, desde la tercera ronda, A3, B3.
 
 Cada orden tiene **10 segundos activos**, en todas las rondas. Añadir una orden
@@ -30,20 +31,25 @@ Las rondas 1–2 mantienen hasta un movimiento y una acción distinta; desde la
 ronda 3 hay **3 acciones libres**, incluso con la misma pieza. Al llenar la cola
 comienza automáticamente la pelea y, al terminar, la siguiente ronda.
 No hay pantallas de «Listo». Las animaciones no consumen tiempo de planificación.
-Editar o borrar una orden anterior no concede nuevos reinicios para el mismo
-hueco. Una orden cuya pieza haya muerto o cuyo destino ya no sea accesible falla
+El resumen de órdenes y la pieza en foco son informativos, sin botones de
+confirmación ni edición. Una orden cuya pieza haya muerto o cuyo destino ya no sea accesible falla
 y consume su hueco. El adversario puede alterar el resultado de tu previsión.
 
 Mover, atacar, bloquear, Focus y ejecutar una definitiva cuestan una acción.
 Focus carga una definitiva; utilizarla consume la carga. Bloqueo protege el
 siguiente impacto, sin acumulación, y caduca tras la siguiente ronda.
-Se puede elegir orientación N/E/S/O al preparar el movimiento.
+Al seleccionar una pieza se resaltan sus destinos y aparecen Bloquear, Focus
+y Definitiva junto a ella. Pulsar o arrastrar hacia una casilla permite escoger
+Mover o Atacar allí mismo. Atacar se confirma al pulsarlo; Mover muestra cuatro
+flechas de orientación y se confirma al elegir una. Las variantes y objetivos
+de definitivas también se escogen sobre el tablero.
 
 ## Movimiento y ataques
 
 Las piezas conservan sus patrones geométricos de ajedrez. El caballo salta;
-las demás piezas respetan las obstrucciones. El peón avanza, con doble paso
-inicial desde su fila habitual si el camino está libre. En este modo no hay
+las demás piezas respetan las obstrucciones. El peón puede avanzar una o dos
+casillas en cualquier movimiento si el camino está libre, y desplazarse a las
+dos diagonales delanteras aunque estén vacías. En este modo no hay
 jaque, enroque, captura al paso ni promoción: los peones conservan su función
 de apoyo. No se exige que el rey evite una casilla amenazada.
 
@@ -78,7 +84,7 @@ por reflejo produce tablas.
 
 | Clase | Definitiva y variante | Límite / respuesta |
 | --- | --- | --- |
-| Peón | Auxilio: cura a un aliado cercano o a sí mismo. Trampa: coloca una mina adyacente. | Hasta dos trampas activas por bando; también dañan aliados. |
+| Peón | Vanguardia: golpea las dos casillas frontales y ambas diagonales delanteras. | También alcanza aliados. Un obstáculo frontal impide alcanzar la segunda casilla frontal; los cuerpos no detienen esta área. |
 | Caballo | Tormenta ecuestre: ataca las ocho casillas en L. | Alcanza aliados; ocupar casillas no incluidas en la L evita el golpe. |
 | Alfil | Cruz astral: primer cuerpo de cada diagonal. Sanación: cura al primer aliado de una diagonal. | Sin atravesar cuerpos ni terreno cerrado. |
 | Torre | Bastión: 2 cargas de armadura y 2 de reflejo. Barricada: obstáculo adyacente. | Las cargas no se apilan; la barricada dura dos rondas. |
@@ -101,7 +107,8 @@ planes desde la misma posición pública sin consultar las órdenes contrarias.
 Las simulaciones automatizadas ayudan a detectar bloqueos y sesgos; siguen
 siendo necesarias partidas humanas para ajustar tiempos y ventajas de apertura.
 
-La muestra reproducible inicial de 64 semillas, con IA en ambos bandos y límite
+Antes de ampliar el movimiento y cambiar la definitiva del peón, la muestra
+inicial de 64 semillas, con IA en ambos bandos y límite
 de 40 rondas, terminó las 64 partidas sin planes inválidos: media de 4,97 rondas.
 El bando que ejecutó primero en la ronda 1 ganó 32/64; el ganador del dado,
 42/64. En una versión previa con prioridad fija y una IA más pasiva en finales,
@@ -109,7 +116,11 @@ el primer bando ganó 51/64. Se modificaron ambas cosas, por lo que esta
 comparación no aísla una única causa. Esta muestra detecta problemas gruesos;
 no sustituye pruebas humanas ni estima porcentajes competitivos fiables.
 
-Reproducir: `node projects/FCT/scripts/simulate-tactics.mjs --games=64` desde
+La comprobación posterior del peón ampliado, con 16 semillas y las reglas
+actuales, terminó 16/16 partidas sin planes inválidos (media de 5,56 rondas).
+Es una comprobación de funcionamiento, no una medición de equilibrio.
+
+Reproducir: `node projects/FCT/scripts/simulate-tactics.mjs --games=16` desde
 la raíz del repositorio. La salida JSON puede guardarse en `dist/`.
 
 Fuentes: `src/tactics-engine.js`, `src/tactics-ai.js`, `src/tactics-ui.js` y

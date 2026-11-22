@@ -9,24 +9,34 @@ move/capture audio for both sides (including en passant).
 
 ## Fantasy Chess Tactics
 
-The main **JUGAR** button opens `tactics.html`, the 8-vs-8 game against AI.
+The main **JUGAR** button opens `tactics.html` directly in 3D, without a second
+start dialog. This is the 8-vs-8 game against AI.
 Both armies are placed automatically and randomly on their home two rows and
 are visible before initiative. There is no manual deployment or local two-player
 mode. Players prepare orders; each new order gets **10 active seconds**. An
 expired slot becomes a wait. Completing the queue starts combat automatically,
 and the next round starts immediately after resolution. Opening rounds keep
 one movement and one other action; later rounds keep three free actions.
-Editing an earlier order does not reset the same timer repeatedly.
+Selecting a unit shows legal squares and Block/Focus/Ultimate controls next to
+it. Clicking or dragging to a square offers Move/Attack there; choosing an attack
+queues it immediately. Choosing a move displays four facing arrows on the field,
+and choosing a facing queues the move. Ultimate variants and targets use the
+same field controls. The sidebar's unit inspector and queue are informational.
+
+Pawns can always move one or two clear squares forward, or to either forward
+diagonal even if empty. Their Vanguardia ultimate strikes all four of those
+squares, including allies; a solid tile directly ahead blocks the second square.
 
 HP and facing remain part of the rules, while health bars and foot arrows are
 invisible in both views. Legal move/attack squares have stronger fills and edges.
-Class ultimates, friendly fire, healing, traps, barricades and permanent fractures
+Class ultimates, friendly fire, bishop healing, barricades and permanent fractures
 are handled by the deterministic engine. **Partida clásica** remains available.
 
 See [the Spanish rules and initial balance study](TACTICS.md). Run
 `node scripts/qa-fct-tactics.cjs` from the repository root with Playwright/Edge
-configured below to test menu labels, automatic setup, per-order deadlines,
-automatic battle/round flow and 2D/3D indicators at desktop/mobile sizes.
+configured below to test embedded homepage windows/new-tab links, direct 3D
+entry, field commands/facing, automatic battle/round flow, pawn moves, dragging
+in both views and visible indicators at desktop/mobile sizes.
 Test hooks never ship in production.
 
 ## Character appearances

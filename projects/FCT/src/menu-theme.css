@@ -59,3 +59,5 @@ body,button { font-family: var(--font-ui); }
   .selector-content { grid-template-columns: 1fr 1fr; }
   .selector-preview { grid-column: 2; grid-row: 1; }
 }
+
+.select-pieces-button{display:flex;justify-content:center;align-items:center}

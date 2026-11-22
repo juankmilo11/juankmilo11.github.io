@@ -8,7 +8,7 @@ import { appearanceFor, appearanceKey } from './appearance.js';
 
 const FILES='abcdefgh', angles={N:Math.PI,E:Math.PI/2,S:0,W:-Math.PI/2};
 const location=s=>{const row=8-Number(s[1]),file=FILES.indexOf(s[0]);return new THREE.Vector3(file-3.5,tileElevation(row,file)+.015,row-3.5);};
-export async function createTacticsBoard3D(host,onSquare){
+export async function createTacticsBoard3D(host,onSquare,{onDrag,onProject}={}){
   const scene=new THREE.Scene();scene.background=new THREE.Color(0x786653);scene.fog=new THREE.Fog(0x786653,19,40);
   const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.25));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;
@@ -23,7 +23,7 @@ export async function createTacticsBoard3D(host,onSquare){
   for(let row=0;row<8;row++)for(let file=0;file<8;file++){
     const square=FILES[file]+(8-row),tile=new THREE.Mesh(createTileGeometry(row,file),new THREE.MeshStandardMaterial({color:(row+file)%2?terrainPalette.dark:terrainPalette.light,roughness:1}));
     tile.position.copy(location(square));tile.position.y-=.015;tile.receiveShadow=true;tile.userData.square=square;world.add(tile);tiles.set(square,tile);
-    const mark=new THREE.Mesh(new THREE.PlaneGeometry(.87,.87),new THREE.MeshBasicMaterial({color:0x7ce4c0,transparent:true,opacity:.25,depthWrite:false,side:THREE.DoubleSide}));mark.rotation.x=-Math.PI/2;mark.position.copy(location(square));mark.position.y+=.006;mark.visible=false;world.add(mark);highlights.set(square,mark);
+    const mark=new THREE.Mesh(new THREE.PlaneGeometry(.87,.87),new THREE.MeshBasicMaterial({color:0x7ce4c0,transparent:true,opacity:.72,depthWrite:false,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-4}));mark.rotation.x=-Math.PI/2;mark.position.copy(location(square));mark.position.y+=.006;mark.visible=false;mark.renderOrder=4;const border=new THREE.LineSegments(new THREE.EdgesGeometry(mark.geometry),new THREE.LineBasicMaterial({color:0xf9fff4,transparent:true,opacity:.95,depthTest:false}));border.position.z=.005;border.renderOrder=5;mark.add(border);world.add(mark);highlights.set(square,mark);
   }
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;let active=true,frame=0,disposed=false,terrainKey='',snapshot=null,busy=false;
   function pieceLook(unit){const look=appearanceFor(unit.type,unit.color);return snapshot?.opponent==='local'&&unit.color==='b'&&unit.type==='k'?{...look,character:'delita'}:look;}
@@ -43,10 +43,10 @@ export async function createTacticsBoard3D(host,onSquare){
       if(mesh)terrain.add(mesh);
     }
   }
-  function render(state,{selectedSquare=null,targets=[],lastEvent=null}={}){snapshot=state;drawTerrain(state);const retained=new Set();
+  function render(state,{selectedSquare=null,targets=[],moveTargets=[],attackTargets=[],lastEvent=null}={}){snapshot=state;drawTerrain(state);const retained=new Set();
     for(const unit of state.units||[]){const corpse=unit.type==='k'&&unit.hp<=0&&state.phase==='finished';if(!unit.square||(unit.hp<=0&&!corpse))continue;retained.add(unit.id);let e=units.get(unit.id);const key=appearanceKey(pieceLook(unit));if(e&&e.key!==key){removeUnit(unit.id);e=null;}e??=addUnit(unit);e.unit={...unit};if(!busy)e.group.position.copy(location(unit.square));e.visual.rotation.y=angles[unit.facing]??0;e.bearing.rotation.y=(angles[unit.facing]??0)-Math.PI;updateBadge(e,unit);e.badge.visible=false;e.bearing.visible=false;if(corpse)animateCharacter(e.visual,0,{kingPose:'defeated',reducedMotion:true});}
     for(const id of units.keys())if(!retained.has(id)&&!busy)removeUnit(id);
-    const targetSet=new Set(targets);for(const [square,mark]of highlights){mark.visible=square===selectedSquare||targetSet.has(square)||square===lastEvent?.to;mark.material.color.setHex(square===selectedSquare?0x75d9ef:targetSet.has(square)?0x82d3a6:0xe3bf66);mark.material.opacity=square===selectedSquare?.62:targetSet.has(square)?.56:.3;}
+    const targetSet=new Set(targets);for(const [square,mark]of highlights){mark.visible=square===selectedSquare||targetSet.has(square)||square===lastEvent?.to;mark.material.color.setHex(square===selectedSquare?0x7cecff:attackTargets.includes(square)?moveTargets.includes(square)?0xffdf48:0xff6e44:0x20d4ff);mark.material.opacity=square===selectedSquare?.62:targetSet.has(square)?.72:.25;}
   }
   function ring(point,color,size=.38){const m=new THREE.Mesh(new THREE.RingGeometry(size*.75,size,32),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false}));m.position.copy(point);m.position.y+=.04;m.rotation.x=-Math.PI/2;effects.add(m);return m;}
   async function play(event,nextState){if(disposed||!event)return;busy=true;const actor=units.get(event.unitId),from=event.from?location(event.from):actor?.group.position.clone(),to=event.to?location(event.to):from;
@@ -70,9 +70,19 @@ export async function createTacticsBoard3D(host,onSquare){
   }
   const ray=new THREE.Raycaster(),pointer=new THREE.Vector2();let down=null;
   function hit(e){const rect=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);ray.setFromCamera(pointer,camera);const all=[...tiles.values(),...Array.from(units.values(),v=>v.visual)];const intersections=ray.intersectObjects(all,true);for(const h of intersections){let o=h.object;while(o&&!o.userData.square&&!Array.from(units.values()).some(u=>u.group===o))o=o.parent;const unit=Array.from(units.values()).find(u=>u.group===o);if(unit)return unit.unit.square;if(o?.userData.square)return o.userData.square;}return null;}
-  renderer.domElement.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY};});renderer.domElement.addEventListener('pointerup',e=>{if(down&&Math.hypot(e.clientX-down.x,e.clientY-down.y)<6)onSquare(hit(e));down=null;});renderer.domElement.addEventListener('pointercancel',()=>{down=null;});renderer.domElement.style.cursor='grab';
+  function ground(e){const rect=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);ray.setFromCamera(pointer,camera);return ray.intersectObjects([...tiles.values()],false)[0]?.object.userData.square??null;}
+  renderer.domElement.addEventListener('pointerdown',e=>{
+    if(e.button!==0)return;const square=hit(e),entry=[...units.values()].find(u=>u.unit.square===square&&u.unit.color==='w');
+    down={x:e.clientX,y:e.clientY,square,entry:snapshot?.phase==='planning'&&onDrag?entry:null,dragging:false,origin:entry?.group.position.clone()};
+    if(down.entry){controls.enabled=false;renderer.domElement.setPointerCapture(e.pointerId);}
+  },true);
+  renderer.domElement.addEventListener('pointermove',e=>{if(!down?.entry)return;if(Math.hypot(e.clientX-down.x,e.clientY-down.y)>6)down.dragging=true;if(!down.dragging)return;const square=ground(e);if(square){down.entry.group.position.copy(location(square));down.entry.group.position.y+=.14;}});
+  renderer.domElement.addEventListener('pointerup',e=>{if(!down)return;const gesture=down;down=null;if(gesture.entry){gesture.entry.group.position.copy(gesture.origin);controls.enabled=true;if(renderer.domElement.hasPointerCapture(e.pointerId))renderer.domElement.releasePointerCapture(e.pointerId);if(gesture.dragging)onDrag(gesture.square,ground(e));else onSquare(hit(e));}else if(Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)<6)onSquare(hit(e));},true);
+  renderer.domElement.addEventListener('pointercancel',()=>{if(down?.entry)down.entry.group.position.copy(down.origin);down=null;controls.enabled=true;});renderer.domElement.style.cursor='grab';
+  function projectSquare(square){const p=location(square).add(new THREE.Vector3(0,.5,0)).project(camera),r=renderer.domElement.getBoundingClientRect();return{x:(p.x+1)*r.width/2,y:(1-p.y)*r.height/2};}
   function resize(){const w=Math.max(1,host.clientWidth),h=Math.max(1,host.clientHeight);renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=h>w?49:39;camera.updateProjectionMatrix();}
+  controls.addEventListener('change',()=>onProject?.());
   const observer=new ResizeObserver(resize);observer.observe(host);resize();
   function loop(now){if(disposed)return;frame=requestAnimationFrame(loop);if(!active||document.hidden||!host.clientWidth||!host.clientHeight)return;if(!busy)for(const e of units.values())animateCharacter(e.visual,now/1000,{reducedMotion:reduced,phase:e.group.id,selected:false,kingPose:e.unit.hp<=0?'defeated':'standing'});controls.update();renderer.render(scene,camera);}frame=requestAnimationFrame(loop);
-  return {render,play,resize,resetCamera(){controls.reset();},setActive(value){active=value;if(value)resize();},dispose(){disposed=true;cancelAnimationFrame(frame);observer.disconnect();controls.dispose();for(const id of units.keys())removeUnit(id);clearGroup(effects);clearGroup(terrain);scene.traverse(m=>{m.geometry?.dispose();if(m.material)for(const mat of Array.isArray(m.material)?m.material:[m.material])mat.dispose();});renderer.dispose();renderer.domElement.remove();}};
+  return {render,play,resize,projectSquare,resetCamera(){controls.reset();},setActive(value){active=value;if(value)resize();},dispose(){disposed=true;cancelAnimationFrame(frame);observer.disconnect();controls.dispose();for(const id of units.keys())removeUnit(id);clearGroup(effects);clearGroup(terrain);scene.traverse(m=>{m.geometry?.dispose();if(m.material)for(const mat of Array.isArray(m.material)?m.material:[m.material])mat.dispose();});renderer.dispose();renderer.domElement.remove();}};
 }

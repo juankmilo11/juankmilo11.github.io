@@ -75,10 +75,10 @@ test('AI repositions to create an attack instead of refreshing guard indefinitel
   assert.ok(['N','E','S','W'].includes(movement.facing));
 });
 
-test('AI uses a charged supporting pawn to heal its wounded king',()=>{
-  const state=fixture({'w-k':{square:'a1'},'b-k':{square:'h8',hp:2},'b-p1':{square:'g7',charged:true}});
+test('AI uses a charged supporting bishop to heal its wounded king',()=>{
+  const state=fixture({'w-k':{square:'a1'},'b-k':{square:'h8',hp:2},'b-b':{square:'g7',charged:true}});
   const [first]=planAI(state,'b');
-  assert.deepEqual(first,{unitId:'b-p1',kind:'ultimate',mode:'heal',target:'h8'});
+  assert.deepEqual(first,{unitId:'b-b',kind:'ultimate',mode:'heal',target:'h8'});
 });
 
 test('a king approaches the opponent when no supporting special pieces remain',()=>{

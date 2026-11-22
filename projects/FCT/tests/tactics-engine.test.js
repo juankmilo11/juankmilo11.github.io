@@ -159,9 +159,9 @@ test('bishop ultimate hits the first target in all four diagonals without x-ray'
 });
 
 test('healing is capped, traps trigger on allies too, and obstacles expire after two rounds',()=>{
-  const state=fixture({'w-p1':'d4','w-r':'d5','b-r':'g6'});unit(state,'w-p1').charged=true;unit(state,'w-r').hp=5;
-  const healed=previewPlan(state,'w',[{unitId:'w-p1',kind:'ultimate',mode:'heal',target:'d5'}]);assert.equal(unit(healed,'w-r').hp,6);
-  const trapped=previewPlan(state,'w',[{unitId:'w-p1',kind:'ultimate',mode:'trap',target:'e5'},{unitId:'w-r',kind:'move',target:'e5'}]);
+  const state=fixture({'w-b':'c4','w-p1':'d4','w-r':'d5','b-r':'g6'});unit(state,'w-b').charged=true;unit(state,'w-r').hp=5;
+  const healed=previewPlan(state,'w',[{unitId:'w-b',kind:'ultimate',mode:'heal',target:'d5'}]);assert.equal(unit(healed,'w-r').hp,6);
+  const trapState=structuredClone(state);trapState.tiles.e5={kind:'trap',owner:'w'};const trapped=previewPlan(trapState,'w',[{unitId:'w-r',kind:'move',target:'e5'}]);
   assert.equal(unit(trapped,'w-r').hp,3);assert.equal(trapped.tiles.e5,undefined);
   unit(state,'w-r').charged=true;
   const barricade=previewPlan(state,'w',[{unitId:'w-r',kind:'ultimate',mode:'obstacle',target:'e5'}]);
@@ -206,4 +206,11 @@ test('forecast and public observation do not consume, reveal, or depend on seale
   const alternative=structuredClone(state);alternative.plans.b=[{unitId:'b-r',kind:'focus'}];
   assert.deepEqual(previewPlan(state,'w',plan),previewPlan(alternative,'w',plan));assert.deepEqual(state,before);
   const view=publicView(state,'w');assert.deepEqual(view.plans.b,[]);view.units[0].hp=0;assert.deepEqual(state,before);
+});
+
+test('pawns always advance up to two clear squares, can move diagonally and sweep all four forward cells',()=>{
+  const state=fixture({'w-p1':'d4','b-p1':'c5','b-p2':'d5','b-p3':'e5','b-r':'d6'});unit(state,'w-p1').hasMoved=true;unit(state,'w-p1').charged=true;
+  assert.ok(getLegalMoves(state,'w-p1').includes('c5'));assert.ok(!getLegalMoves(state,'w-p1').includes('d6'),'movement cannot jump a body');
+  const result=previewPlan(state,'w',[{unitId:'w-p1',kind:'ultimate'}]);for(const id of ['b-p1','b-p2','b-p3','b-r'])assert.ok(unit(result,id).hp<6);
+  unit(state,'b-p2').square='a7';assert.ok(getLegalMoves(state,'w-p1').includes('d6'),'double step remains available away from home');unit(state,'b-p1').square='a6';assert.ok(getLegalMoves(state,'w-p1').includes('c5'),'diagonal movement does not require a capture');
 });

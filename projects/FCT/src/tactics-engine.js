@@ -2,7 +2,7 @@
 export const UNIT_NAMES = {p:'Peón',n:'Caballo',b:'Alfil',r:'Torre',q:'Reina',k:'Rey'};
 export const DIRECTIONS = {N:[0,1],NE:[1,1],E:[1,0],SE:[1,-1],S:[0,-1],SW:[-1,-1],W:[-1,0],NW:[-1,1]};
 export const ABILITIES = {
-  p:{name:'Auxilio / Trampa',description:'Cura 3 a un aliado adyacente o coloca una trampa de 2 de daño.',modes:['heal','trap']},
+  p:{name:'Vanguardia',description:'Ataca las dos casillas del frente y ambas diagonales delanteras, incluidos aliados.',modes:['sweep']},
   n:{name:'Tormenta ecuestre',description:'Ataca las ocho casillas en L, incluidos aliados.',modes:['storm']},
   b:{name:'Cruz astral / Sanación',description:'Ataca las cuatro diagonales hasta el primer objetivo, o cura 3 al primer aliado de una diagonal.',modes:['nova','heal']},
   r:{name:'Bastión / Barricada',description:'Obtiene 2 cargas de armadura y reflejo, o crea un obstáculo adyacente durante dos rondas.',modes:['bastion','obstacle']},
@@ -118,12 +118,17 @@ export function getLegalMoves(state,input) {
     if(front&&!solid(state,front)){
       result.push(front);
       const twice=sq(x,y+dy*2);
-      if(!unitAt(state,front)&&!unit.hasMoved&&y===(unit.color==='w'?1:6)&&twice&&!solid(state,twice))result.push(twice);
+      if(!unitAt(state,front)&&twice&&!solid(state,twice))result.push(twice);
     }
-    for(const dx of [-1,1]){const square=sq(x+dx,y+dy);if(square&&!solid(state,square)&&unitAt(state,square))result.push(square);}
+    for(const dx of [-1,1]){const square=sq(x+dx,y+dy);if(square&&!solid(state,square))result.push(square);}
     return result;
   }
   return attackDirections(unit).flatMap(direction=>ray(state,unit,direction,unit.type==='k'?1:7));
+}
+export function getPawnArea(state,input){
+  const unit=findUnit(state,input);if(!alive(unit))return [];
+  const[x,y]=xy(unit.square),dy=unit.color==='w'?1:-1;
+  return [[-1,dy],[1,dy],[0,dy],[0,2*dy]].map(([dx,step])=>sq(x+dx,y+step)).filter(square=>square&&!solid(state,square)&&(Number(square[1])!==y+1+2*dy||!solid(state,sq(x,y+dy))));
 }
 export function getAttackTargets(state,input,direction) {
   const unit=findUnit(state,input);if(!alive(unit)||!attackDirections(unit).includes(direction))return [];
@@ -250,7 +255,8 @@ function applyOrder(state,side,raw) {
       for(const ally of livingUnits(state,side))if(adjacent(unit.square,ally.square)){ally.armor=Math.min(2,ally.armor+1);ally.boost=1;event.buffs.push(ally.id);}
     }else{
       const directions=unit.type==='n'?DIAGONALS:unit.type==='b'?DIAGONALS:ALL;
-      const targetIds=[...new Set(directions.flatMap(direction=>getAttackTargets(state,unit,direction)).map(square=>unitAt(state,square)?.id).filter(Boolean))];
+      const area=unit.type==='p'?getPawnArea(state,unit):directions.flatMap(direction=>getAttackTargets(state,unit,direction));
+      const targetIds=[...new Set(area.map(square=>unitAt(state,square)?.id).filter(Boolean))];
       const bonus=unit.boost?1:0;unit.boost=0;
       for(const id of targetIds){if(unit.hp<=0||state.winner)break;strike(state,unit,findUnit(state,id),event,bonus);checkWinner(state,event);}
     }

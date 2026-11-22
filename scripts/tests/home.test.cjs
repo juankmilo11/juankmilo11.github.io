@@ -139,7 +139,7 @@ function browser({ imageDelay = 0, imageFailure = false, reducedMotion = false }
   };
   const windowTemplate = new Element('section', 'ventana');
   const titlebar = new Element('header', 'barra-ventana');
-  titlebar.append(new Element('h2'), new Element('button', 'cerrar-ventana'));
+  titlebar.append(new Element('h2'), new Element('a', 'abrir-pestana'), new Element('button', 'cerrar-ventana'));
   windowTemplate.append(titlebar, new Element('iframe'));
   controls['#plantilla-ventana'] = { content: { firstElementChild: windowTemplate } };
   const links = [
@@ -152,7 +152,7 @@ function browser({ imageDelay = 0, imageFailure = false, reducedMotion = false }
     link.setAttribute('href', href);
     link.dataset = { windowTitle: name, barColor: color };
     link.textContent = name;
-    if (index === 2) link.setAttribute('data-open-tab', '');
+
     return link;
   });
   document.querySelector = selector => controls[selector] || document.body.querySelector(selector);
@@ -246,10 +246,10 @@ test('startup glitches for five seconds and blocks all bubbles until the deadlin
     assert.equal(link.hasAttribute('aria-disabled'), false);
     assert.equal(link.hasAttribute('tabindex'), false);
   }
-  assert.equal(Boolean(page.links[2].dispatch('click').defaultPrevented), false);
+  assert.equal(Boolean(page.links[2].dispatch('click').defaultPrevented), true);
   assert.equal(Boolean(page.links[2].dispatch('auxclick').defaultPrevented), false);
   page.links[0].dispatch('click');
-  assert.equal(page.windows().length, 1);
+  assert.equal(page.windows().length, 2);
 });
 
 test('startup unlocks after five seconds even when GIFs are slow or unavailable, including reduced motion', async () => {
@@ -406,7 +406,7 @@ test('Yin Yang changes speed without opening windows or disturbing an active GIF
   page.click('.escenario');page.click('.escenario');page.click('.escenario');
   await page.advance(1000);assert.equal(page.windows().length,0);assert.equal(shownGif(page),first);
   assert.equal(page.document.documentElement.style.getPropertyValue('--rotation-speed'),'0.5s');
-  assert.equal(Boolean(page.links[2].dispatch('click').defaultPrevented),false);
+  assert.equal(Boolean(page.links[2].dispatch('click').defaultPrevented),true);
 });
 
 test('bubbles open windows after startup and reuse existing iframes', async () => {
@@ -539,4 +539,13 @@ test('JK opens the password gate and only its own iframe can change the window s
   page.window.dispatch('message', { ...message, data: { type: 'admin:authenticated', authenticated: false } });
   assert.equal(popup.classList.contains('admin-abierto'), false);
   assert.equal(popup.querySelector('h2').textContent, 'JK');
+});
+
+test('all bubbles including FCT open embedded windows with a new-tab action', async()=>{
+  const page=browser();await page.advance(5000);
+  for(const link of page.links){link.dispatch('click');const win=page.windows().at(-1),button=win.querySelector('.abrir-pestana');assert.ok(button);assert.equal(button.href,link.getAttribute('href'));}
+  assert.equal(page.windows().length,4);
+  const fct=page.windows()[2];assert.ok(fct.classList.contains('ventana-fct'));
+  fct.querySelector('iframe').contentWindow.location={href:'https://example.test/FCT/tactics.html'};
+  fct.querySelector('.abrir-pestana').dispatch('click');assert.equal(fct.querySelector('.abrir-pestana').href,'https://example.test/FCT/tactics.html');
 });
