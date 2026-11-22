@@ -27,21 +27,19 @@
       <main class="workspace">
         <aside class="sidebar">
           <section class="match-card">
-            <div class="eyebrow">PREPARAR COMBATE</div>
-            <h1>Fantasy Chess:<br />Tactics</h1>
-            <p class="muted">Partida clásica</p>
+            <h1>Fantasy Chess<br />Tactics</h1>
 
-            <a class="tactics-mode-link" href="./tactics.html"><span>NUEVO MODO</span><strong>Órdenes de guerra</strong><small>8 piezas · planes secretos · combate intercalado</small></a>
+            <a class="tactics-mode-link" href="./tactics.html"><strong>JUGAR</strong></a>
 
             <button class="select-pieces-button" id="select-pieces" type="button" aria-haspopup="dialog" aria-controls="piece-selector"><img src="/fct-potion.png" alt="" /><strong>Seleccionar piezas</strong></button>
 
-            <button class="new-game-button" id="new-game" type="button"><span>⚔</span> Iniciar combate</button>
+            <button class="new-game-button" id="new-game" type="button">Partida clásica</button>
           </section>
         </aside>
 
         <section class="game-area" aria-label="Tablero de ajedrez">
           <div class="game-toolbar">
-            <div class="map-title"><img class="map-icon" src="/fct-potion.png" alt="" /><div><small>RUINAS</small><strong>Fantasy Chess: Tactics</strong></div></div>
+            <div class="map-title"><img class="map-icon" src="/fct-potion.png" alt="" /><div><small>RUINAS</small><strong>Fantasy Chess Tactics</strong></div></div>
             <div class="game-status-badge" aria-live="polite"><span class="turn-pulse" id="turn-pulse"></span><strong id="game-status">Tu turno</strong></div>
             <div class="review-controls" id="review-controls" role="group" aria-label="Revisión cronológica de la partida" hidden><button id="review-first" type="button" title="Ir a la posición inicial" aria-label="Ir a la posición inicial">|‹</button><button id="review-previous" type="button" title="Movimiento anterior" aria-label="Movimiento anterior">‹</button><output id="review-position" aria-live="polite">Inicio · 0/0</output><button id="review-next" type="button" title="Movimiento siguiente" aria-label="Movimiento siguiente">›</button><button id="review-last" type="button" title="Ir a la posición actual" aria-label="Ir a la posición actual">›|</button><button id="review-return" type="button" title="Volver a la posición actual">Volver</button><small id="review-pause-note" class="review-pause-note" role="status" hidden>Partida pausada · Pulsa «Volver» para continuar.</small></div>
             <div class="toolbar-actions">

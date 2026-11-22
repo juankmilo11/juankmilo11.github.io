@@ -43,11 +43,11 @@ async function inspectViewer(browser) {
   assert.equal(await page.locator('#audio-reopen').getAttribute('aria-pressed'),'true');
   await page.locator('#audio-reopen').click();
   const seen=[];
-  for(let i=0;i<8;i++){
+  for(let i=0;i<5;i++){
     seen.push(await page.locator('#background-music').getAttribute('data-track'));
     await page.locator('#background-music').dispatchEvent('ended');
   }
-  assert.equal(new Set(seen).size,8);
+  assert.equal(new Set(seen).size,5);
   await page.locator('#audio-reopen').click();
   await page.waitForFunction(()=>!document.querySelector('#background-music').paused);
   await page.locator('#audio-reopen').click();

@@ -29,7 +29,7 @@ test('each side has three pawns and one of each special; only kings start charge
   }
 });
 
-test('deployment accepts only free home squares, seals placements and hides them through initiative',()=>{
+test('deployment accepts only free home squares, seals placements and reveals both armies for initiative',()=>{
   const state=createMatch({seed:2});
   assert.equal(placeUnit(state,'w','w-p1','e3').ok,false);
   assert.equal(placeUnit(state,'w','b-p1','a1').ok,false);
@@ -42,7 +42,7 @@ test('deployment accepts only free home squares, seals placements and hides them
   assert.equal(Object.hasOwn(publicWhite,'rng'),false);
   confirmDeployment(state,'w');assert.equal(placeUnit(state,'w','w-p1','b1').ok,false);
   confirmDeployment(state,'b');assert.equal(state.phase,'initiative');
-  assert.ok(publicView(state,'w').units.filter(piece=>piece.color==='b').every(piece=>piece.square===null));
+  assert.ok(publicView(state,'w').units.filter(piece=>piece.color==='b').every(piece=>piece.square));
   const roll=rollInitiative(state);chooseInitiative(state,roll.winner,{first:true});
   assert.equal(state.phase,'planning');assert.ok(publicView(state,'w').units.every(piece=>piece.square));
 });
@@ -64,7 +64,7 @@ test('seeded dice reroll ties and the winner trades initiative for one non-royal
 
 test('opening quotas count occupied moves as attacks; later rounds allow three free actions',()=>{
   const state=fixture({'w-r':'d4','b-r':'d6'},1);
-  assert.deepEqual(roundRules(state),{seconds:7,actions:2,maxMoves:1,maxOther:1});
+  assert.deepEqual(roundRules(state),{seconds:10,actions:2,maxMoves:1,maxOther:1});
   assert.equal(orderCategory(state,{kind:'move',target:'d6'}),'other');
   assert.equal(submitPlan(state,'w',[{unitId:'w-r',kind:'move',target:'d6'},{unitId:'w-r',kind:'attack',direction:'N'}]).ok,false);
   assert.equal(submitPlan(state,'w',[{unitId:'w-r',kind:'move',target:'d5'},{unitId:'w-r',kind:'attack',direction:'N'}]).ok,true);

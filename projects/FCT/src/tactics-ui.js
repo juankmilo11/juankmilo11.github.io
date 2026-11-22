@@ -1,5 +1,5 @@
 import './tactics.css';
-import { createMatch, placeUnit, autoDeploy, confirmDeployment, rollInitiative, chooseInitiative, roundRules, submitPlan, resolveNext, getLegalMoves, getAttackTargets, validateOrder, previewPlan, publicView, UNIT_NAMES, ABILITIES, orderCategory } from './tactics-engine.js';
+import { createMatch, autoDeploy, confirmDeployment, rollInitiative, chooseInitiative, roundRules, submitPlan, resolveNext, getLegalMoves, getAttackTargets, validateOrder, previewPlan, publicView, UNIT_NAMES, ABILITIES, orderCategory } from './tactics-engine.js';
 import { planAI } from './tactics-ai.js';
 import { appearanceFor, thumbnailUrl, setLoadout } from './appearance.js';
 import { createAudioSystem } from './audio-system.js';
@@ -18,12 +18,12 @@ const other=side=>side==='w'?'b':'w';
 const isAlive=unit=>unit.hp>0&&unit.square;
 const squares=Array.from({length:64},(_,i)=>String.fromCharCode(97+i%8)+(8-Math.floor(i/8)));
 let match=null, viewer='w', selectedId=null, draft=[], intent=null, facing='N', pendingTarget=null, direction=null, abilityMode=null;
-let phaseToken=0, privacy=false, curtainCallback=null, planning=false, resolving=false, roundPrepared=0, aiPlan=[], secondsLeft=0, totalSeconds=7, lastTick=0;
-let view='2d', three=null, threePromise=null, lastEvent=null, toastTimer;
+let phaseToken=0, privacy=false, planning=false, resolving=false, roundPrepared=0, aiPlan=[], secondsLeft=0, totalSeconds=10, lastTick=0;
+let view='2d', three=null, threePromise=null, lastEvent=null, toastTimer, furthestOrder=0;
 const sound=(name='menu2')=>audio.playSound(name);
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-function sideName(side){return match?.opponent==='local'?(side==='w'?'Jugador 1':'Jugador 2'):(side==='w'?'Tu ejército':'El estratega');}
-function look(unit){const result=appearanceFor(unit.type,unit.color);return match?.opponent==='local'&&unit.color==='b'&&unit.type==='k'?{...result,character:'delita'}:result;}
+function sideName(side){return side==='w'?'Tu ejército':'El estratega';}
+function look(unit){return appearanceFor(unit.type,unit.color);}
 function toast(message){clearTimeout(toastTimer);$('#board-toast').textContent=message;$('#board-toast').hidden=false;toastTimer=setTimeout(()=>$('#board-toast').hidden=true,3200);}
 function unitFrom(state,id=selectedId){return state?.units.find(unit=>unit.id===id);}
 function forecast(){return match?.phase==='planning'?previewPlan(publicView(match,viewer),viewer,draft):publicView(match,viewer);}
@@ -67,8 +67,6 @@ function renderBoard(){
     if(unit){
       const token=document.createElement('span');token.className=`tactical-token token-${unit.color==='w'?'white':'black'}`;token.dataset.unit=unit.id;
       const img=document.createElement('img');img.src=thumbnailUrl(look(unit));img.alt='';img.draggable=false;token.append(img);
-      const face=document.createElement('span');face.className='token-face';face.textContent=FACE[unit.facing];token.append(face);
-      const hp=document.createElement('span');hp.className='hp-track';hp.setAttribute('aria-hidden','true');hp.innerHTML=Array.from({length:6},(_,i)=>`<i class="${i<unit.hp?'full':''}"></i>`).join('');token.append(hp);
       if(unit.charged){const charge=document.createElement('span');charge.className='token-charge';charge.textContent='✦';token.append(charge);}
       const buffs=[unit.guard?'◇':'',unit.armor?`A${unit.armor}`:'',unit.reflect?'↶':'',unit.boost?'+':''].filter(Boolean);if(buffs.length){const resource=document.createElement('span');resource.className='token-resource';resource.textContent=buffs.join(' ');token.append(resource);}
       cell.append(token);
@@ -89,26 +87,20 @@ function renderRoster(){
 function renderPhase(){
   if(!match)return;
   const panel=$('#phase-panel');$('#round-counter').textContent=match.round?`Ronda ${match.round}`:'Preparación';
-  const planningVisible=match.phase==='planning'&&planning&&!privacy;
-  document.body.classList.toggle('is-planning',planningVisible);
-  $('#planning-panel').hidden=!planningVisible;$('#queue-panel').hidden=!planningVisible;
-  if(match.phase==='deployment'){
-    const count=match.units.filter(unit=>unit.color===viewer&&unit.square).length;
-    $('#phase-kicker').textContent='PREPARACIÓN · EJÉRCITOS OCULTOS';$('#phase-title').textContent='Despliegue secreto';$('#battle-status').textContent=`${sideName(viewer)} · ${count} de 8 piezas ubicadas`;
-    panel.innerHTML=`<p class="eyebrow">${escape(sideName(viewer))}</p><h2>Elige tu formación</h2><p>Selecciona una pieza abajo y pulsa una casilla de las filas ${viewer==='w'?'1 o 2':'7 u 8'}. Puedes recolocarla hasta confirmar.</p><button type="button" class="secondary-button" data-command="auto-deploy">Formación aleatoria</button><button type="button" class="primary-button" data-command="confirm-deploy" ${count<8?'disabled':''}>Confirmar despliegue</button><p class="phase-footnote">El despliegue contrario sigue oculto. Sin límite de tiempo.</p>`;
-  }else if(match.phase==='initiative'){
-    $('#phase-kicker').textContent='ANTES DE LA PRIMERA RONDA';$('#phase-title').textContent='La suerte abre el combate';$('#battle-status').textContent='Una ventaja. Dos caminos.';
-    const dice=match.dice;
-    const canChoose=!privacy&&!(match.opponent==='ai'&&dice?.winner==='b');
-    panel.innerHTML=`<p class="eyebrow">INICIATIVA</p><h2>${dice?`${escape(sideName(dice.winner))} gana la tirada`:'Lanza los dados'}</h2>${dice?`<div class="dice-pair"><div><span class="dice-face">${dice.w}</span>${escape(sideName('w'))}</div><div><span class="dice-face">${dice.b}</span>${escape(sideName('b'))}</div></div>${dice.rolls.length>1?'<p class="phase-footnote">Hubo empate: se repitió la tirada.</p>':''}<p>Actúa primero en la ronda 1 o empieza con una definitiva cargada. La iniciativa alterna después de cada ronda. El rey ya empieza cargado y la reina no recibe esta ventaja.</p><button type="button" class="primary-button" data-command="choose-first" ${canChoose?'':'disabled'}>Actuar primero en la ronda 1</button><div class="privilege-list">${match.units.filter(unit=>unit.color===dice.winner&&!['k','q'].includes(unit.type)).map(unit=>`<button type="button" data-charge="${unit.id}" ${canChoose?'':'disabled'}>✦ ${UNIT_NAMES[unit.type]}${unit.type==='p'?` ${unit.id.at(-1)}`:''}</button>`).join('')}</div>`:'<p>Cada bando tira un dado. El mayor elige su ventaja; los empates se repiten.</p><button type="button" class="primary-button" data-command="roll">Lanzar dados</button>'}`;
+  const show=match.phase==='planning'&&planning;
+  document.body.classList.toggle('is-planning',show);$('#planning-panel').hidden=!show;$('#queue-panel').hidden=!show;
+  $('#phase-title').textContent='Fantasy Chess Tactics';
+  if(match.phase==='initiative'){
+    $('#phase-kicker').textContent='INICIATIVA';$('#battle-status').textContent='Ambos ejércitos están listos.';
+    const dice=match.dice,canChoose=dice?.winner==='w';
+    panel.innerHTML=`<h2>${dice?`${escape(sideName(dice.winner))} gana la tirada`:'Lanza los dados'}</h2>${dice?`<div class="dice-pair"><div><span class="dice-face">${dice.w}</span>Tu ejército</div><div><span class="dice-face">${dice.b}</span>El estratega</div></div><p>Elige actuar primero o cargar una definitiva. La iniciativa alterna cada ronda.</p><button type="button" class="primary-button" data-command="choose-first" ${canChoose?'':'disabled'}>Actuar primero</button><div class="privilege-list">${match.units.filter(u=>u.color==='w'&&!['k','q'].includes(u.type)).map(u=>`<button type="button" data-charge="${u.id}" ${canChoose?'':'disabled'}>✦ ${UNIT_NAMES[u.type]}${u.type==='p'?` ${u.id.at(-1)}`:''}</button>`).join('')}</div>`:'<button type="button" class="primary-button" data-command="roll">Lanzar dados</button>'}`;
   }else if(match.phase==='planning'){
-    $('#phase-kicker').textContent='PLANIFICACIÓN SIMULTÁNEA · ÓRDENES OCULTAS';$('#phase-title').textContent='Decide antes de combatir';$('#battle-status').textContent=privacy?'Esperando al siguiente estratega':`${sideName(viewer)} · prepara tu secuencia`;
-    const rules=roundRules(match);panel.innerHTML=`<p class="eyebrow">${escape(sideName(viewer))} · ${rules.actions} ÓRDENES</p><div class="timer" id="planning-timer"><p>Tiempo para planear</p><strong id="timer-seconds">${Math.ceil(secondsLeft)}s</strong></div><div class="timer-track"><i id="timer-progress"></i></div><p>${match.round<=2?'Un movimiento y una acción, en el orden que elijas.':'Tres acciones libres. Puedes usar varias veces la misma pieza.'}</p><p class="phase-footnote">La posición del tablero anticipa tus órdenes. El rival puede cambiar el resultado.</p>`;updateTimer();
+    $('#phase-kicker').textContent='PREPARA TUS ÓRDENES';$('#battle-status').textContent='Tu ejército · elige la siguiente orden';
+    panel.innerHTML=`<p class="eyebrow">${roundRules(match).actions} ÓRDENES</p><div class="timer" id="planning-timer"><p>Tiempo para esta orden</p><strong id="timer-seconds">${Math.ceil(secondsLeft)}s</strong></div><div class="timer-track"><i id="timer-progress"></i></div><p>${match.round<=2?'Un movimiento y una acción.':'Tres acciones libres.'} Cada orden dispone de 10 segundos.</p>`;updateTimer();
   }else if(match.phase==='resolution'){
-    $('#phase-kicker').textContent='LAS ÓRDENES YA ESTÁN SELLADAS';$('#phase-title').textContent='El combate toma vida';$('#battle-status').textContent=lastEvent?.message??'Las órdenes se ejecutan intercaladas.';
-    panel.innerHTML='<p class="eyebrow">RESOLUCIÓN</p><h2>Cada orden cuenta</h2><p>Una acción por bando, una tras otra. La geometría, la orientación y el tiempo deciden quién sigue en pie.</p><p class="phase-footnote">Una orden que queda bloqueada pierde su acción.</p>';
+    $('#phase-kicker').textContent='COMBATE';$('#battle-status').textContent=lastEvent?.message??'Ejecutando órdenes…';panel.innerHTML='<h2>Combate en curso</h2><p>Una acción por bando, una tras otra.</p>';
   }else if(match.phase==='finished'){
-    $('#phase-kicker').textContent='PARTIDA FINALIZADA';$('#phase-title').textContent='Una corona ha caído';$('#battle-status').textContent=winnerText();panel.innerHTML=`<p class="eyebrow">RESULTADO</p><h2>${escape(winnerText())}</h2><p>La crónica conserva los últimos intercambios de esta batalla.</p><button type="button" class="primary-button" data-command="restart">Otra batalla</button>`;
+    $('#phase-kicker').textContent='PARTIDA FINALIZADA';$('#battle-status').textContent=winnerText();panel.innerHTML=`<h2>${escape(winnerText())}</h2><button type="button" class="primary-button" data-command="restart">Otra partida</button>`;
   }
 }
 function renderControls(){
@@ -142,10 +134,6 @@ function render(){renderPhase();renderBoard();renderRoster();renderControls();re
 function selectUnit(id){const state=forecast(),unit=unitFrom(state,id);if(!unit||unit.color!==viewer||unit.hp<=0)return;selectedId=id;facing=unit.facing;clearIntent();sound();render();}
 function handleSquare(square){
   if(!match||privacy||resolving||!square)return;
-  if(match.phase==='deployment'){
-    if(selectedId){const result=placeUnit(match,viewer,selectedId,square);if(result.ok){sound('menu3');const next=match.units.find(unit=>unit.color===viewer&&!unit.square);if(next)selectedId=next.id;render();return;}}
-    const own=match.units.find(unit=>unit.color===viewer&&unit.square===square);if(own)selectUnit(own.id);else toast('Elige una pieza y una casilla libre de tus dos primeras filas.');return;
-  }
   if(match.phase!=='planning'||!planning)return;
   const state=forecast(),unit=unitFrom(state),targets=unit?targetSquares(state,unit):[];
   if(unit&&targets.includes(square)){
@@ -157,41 +145,49 @@ function handleSquare(square){
   }
   const own=state.units.find(piece=>piece.color===viewer&&piece.hp>0&&piece.square===square);if(own)selectUnit(own.id);else{selectedId=null;clearIntent();render();}
 }
-function addOrder(){const order=currentOrder(),result=order?checkPlan([...draft,order]):{ok:false,error:'Completa la orden.'};if(!result.ok){toast(result.error);return;}draft.push(order);clearIntent();sound('menu4');render();}
+function addOrder(){
+  const order=currentOrder(),result=order?checkPlan([...draft,order]):{ok:false,error:'Completa la orden.'};
+  if(!result.ok){toast(result.error);return;}
+  draft.push(order);clearIntent();sound('menu4');advanceOrder();
+}
+function advanceOrder(){
+  if(draft.length>=roundRules(match).actions||forecast().winner){void sealPlan();return;}
+  // Editing an earlier slot must not grant unlimited extra planning time.
+  if(draft.length>furthestOrder){furthestOrder=draft.length;secondsLeft=totalSeconds;lastTick=performance.now();}
+  render();
+}
+function expireOrder(){
+  while(draft.length<=furthestOrder&&draft.length<roundRules(match).actions)draft.push({kind:'pass'});
+  clearIntent();advanceOrder();
+}
 function setAction(kind){if(!planning||privacy)return;const unit=unitFrom(forecast());if(!unit)return;clearIntent();intent=kind;abilityMode=ABILITIES[unit.type].modes[0];facing=unit.facing;sound();if(['block','focus'].includes(kind)){addOrder();return;}render();}
-function showCurtain(title,description,callback,label='Listo para planear',kicker='ÓRDENES SECRETAS'){
-  privacy=true;planning=false;curtainCallback=callback;$('#order-queue').replaceChildren();$('#order-context').replaceChildren();$('#curtain-title').textContent=title;$('#curtain-description').textContent=description;$('#curtain-kicker').textContent=kicker;$('#curtain-continue').textContent=label;$('#privacy-curtain').hidden=false;three?.setActive(false);board.setAttribute('aria-hidden','true');render();$('#curtain-continue').focus({preventScroll:true});
+
+
+
+function newMatch(){
+  phaseToken++;planning=false;resolving=false;privacy=false;roundPrepared=0;
+  match=createMatch({seed:crypto.getRandomValues(new Uint32Array(1))[0]});viewer='w';draft=[];lastEvent=null;selectedId=null;clearIntent();
+  for(const side of ['w','b']){autoDeploy(match,side);confirmDeployment(match,side);}
+  render();three?.setActive(view==='3d');
 }
-function hideCurtain(){privacy=false;$('#privacy-curtain').hidden=true;board.removeAttribute('aria-hidden');if(three)three.setActive(view==='3d');const callback=curtainCallback;curtainCallback=null;callback?.();}
-function startDeployment(){
-  selectedId=match.units.find(unit=>unit.color===viewer&&!unit.square)?.id??match.units.find(unit=>unit.color===viewer)?.id;clearIntent();render();
+function rollDice(){
+  const result=rollInitiative(match);if(!result.ok){toast(result.error);return;}sound('menu3');render();
+  if(match.dice.winner==='b'){const token=phaseToken;setTimeout(()=>{if(token!==phaseToken)return;const choice=chooseInitiative(match,'b',{first:true});if(choice.ok)prepareRound();},700);}
 }
-function newMatch(opponent){
-  phaseToken++;planning=false;resolving=false;privacy=false;roundPrepared=0;match=createMatch({seed:crypto.getRandomValues(new Uint32Array(1))[0],opponent});viewer='w';draft=[];lastEvent=null;$('#privacy-curtain').hidden=true;board.removeAttribute('aria-hidden');
-  if(opponent==='ai'){autoDeploy(match,'b');confirmDeployment(match,'b');}
-  startDeployment();if(three)three.setActive(view==='3d');
-}
-function finishDeployment(){
-  const result=confirmDeployment(match,viewer);if(!result.ok){toast(result.error);return;}sound('menu4');
-  if(match.phase==='initiative'){selectedId=null;render();return;}
-  viewer=other(viewer);selectedId=null;showCurtain(`${sideName(viewer)}, prepara tu ejército`,'Pasa el dispositivo. Las posiciones del otro bando seguirán ocultas hasta que ambos confirmen.',startDeployment,'Comenzar despliegue','PANTALLA DE PRIVACIDAD');
-}
-function rollDice(){const result=rollInitiative(match);if(!result.ok){toast(result.error);return;}sound('menu3');render();if(match.opponent==='local'&&match.dice.winner!==viewer){viewer=match.dice.winner;showCurtain(`${sideName(viewer)}, elige tu ventaja`,'Pasa el dispositivo al ganador de la tirada. Puede actuar primero en la ronda 1 o cargar una definitiva.',render,'Elegir mi ventaja','INICIATIVA');}if(match.opponent==='ai'&&match.dice.winner==='b'){const token=phaseToken;setTimeout(()=>{if(token!==phaseToken)return;const choice=chooseInitiative(match,'b',{first:true});if(choice.ok){toast('El estratega gana la tirada y elige actuar primero.');prepareRound();}},1000);}}
-function choosePrivilege(first,unitId){if(match.opponent==='ai'&&match.dice.winner==='b')return;const result=chooseInitiative(match,match.dice.winner,{first,unitId});if(!result.ok){toast(result.error);return;}sound('menu4');prepareRound();}
+function choosePrivilege(first,unitId){if(match.dice.winner!=='w')return;const result=chooseInitiative(match,'w',{first,unitId});if(!result.ok){toast(result.error);return;}sound('menu4');prepareRound();}
 function prepareRound(){
   if(match.phase!=='planning')return;
-  if(roundPrepared!==match.round){roundPrepared=match.round;draft=[];lastEvent=null;if(match.opponent==='ai')aiPlan=planAI(structuredClone(match),'b');}
-  viewer=match.opponent==='ai'?'w':match.activePlanner;selectedId=null;clearIntent();
-  const rules=roundRules(match);showCurtain(`${sideName(viewer)}, ronda ${match.round}`,`${rules.seconds} segundos para preparar ${match.round<=2?'un movimiento y una acción':'tres acciones libres'}. Tus órdenes se mantendrán ocultas hasta la resolución.`,beginPlanning);
+  if(roundPrepared!==match.round){roundPrepared=match.round;draft=[];lastEvent=null;aiPlan=planAI(structuredClone(match),'b');}
+  viewer='w';selectedId=null;clearIntent();beginPlanning();
 }
-function beginPlanning(){
-  planning=true;draft=[];selectedId=null;clearIntent();totalSeconds=roundRules(match).seconds;secondsLeft=totalSeconds;lastTick=performance.now();render();
-}
+function beginPlanning(){planning=true;draft=[];furthestOrder=0;selectedId=null;clearIntent();totalSeconds=10;secondsLeft=10;lastTick=performance.now();render();}
 function updateTimer(){const seconds=$('#timer-seconds'),progress=$('#timer-progress');if(seconds)seconds.textContent=`${Math.max(0,Math.ceil(secondsLeft))}s`;if(progress)progress.style.width=`${Math.max(0,secondsLeft/totalSeconds*100)}%`;$('#planning-timer')?.classList.toggle('is-urgent',secondsLeft<=3);if(planning&&compactPlanning())$('#round-counter').textContent=`R${match.round} · ${Math.max(0,Math.ceil(secondsLeft))}s · ${draft.length}/${roundRules(match).actions}`;}
 async function sealPlan(){
-  if(!planning||privacy||match.phase!=='planning')return;const result=submitPlan(match,viewer,draft);if(!result.ok){toast(result.error);return;}planning=false;clearIntent();selectedId=null;sound('menu4');
-  if(match.opponent==='ai'){const aiResult=submitPlan(match,'b',aiPlan);if(!aiResult.ok){console.error('AI plan rejected:',aiResult.error);submitPlan(match,'b',[]);}}
-  if(match.phase==='resolution'){draft=[];await runResolution();}else{draft=[];viewer=match.activePlanner;showCurtain(`${sideName(viewer)}, prepara tus órdenes`,'Pasa el dispositivo. La secuencia anterior ya está sellada y permanece oculta.',beginPlanning);}
+  if(!planning||match.phase!=='planning')return;
+  const result=submitPlan(match,'w',draft);if(!result.ok){toast(result.error);return;}
+  planning=false;clearIntent();selectedId=null;sound('menu4');
+  const aiResult=submitPlan(match,'b',aiPlan);if(!aiResult.ok){console.error('AI plan rejected:',aiResult.error);submitPlan(match,'b',[]);}
+  draft=[];await runResolution();
 }
 async function animate2D(event){
   const attacker=event.from?board.querySelector(`[data-square="${event.from}"] .tactical-token`):null;
@@ -210,7 +206,7 @@ async function animate2D(event){
   await delay(reduced?85:['pass','fizzle'].includes(event.kind)?210:570);
 }
 async function runResolution(){
-  const token=phaseToken;resolving=true;planning=false;privacy=false;$('#privacy-curtain').hidden=true;board.removeAttribute('aria-hidden');viewer=match.opponent==='ai'?'w':match.firstSide;render();
+  const token=phaseToken;resolving=true;planning=false;privacy=false;board.removeAttribute('aria-hidden');viewer=match.opponent==='ai'?'w':match.firstSide;render();
   while(match.phase==='resolution'&&token===phaseToken){
     const result=resolveNext(match);if(!result.ok){toast(result.error);break;}const event=result.event;lastEvent=event;
     $('#battle-status').textContent=event.message;audio.playSound(event.targets?.some(target=>target.damage)?'user_piece_move':event.kind==='move'?'AI_piece_move':'menu3',.7);
@@ -221,7 +217,7 @@ async function runResolution(){
   if(match.phase==='finished'){render();await delay(reduced?80:300);if(token!==phaseToken)return;$('#result-title').textContent=winnerText();$('#result-description').textContent=match.winner==='draw'?'Los dos reyes cayeron en el mismo intercambio.':`El rey de ${sideName(other(match.winner)).toLowerCase()} ha caído en la ronda ${match.round}.`;$('#result-dialog').showModal();audio.playSound('checkmate');}
   else prepareRound();
 }
-function winnerText(){return match.winner==='draw'?'Ambas coronas han caído':match.opponent==='ai'?(match.winner==='w'?'Tu ejército vence':'El estratega vence'):`${sideName(match.winner)} vence`;}
+function winnerText(){return match.winner==='draw'?'Ambas coronas han caído':match.winner==='w'?'Tu ejército vence':'El estratega vence';}
 async function setView(next){
   if(next==='3d'){
     if(!threePromise)threePromise=import('./tactics-board3d.js').then(module=>module.createTacticsBoard3D(host3d,handleSquare));
@@ -231,7 +227,7 @@ async function setView(next){
   document.querySelectorAll('[data-view]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.view===view)));sound();
 }
 function openRules(){rulesDialog.showModal();three?.setActive(false);sound('menu1');}
-function restart(){if(resolving||planning){if(!confirm('¿Abandonar esta batalla y preparar otra?'))return;}phaseToken++;planning=false;resolving=false;privacy=false;three?.setActive(false);$('#privacy-curtain').hidden=true;$('#result-dialog').close();modeDialog.showModal();}
+function restart(){if(resolving||planning){if(!confirm('¿Abandonar esta batalla y preparar otra?'))return;}phaseToken++;planning=false;resolving=false;privacy=false;three?.setActive(false);$('#result-dialog').close();modeDialog.showModal();}
 
 board.addEventListener('click',event=>{const cell=event.target.closest('[data-square]');if(cell)handleSquare(cell.dataset.square);});
 $('#unit-roster').addEventListener('click',event=>{const button=event.target.closest('[data-unit]');if(button)selectUnit(button.dataset.unit);});
@@ -241,9 +237,9 @@ $('#order-context').addEventListener('click',event=>{const dir=event.target.clos
 $('#add-order').addEventListener('click',addOrder);
 $('#order-queue').addEventListener('click',event=>{const remove=event.target.closest('[data-remove]'),shift=event.target.closest('[data-shift]');const candidate=[...draft];if(remove)candidate.splice(Number(remove.dataset.remove),1);else if(shift){const index=Number(shift.dataset.shift);[candidate[index-1],candidate[index]]=[candidate[index],candidate[index-1]];}else return;const result=checkPlan(candidate);if(!result.ok){toast(`La secuencia posterior depende de esta orden. ${result.error}`);return;}draft=candidate;clearIntent();sound();render();});
 $('#queue-clear').addEventListener('click',()=>{draft=[];clearIntent();sound();render();});$('#queue-confirm').addEventListener('click',sealPlan);
-$('#phase-panel').addEventListener('click',event=>{const command=event.target.closest('[data-command]')?.dataset.command,charge=event.target.closest('[data-charge]')?.dataset.charge;if(charge){choosePrivilege(false,charge);return;}if(command==='auto-deploy'){autoDeploy(match,viewer);sound('menu3');render();}else if(command==='confirm-deploy')finishDeployment();else if(command==='roll')rollDice();else if(command==='choose-first')choosePrivilege(true);else if(command==='restart')restart();});
-$('#curtain-continue').addEventListener('click',hideCurtain);
-$('#start-match').addEventListener('click',()=>{modeDialog.close();sound('menu4');newMatch(document.querySelector('[name="opponent"]:checked').value);});
+$('#phase-panel').addEventListener('click',event=>{const command=event.target.closest('[data-command]')?.dataset.command,charge=event.target.closest('[data-charge]')?.dataset.charge;if(charge)choosePrivilege(false,charge);else if(command==='roll')rollDice();else if(command==='choose-first')choosePrivilege(true);else if(command==='restart')restart();});
+
+$('#start-match').addEventListener('click',()=>{modeDialog.close();sound('menu4');newMatch();});
 document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>setView(button.dataset.view)));
 $('#camera-reset').addEventListener('click',()=>{three?.resetCamera();sound('menu3');});
 $('#rules-open').addEventListener('click',openRules);$('#rules-close').addEventListener('click',()=>rulesDialog.close());$('#rules-done').addEventListener('click',()=>rulesDialog.close());rulesDialog.addEventListener('close',()=>{lastTick=performance.now();three?.setActive(view==='3d'&&!privacy);});
@@ -251,6 +247,6 @@ $('#new-match').addEventListener('click',restart);$('#result-again').addEventLis
 modeDialog.addEventListener('cancel',event=>event.preventDefault());
 document.addEventListener('visibilitychange',()=>lastTick=performance.now());
 window.addEventListener('resize',()=>three?.resize());
-setInterval(()=>{const now=performance.now(),elapsed=(now-lastTick)/1000;lastTick=now;if(!planning||privacy||document.hidden||rulesDialog.open||modeDialog.open||resolving)return;secondsLeft=Math.max(0,secondsLeft-elapsed);updateTimer();if(secondsLeft<=0)sealPlan();},100);
+setInterval(()=>{const now=performance.now(),elapsed=(now-lastTick)/1000;lastTick=now;if(!planning||privacy||document.hidden||rulesDialog.open||modeDialog.open||resolving)return;secondsLeft=Math.max(0,secondsLeft-elapsed);updateTimer();if(secondsLeft<=0)expireOrder();},100);
 $('#class-manual').innerHTML=Object.entries(ABILITIES).map(([type,ability])=>`<article><strong>${UNIT_NAMES[type]} · ${escape(ability.name)}</strong>${escape(ability.description)}</article>`).join('');
 modeDialog.showModal();

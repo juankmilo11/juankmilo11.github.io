@@ -37,7 +37,7 @@ function nextRandom(state) {
 }
 export function roundRules(input) {
   const round=typeof input==='number'?input:input.round;
-  return round<=2?{seconds:7,actions:2,maxMoves:1,maxOther:1}:{seconds:10,actions:3,maxMoves:3,maxOther:3};
+  return round<=2?{seconds:10,actions:2,maxMoves:1,maxOther:1}:{seconds:10,actions:3,maxMoves:3,maxOther:3};
 }
 export function createMatch({seed=Date.now(),opponent='ai'}={}) {
   let normalized=typeof seed==='number'?seed: [...String(seed)].reduce((n,c)=>Math.imul(n,31)+c.charCodeAt(0),7);
@@ -46,7 +46,7 @@ export function createMatch({seed=Date.now(),opponent='ai'}={}) {
     let pawn=0;
     for(const type of TYPES)units.push({id:`${color}-${type}${type==='p'?++pawn:''}`,color,type,square:null,hp:6,maxHp:6,facing:color==='w'?'N':'S',charged:type==='k',armor:0,guard:0,guardUntil:0,reflect:0,boost:0,hasMoved:false});
   }
-  return {version:1,opponent:opponent==='local'?'local':'ai',rng:(normalized>>>0)||0x9e3779b9,units,tiles:{},phase:'deployment',round:0,firstSide:'w',activePlanner:'w',ready:{w:false,b:false},deployed:{w:false,b:false},plans:{w:[],b:[]},winner:null,log:[],dice:null,diceWinner:null,fractures:0,resolution:[],resolutionIndex:0,revision:0};
+  return {version:1,opponent:'ai',rng:(normalized>>>0)||0x9e3779b9,units,tiles:{},phase:'deployment',round:0,firstSide:'w',activePlanner:'w',ready:{w:false,b:false},deployed:{w:false,b:false},plans:{w:[],b:[]},winner:null,log:[],dice:null,diceWinner:null,fractures:0,resolution:[],resolutionIndex:0,revision:0};
 }
 export function placeUnit(state,side,id,square) {
   if(state.phase!=='deployment'||state.deployed[side])return bad('El despliegue ya está cerrado.');
@@ -305,7 +305,7 @@ export function publicView(state,viewer) {
   const view=clone(state);
   // Random state would expose a reproducible hidden deployment or sealed choice.
   delete view.rng;
-  if(['deployment','initiative'].includes(state.phase)){
+  if(state.phase==='deployment'){
     for(const unit of view.units)if(unit.color!==viewer)unit.square=null;
     view.log=[];
   }

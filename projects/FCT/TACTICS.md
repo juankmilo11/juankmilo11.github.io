@@ -1,25 +1,22 @@
-# Órdenes de guerra · reglas y balance inicial
+# Fantasy Chess Tactics · reglas y balance inicial
 
 Modo independiente del ajedrez clásico, accesible desde el menú de FCT.
 Referencia de estructura: [Kombat Fighters – KotK, Newgrounds](https://www.newgrounds.com/portal/view/456055).
 La programación de órdenes y su resolución encadenada se adaptan a las piezas,
 los personajes y el campo 8×8 de FCT. No hay mazo, robo ni cartas consumibles.
 
-## Preparación y privacidad
+## Preparación
 
 Cada bando tiene 3 peones y un caballo, alfil, torre, reina y rey: 8 unidades.
-Las ocho unidades se colocan libremente en las filas 1–2 o 7–8. Las posiciones
-contrarias permanecen ocultas durante el despliegue y la tirada de iniciativa.
-Se puede jugar contra la IA o por relevos locales, con una pantalla de entrega
-del dispositivo. El modo local no es multijugador por Internet: la privacidad
-es visual, entre jugadores que comparten un navegador.
+Ambos ejércitos se colocan automáticamente y al azar en las filas 1–2 y 7–8.
+Las posiciones son visibles desde el inicio. Se juega contra la IA; no hay
+selección de adversario, despliegue manual ni modo local de dos jugadores.
 
-Cada jugador lanza un dado de seis caras. Los empates se repiten. El ganador
+Cada bando lanza un dado de seis caras. Los empates se repiten. El ganador
 elige ejecutar primero o cargar una definitiva de peón, caballo, alfil o torre;
 en este último caso el adversario ejecuta primero. La reina queda excluida de
-esta ventaja y ambos reyes comienzan cargados.
-La prioridad se alterna entre bandos en cada ronda posterior: la tirada concede
-el primer movimiento de la partida, no una ventaja de iniciativa permanente.
+esta ventaja y ambos reyes comienzan cargados. La prioridad se alterna entre
+bandos en cada ronda posterior.
 
 ## Rondas
 
@@ -27,12 +24,15 @@ el primer movimiento de la partida, no una ventaja de iniciativa permanente.
 2. Confirmar el plan o esperar a que termine el tiempo.
 3. Ejecutar A1, B1, A2, B2 y, desde la tercera ronda, A3, B3.
 
-Las rondas 1 y 2 dan **7 segundos por jugador**, con como máximo un movimiento
-y una acción distinta de movimiento. Desde la ronda 3 hay **10 segundos** y
-**3 acciones libres**, incluso con la misma pieza. Las órdenes no preparadas
-se convierten en esperas. Las animaciones no consumen tiempo de planificación.
-Una orden cuya pieza haya muerto o cuyo objetivo ya sea inaccesible falla y
-consume su hueco. El adversario puede alterar el resultado de tu previsión.
+Cada orden tiene **10 segundos activos**, en todas las rondas. Añadir una orden
+abre el tiempo de la siguiente. Si se agota, ese hueco se convierte en una espera.
+Las rondas 1–2 mantienen hasta un movimiento y una acción distinta; desde la
+ronda 3 hay **3 acciones libres**, incluso con la misma pieza. Al llenar la cola
+comienza automáticamente la pelea y, al terminar, la siguiente ronda.
+No hay pantallas de «Listo». Las animaciones no consumen tiempo de planificación.
+Editar o borrar una orden anterior no concede nuevos reinicios para el mismo
+hueco. Una orden cuya pieza haya muerto o cuyo destino ya no sea accesible falla
+y consume su hueco. El adversario puede alterar el resultado de tu previsión.
 
 Mover, atacar, bloquear, Focus y ejecutar una definitiva cuestan una acción.
 Focus carga una definitiva; utilizarla consume la carga. Bloqueo protege el
@@ -67,7 +67,8 @@ convierte en ataque básico. Las definitivas de área también causan fuego amig
 | Trampa | 2 al entrar; desaparece tras activarse |
 
 El frente es el sector de 90 grados centrado en la orientación de la unidad.
-La mitigación es determinista: tres golpes frontales o un frontal y un lateral
+Las barras de vida y flechas de los pies son invisibles; estos valores y la orientación
+siguen activos en el motor. La mitigación es determinista: tres golpes frontales o un frontal y un lateral
 eliminan una unidad sin protección. Se reserva el azar para la iniciativa y el
 despliegue automático, para que el resultado de un golpe pueda anticiparse.
 La partida acaba inmediatamente al morir un rey; la muerte simultánea de ambos

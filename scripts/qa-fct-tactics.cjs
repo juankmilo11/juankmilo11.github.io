@@ -23,58 +23,51 @@ const buildRoot=path.resolve(__dirname,'../dist/tactics-qa-build');
   browser=await chromium.launch({channel:'msedge',headless:true,args:['--enable-unsafe-swiftshader']});
   const engine=await import(pathToFileURL(path.join(project,'src/tactics-engine.js')).href);
   function battle(){const s=engine.createMatch({seed:11});engine.autoDeploy(s,'w');engine.autoDeploy(s,'b');Object.assign(s,{phase:'planning',round:3,firstSide:'w',deployed:{w:true,b:true},ready:{w:false,b:false},activePlanner:'w'});return s;}
-  for(const [width,height]of (process.env.FCT_QA_PHONE_ONLY?[[390,844],[320,568]]:[[1440,1000],[390,844],[320,568]])){
-   const page=await browser.newPage({viewport:{width,height},isMobile:width<740,hasTouch:width<740,reducedMotion:width===1440?'no-preference':'reduce'}),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(18000);
-   await page.goto(origin,{waitUntil:'domcontentloaded'});await page.locator('.tactics-mode-link').click();await page.locator('#mode-dialog[open]').waitFor();
+  for(const [width,height]of [[1440,1000],[390,844],[320,568]]){
+   const page=await browser.newPage({viewport:{width,height},isMobile:width<740,hasTouch:width<740,reducedMotion:width<740?'reduce':'no-preference'}),errors=[];
+   page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(20000);
+   await page.goto(origin,{waitUntil:'domcontentloaded'});
+   assert.equal((await page.locator('.tactics-mode-link').textContent()).trim(),'JUGAR');
+   assert.equal((await page.locator('#new-game').textContent()).trim(),'Partida clásica');
+   await page.locator('.tactics-mode-link').click();await page.locator('#mode-dialog[open]').waitFor();
+   assert.equal(await page.locator('#intro-title').textContent(),'Fantasy Chess Tactics');
+   assert.equal(await page.locator('[name="opponent"],.intro-features,.intro-dialog fieldset').count(),0);
    await page.screenshot({path:path.join(output,`intro-${width}.png`)});
-   await page.locator('#start-match').click();
-   assert.equal(await page.locator('.tactical-token.token-black').count(),0,'AI deployment is concealed');
-   await page.locator('[data-command="auto-deploy"]').click();assert.equal(await page.locator('#board-2d .tactical-token').count(),8);
-   await page.locator('[data-command="confirm-deploy"]').click();assert.equal(await page.locator('.token-black').count(),0,'initiative still conceals enemy positions');
+   await page.locator('#start-match').click();assert.equal(await page.locator('#board-2d .tactical-token').count(),16,'both armies placed automatically and visible');
+   assert.equal(await page.locator('#privacy-curtain,[data-command="auto-deploy"],[data-command="confirm-deploy"]').count(),0);
    await page.locator('[data-command="roll"]').click();
    if(await page.evaluate(()=>window.qaTactics.get().match.dice.winner==='w'))await page.locator('[data-command="choose-first"]').click();
-   await page.locator('#privacy-curtain:not([hidden])').waitFor();assert.equal(await page.locator('#planning-panel').isVisible(),false);
-   await page.locator('#curtain-continue').click();await page.locator('#rules-open').click();
-   const paused=await page.evaluate(()=>window.qaTactics.get().secondsLeft);await page.waitForTimeout(220);assert.ok(Math.abs(paused-await page.evaluate(()=>window.qaTactics.get().secondsLeft))<.15,'rules pause active planning clock');
-   await page.locator('#rules-close').click();assert.equal(await page.locator('#board-2d .tactical-token').count(),16);
-   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'no horizontal overflow');
-   if(width<740){
-    const dock=await page.locator('#planning-panel').boundingBox(),field=await page.locator('#board-2d').boundingBox();
-    assert.ok(dock.y+ dock.height<=height+1,'action dock stays within the viewport');
-    assert.ok(field.y+field.height<=dock.y+2,'action dock does not cover home squares');
-   }
+   await page.waitForFunction(()=>window.qaTactics.get().planning);
+   assert.ok(await page.evaluate(()=>window.qaTactics.get().secondsLeft>9));
+   assert.equal(await page.locator('#board-2d .hp-track,#board-2d .token-face').count(),0);
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
    await page.screenshot({path:path.join(output,`planning-${width}.png`)});
-   // Let the real 7-second opening timer seal a partial plan and resolve it.
    const pawn=await page.evaluate(()=>window.qaTactics.get().match.units.find(u=>u.id==='w-p1').square);
-   await page.locator(`[data-square="${pawn}"]`).click();await page.locator('[data-action="focus"]').click();assert.equal(await page.locator('#order-queue li:not(.queue-empty)').count(),1);
-   if(width<740){
-    const knight=await page.evaluate(()=>window.qaTactics.get().match.units.find(u=>u.id==='w-n').square),state=await page.evaluate(()=>window.qaTactics.get().match);
-    const target=engine.getLegalMoves(state,'w-n').find(s=>!engine.unitAt(state,s));
-    await page.locator(`[data-square="${knight}"]`).tap();await page.locator('[data-action="move"]').tap();await page.locator(`[data-square="${target}"]`).tap();await page.locator('[data-facing="W"]').tap();
-    assert.equal(await page.evaluate(()=>window.qaTactics.get().draft.length),2);
-    assert.equal(await page.locator(`[data-square="${target}"] [data-unit="w-n"] .token-face`).textContent(),'←');
-    assert.equal(await page.evaluate(()=>window.qaTactics.get().match.units.find(u=>u.id==='w-n').square),knight,'forecast does not move the real unit before resolution');
-   }
-   await page.waitForFunction(()=>window.qaTactics.get().match.round===2&&window.qaTactics.get().privacy,{},{timeout:16000});
-   assert.ok(await page.evaluate(()=>window.qaTactics.get().match.log.some(e=>e.side==='w'&&e.kind==='focus')));
+   await page.locator(`[data-square="${pawn}"]`).click();await page.waitForTimeout(1200);
+   const before=await page.evaluate(()=>window.qaTactics.get().secondsLeft);await page.locator('[data-action="focus"]').click();
+   assert.ok(await page.evaluate(()=>window.qaTactics.get().secondsLeft>9.4),'10-second clock restarts for next order');assert.ok(before<9.5);
    if(width===1440){
-    await page.locator('#curtain-continue').click();await page.locator('#queue-confirm').click();await page.waitForFunction(()=>window.qaTactics.get().match.round===3&&window.qaTactics.get().privacy);
-    await page.locator('#curtain-continue').click();assert.equal(await page.locator('#queue-count').textContent(),'0 / 3');assert.ok(await page.evaluate(()=>window.qaTactics.get().secondsLeft>9));
-    await page.locator('#rules-open').click();
-    // Actual attack input, death choreography and king-victory overlay in 3D.
-    const s=battle();s.units=s.units.filter(u=>['w-k','w-r','b-k'].includes(u.id));for(const u of s.units){u.square=u.id==='w-k'?'a1':u.id==='w-r'?'d4':'d8';u.facing=u.color==='w'?'N':'S';if(u.id==='b-k')u.hp=2;}
-    await page.locator('#rules-close').click();await page.evaluate(s=>window.qaTactics.load(s),s);await page.locator('#curtain-continue').click();await page.locator('[data-view="3d"]').click();await page.locator('#board-3d canvas').waitFor();
-    await page.locator('#unit-roster [data-unit="w-r"]').click();await page.locator('[data-action="attack"]').click();await page.locator('[data-direction="N"]').click();await page.locator('#add-order').click();await page.locator('#queue-confirm').click();await page.locator('#result-dialog[open]').waitFor();
-    assert.equal(await page.evaluate(()=>window.qaTactics.get().match.winner),'w');assert.equal(await page.evaluate(()=>window.qaTactics.get().match.units.find(u=>u.id==='w-r').square),'d4');
-    await page.screenshot({path:path.join(output,'victory-3d.png')});
-    const terrain=battle();terrain.units=terrain.units.filter(u=>['w-k','w-q','b-k'].includes(u.id));for(const u of terrain.units){u.square=u.id==='w-k'?'a1':u.id==='w-q'?'d4':'h8';if(u.type==='q')u.charged=true;}
-    await page.evaluate(s=>window.qaTactics.load(s),terrain);await page.locator('#curtain-continue').click();await page.locator('[data-view="2d"]').click();await page.locator('#unit-roster [data-unit="w-q"]').click();await page.locator('[data-action="ultimate"]').click();await page.locator('[data-ability-mode="fracture"]').click();await page.locator('[data-square="e4"]').click();await page.locator('#add-order').click();await page.locator('[data-view="3d"]').click();await page.locator('#queue-confirm').click();
-    await page.waitForFunction(()=>window.qaTactics.get().match.round===4&&window.qaTactics.get().privacy);assert.equal(await page.evaluate(()=>window.qaTactics.get().match.tiles.e4.kind),'void');assert.ok(await page.evaluate(()=>window.qaTacticsScene.terrain.children.length>0));
+    await page.locator('[data-remove="0"]').click();await page.waitForTimeout(1000);const editing=await page.evaluate(()=>window.qaTactics.get().secondsLeft);
+    await page.locator('[data-action="block"]').click();assert.ok(await page.evaluate(()=>window.qaTactics.get().secondsLeft)<=editing+.1,'editing cannot reset the same slot forever');
+    await page.waitForFunction(()=>window.qaTactics.get().match.round===2&&window.qaTactics.get().planning,{},{timeout:15000});
+    assert.ok(await page.evaluate(()=>window.qaTactics.get().match.log.some(e=>e.side==='w'&&e.kind==='pass')),'timeout consumes only its action slot');
+   }else{
+    const state=await page.evaluate(()=>window.qaTactics.get().match),knight=state.units.find(u=>u.id==='w-n'),target=engine.getLegalMoves(state,knight).find(s=>!engine.unitAt(state,s));
+    await page.locator(`[data-square="${knight.square}"]`).tap();await page.locator('[data-action="move"]').tap();
+    assert.ok(await page.locator('.is-target').count()>0);await page.locator(`[data-square="${target}"]`).tap();await page.locator('[data-facing="W"]').tap();
+    await page.waitForFunction(()=>window.qaTactics.get().match.round===2&&window.qaTactics.get().planning);
    }
-   assert.deepEqual(errors,[]);console.log(`OK ${width}: secret setup, initiative, timed planning, focus, interleaved resolution, responsive layout${width===1440?', round3, 3D attack/death/victory':''}`);await page.close();
+   assert.ok(await page.evaluate(()=>window.qaTactics.get().secondsLeft>9),'next round starts immediately with 10 seconds');
+   if(width===1440){
+    const s=battle();s.units=s.units.filter(u=>['w-k','w-r','b-k'].includes(u.id));for(const u of s.units){u.square=u.id==='w-k'?'a1':u.id==='w-r'?'d4':'d8';u.facing=u.color==='w'?'N':'S';if(u.id==='b-k')u.hp=2;}
+    await page.evaluate(s=>window.qaTactics.load(s),s);assert.equal(await page.locator('#queue-count').textContent(),'0 / 3');
+    await page.locator('[data-view="3d"]').click();await page.locator('#board-3d canvas').waitFor();
+    assert.equal(await page.evaluate(()=>[...window.qaTacticsScene.units.values()].every(e=>!e.badge.visible&&!e.bearing.visible)),true,'3D health and foot arrows remain invisible');
+    await page.screenshot({path:path.join(output,'board-3d.png')});
+    await page.locator('#unit-roster [data-unit="w-r"]').click();await page.locator('[data-action="attack"]').click();await page.locator('[data-direction="N"]').click();await page.locator('#add-order').click();
+    await page.locator('#result-dialog[open]').waitFor();assert.equal(await page.evaluate(()=>window.qaTactics.get().match.winner),'w');
+   }
+   assert.deepEqual(errors,[]);console.log(`OK ${width}: simplified menu, automatic visible armies, per-order timer reset, automatic resolution/next round, hidden health/arrows${width===1440?', timeout slot, edit protection and 3D victory':''}`);await page.close();
   }
-  const page=await browser.newPage({viewport:{width:1300,height:900},reducedMotion:'reduce'});await page.goto(origin+'tactics.html',{waitUntil:'domcontentloaded'});await page.locator('[name="opponent"][value="local"]').check();await page.locator('#start-match').click();await page.locator('[data-command="auto-deploy"]').click();await page.locator('[data-command="confirm-deploy"]').click();
-  assert.equal(await page.locator('#privacy-curtain').isVisible(),true);assert.equal(await page.locator('#queue-panel').isVisible(),false);await page.locator('#curtain-continue').click();assert.equal(await page.locator('.token-white').count(),0);await page.locator('[data-command="auto-deploy"]').click();await page.locator('[data-command="confirm-deploy"]').click();await page.locator('[data-command="roll"]').click();
-  if(await page.evaluate(()=>window.qaTactics.get().privacy))await page.locator('#curtain-continue').click();await page.locator('[data-command="choose-first"]').click();await page.locator('#curtain-continue').click();await page.locator('#unit-roster [data-unit]').first().click();await page.locator('[data-action="block"]').click();await page.locator('#queue-confirm').click();assert.equal(await page.locator('#privacy-curtain').isVisible(),true);assert.equal(await page.locator('#queue-panel').isVisible(),false);await page.locator('#curtain-continue').click();assert.equal(await page.locator('#order-queue li:not(.queue-empty)').count(),0);await page.locator('#queue-confirm').click();await page.waitForFunction(()=>window.qaTactics.get().match.round===2&&window.qaTactics.get().privacy);console.log('OK local: deployment/plan handover, cleared private queue and shared resolution');await page.close();
  }finally{await browser?.close();server.closeAllConnections();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);process.exitCode=1;});

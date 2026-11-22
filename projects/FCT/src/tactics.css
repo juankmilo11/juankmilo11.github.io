@@ -22,3 +22,8 @@
 }
 @media(max-width:740px){.is-planning .facing-controls p{display:block;font-size:10px;margin:0 0 3px;color:#d6c996}}
 @media(max-width:740px){.view-controls{flex:none}.view-controls button{white-space:nowrap;flex:none;min-width:40px}.view-controls #camera-reset{min-width:30px;width:30px}}
+/* Clear destinations without covering the figures or exposing their health. */
+.tactical-cell.is-target::after{content:'';position:absolute;inset:3px;border:2px solid #a3f3d2;background:#39bd8a59;box-shadow:inset 0 0 0 1px #0a3825aa;pointer-events:none;z-index:1}
+.tactical-cell.is-attack-target::after{content:'';position:absolute;inset:3px;border:2px solid #ffd39a;background:#e88b4c61;box-shadow:inset 0 0 0 1px #5d281dcc;pointer-events:none;z-index:1}
+.hp-track,.token-face{display:none!important}
+.intro-dialog h2{text-align:center;margin-bottom:26px}
