@@ -11,7 +11,7 @@ move/capture audio for both sides (including en passant).
 
 The main **JUGAR** button opens `tactics.html` directly in 3D. Both sides use
 16 pieces in the standard chess starting position. The dice winner chooses
-first or second, with alternating initiative each round. All units, including
+first or second. Execution alternates continuously across round boundaries. All units, including
 both kings, start without a charged ultimate.
 
 Every round allows **two secret actions per side**, with **15 active seconds
@@ -25,23 +25,27 @@ contrasting selected square. Clicking/dropping on an empty legal square queues
 a movement; on a reachable allied/enemy unit it queues a stationary attack.
 There is no confirmation popup. Action buttons sit at the lower battlefield
 edge, clear of destinations. A unit deselects after each order and must be
-selected again for another action. Movement keeps the previous facing unless
-an optional arrow is chosen; final-slot arrows close after 2.5 seconds.
+selected again for another action. Movement commits immediately without any
+facing selection. A cyan border marks the selected square in both views.
 A queued attack whose target square becomes empty, or a movement whose square
 becomes occupied, fizzles without changing the declared action type.
 
 All ultimates attack the class's full area with friendly fire. Sliding rays
 stop at the first body; knights hit all eight L squares, kings adjacent squares,
 and pawns both front squares and forward diagonals. Pawns retain one/two-square
-and diagonal movement. Blocking absorbs 2 on the next hit (minimum received 1)
-and returns actual received damage during that round, without reflection chains.
+and diagonal movement. All hits deal exactly 2 HP. Blocking reflects 2 per hit
+during that round, without absorption or reflection chains. Castling uses the
+classical unmoved-piece, empty-path and king-safety conditions, animates king
+and rook together, and consumes each piece's movement for the round.
 
 The inspector works for either army during preparation, planning, combat and
 review: hover a figure or click it without an acting unit selected to inspect
-it. It shows HP, charge, facing, team color and combat value. Review controls
+it. It shows HP, charge, team color and combat value. Review controls
 occupy the sidebar below the inspector only while reviewing. The colored team
 badge identifies the actor; event descriptions use direction arrows. Compact
-snapshots retain every resolved action, and review never mutates the live game.
+snapshots retain every resolved action. Forward/repeat review shares the live
+action animations; backward review restores health and reverses both castling
+paths. Review never mutates the live game.
 
 The AI uses a bounded two-action beam search, including movement/attack and
 focus/ultimate combinations, incoming threats, reflection and friendly-fire
@@ -50,6 +54,12 @@ their second order pays off. Tactical values in `src/tactics-values.js` are
 pawn 2, knight/bishop 4, rook 5, queen 8; the king has terminal priority.
 The inspector and AI use that same table. Planning reads only the public round
 position and respects the per-unit action restriction.
+
+The tactical battlefield fills the viewport, with a dusk sky and the classic
+camera-orbit introduction. Revealed exchanges list all four orders, their side,
+origin/destination, target and effects; the active step is highlighted. A mobile
+turn strip expands the full HUD on demand. Action animations last 0.65–1.35s
+with short gaps for readability; reduced motion remains supported.
 
 FCT's homepage window, bubble and Yin Yang accent are green. Every application
 window also offers a new-tab action. The cream/dark-outline HUD is inspired by

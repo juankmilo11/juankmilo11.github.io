@@ -1,35 +1,22 @@
-import { publicView, previewPlan, validateOrder, roundRules, getLegalMoves, getAttackSquares, getAttackTargets, getUltimateTargets, attackOrderFor, incomingDamage, unitAt } from './tactics-engine.js';
+import { publicView, previewPlan, validateOrder, roundRules, getLegalMoves, getAttackSquares, getUltimateTargets, attackOrderFor, getCastleOptions, unitAt } from './tactics-engine.js';
 import { tacticalValues as VALUES } from './tactics-values.js';
 
-const DIRECTIONS=['N','NE','E','SE','S','SW','W','NW'];
-const CARDINAL={N:[0,1],E:[1,0],S:[0,-1],W:[-1,0]};
 const point=square=>[square.charCodeAt(0)-97,Number(square[1])-1];
 const alive=unit=>unit.hp>0&&typeof unit.square==='string';
 const distance=(a,b)=>{const[x,y]=point(a),[u,v]=point(b);return Math.max(Math.abs(x-u),Math.abs(y-v));};
-const directions=unit=>unit.type==='p'?(unit.color==='w'?['NW','NE']:['SW','SE']):unit.type==='n'||unit.type==='b'?['NE','SE','SW','NW']:unit.type==='r'?['N','E','S','W']:DIRECTIONS;
-function faceThreat(unit,destination,enemies,lanes){
-  const[x,y]=point(destination);let best=unit.facing,bestRisk=Infinity;
-  for(const [facing,[fx,fy]]of Object.entries(CARDINAL)){
-    let risk=0;
-    for(const enemy of enemies){const[u,v]=point(enemy.square),dx=u-x,dy=v-y,dot=dx*fx+dy*fy,front=dot>0&&Math.abs(dx*fy-dy*fx)<=dot;
-      const reach=lanes.get(enemy.id).has(destination);
-      risk+=(front?2:4)*(reach?3:1/(1+distance(destination,enemy.square)));
-    }
-    if(risk<bestRisk){bestRisk=risk;best=facing;}
-  }return best;
-}
-function damage(attacker,defender){return Math.max(1,incomingDamage(attacker,defender)-(defender.guard?2:0)-(defender.armor?1:0));}
+function damage(){return 2;}
 function areaPriority(state,unit,side){
   return getUltimateTargets(state,unit).reduce((sum,square)=>{const target=unitAt(state,square);if(!target)return sum;const value=damage(unit,target)*(target.type==='k'?100:VALUES[target.type]+2);return sum+(target.color===side?-1.5:1)*value;},0);
 }
 function candidates(state,side,orders){
   const units=state.units.filter(alive),allies=units.filter(u=>u.color===side),enemies=units.filter(u=>u.color!==side),used=new Set(orders.map(o=>`${o.unitId}:${o.kind}`)),result=[];
-  const lanes=new Map(enemies.map(e=>[e.id,new Set(directions(e).flatMap(d=>getAttackTargets(state,e,d)))])),attacks=new Map(enemies.map(e=>[e.id,new Set(getAttackSquares(state,e))]));
+  for(const order of orders)if(order.castle)used.add(`${order.castle.rookId}:move`);
+  const attacks=new Map(enemies.map(e=>[e.id,new Set(getAttackSquares(state,e))]));
   for(const unit of allies){
     const add=(order,priority)=>{if(!used.has(`${unit.id}:${order.kind}`))result.push({order:{unitId:unit.id,...order},priority});};
     if(!used.has(`${unit.id}:move`))for(const target of getLegalMoves(state,unit))if(!unitAt(state,target)){
-      const nearest=Math.min(8,...enemies.map(e=>distance(target,e.square))),facing=faceThreat(unit,target,enemies,lanes);
-      add({kind:'move',target,facing},8-nearest);
+      const nearest=Math.min(8,...enemies.map(e=>distance(target,e.square)));
+      add({kind:'move',target},8-nearest+(unit.type==='k'&&getCastleOptions(state,unit).some(c=>c.target===target)?2:0));
     }
     for(const target of getAttackSquares(state,unit)){const victim=unitAt(state,target);if(victim.color===side)continue;const order=attackOrderFor(state,unit,target),hit=damage(unit,victim);add(order,hit*(victim.type==='k'?200:VALUES[victim.type]*2)+(hit>=victim.hp?400:0));}
     const exposed=enemies.some(e=>attacks.get(e.id).has(unit.square));

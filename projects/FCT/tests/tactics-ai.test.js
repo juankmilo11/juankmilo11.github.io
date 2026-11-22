@@ -65,7 +65,7 @@ test('AI repositions to create an attack instead of refreshing guard indefinitel
   assert.ok(result.units.find(unit=>unit.id==='w-k').hp<6);
   assert.ok(orders.some(order=>order.kind==='move'));
   const movement=orders.find(order=>order.kind==='move');
-  assert.ok(['N','E','S','W'].includes(movement.facing));
+  assert.equal(Object.hasOwn(movement,'facing'),false);
 });
 
 test('AI uses a charged bishop area attack without obsolete healing modes',()=>{
@@ -81,7 +81,7 @@ test('endgames make progress after initial charging rather than refreshing guard
 });
 
 test('two-action search combines Focus and an area ultimate when it wins more material',()=>{
- const state=fixture({'w-k':{square:'a1'},'w-p2':{square:'a3'},'w-p3':{square:'b1'},'w-q':{square:'f4',hp:4},'w-r':{square:'d6',hp:4},'b-k':{square:'h8'},'b-r':{square:'d4'}});
+ const state=fixture({'w-k':{square:'a1'},'w-p2':{square:'a3'},'w-p3':{square:'b1'},'w-q':{square:'f4',hp:2},'w-r':{square:'d6',hp:2},'b-k':{square:'h8'},'b-r':{square:'d4'}});
  const orders=planAI(state,'b'),result=previewPlan(state,'b',orders);
  assert.deepEqual(orders.map(o=>o.kind),['focus','ultimate']);assert.equal(result.units.find(u=>u.id==='w-q').hp,0);assert.equal(result.units.find(u=>u.id==='w-r').hp,0);
 });

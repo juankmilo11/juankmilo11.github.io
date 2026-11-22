@@ -10,7 +10,6 @@ export const ABILITIES = {
   k:{name:'Cerco real',description:'Ataca las ocho casillas adyacentes, incluidos aliados.',modes:['sweep']},
 };
 const TYPES=[...Array(8).fill('p'),'r','n','b','q','k','b','n','r'];
-const FACINGS=['N','E','S','W'];
 const DIAGONALS=['NE','SE','SW','NW'];
 const ORTHOGONALS=['N','E','S','W'];
 const ALL=Object.keys(DIRECTIONS);
@@ -40,9 +39,9 @@ export function createMatch({seed=Date.now(),opponent='ai'}={}) {
   const units=[];
   for(const color of ['w','b']) {
     const counts={};
-    TYPES.forEach((type,index)=>{const count=counts[type]=(counts[type]??0)+1;units.push({id:`${color}-${type}${type==='p'||count>1?count:''}`,color,type,homeSquare:sq(index%8,(color==='w'?(index<8?2:1):(index<8?7:8))-1),square:null,hp:6,maxHp:6,facing:color==='w'?'N':'S',charged:false,armor:0,guard:0,guardUntil:0,counterUntil:0,reflect:0,boost:0,hasMoved:false});});
+    TYPES.forEach((type,index)=>{const count=counts[type]=(counts[type]??0)+1;units.push({id:`${color}-${type}${type==='p'||count>1?count:''}`,color,type,homeSquare:sq(index%8,(color==='w'?(index<8?2:1):(index<8?7:8))-1),square:null,hp:6,maxHp:6,charged:false,guard:0,guardUntil:0,counterUntil:0,hasMoved:false});});
   }
-  return {version:3,opponent:'ai',rng:(normalized>>>0)||0x9e3779b9,units,tiles:{},phase:'deployment',round:0,firstSide:'w',activePlanner:'w',ready:{w:false,b:false},deployed:{w:false,b:false},plans:{w:[],b:[]},winner:null,log:[],dice:null,diceWinner:null,fractures:0,resolution:[],resolutionIndex:0,revision:0};
+  return {version:4,opponent:'ai',rng:(normalized>>>0)||0x9e3779b9,units,tiles:{},phase:'deployment',round:0,firstSide:'w',lastSide:null,actionNumber:0,activePlanner:'w',ready:{w:false,b:false},deployed:{w:false,b:false},plans:{w:[],b:[]},winner:null,log:[],dice:null,diceWinner:null,fractures:0,resolution:[],resolutionIndex:0,revision:0};
 }
 export function placeUnit(state,side,id,square) {
   if(state.phase!=='deployment'||state.deployed[side])return bad('El despliegue ya está cerrado.');
@@ -81,7 +80,7 @@ export function chooseInitiative(state,side,{first=true}={}) {
 export function startRound(state) {
   if(state.winner)return bad('La partida ha terminado.');
   if(!((state.phase==='initiative'&&state.dice?.choice)||(state.phase==='resolution'&&state.resolutionIndex>=state.resolution.length)))return bad('La siguiente ronda todavía no puede empezar.');
-  state.round++;if(state.round>1)state.firstSide=other(state.firstSide);
+  if(state.lastSide)state.firstSide=other(state.lastSide);state.round++;
   state.phase='planning';state.ready={w:false,b:false};state.plans={w:[],b:[]};state.activePlanner=state.firstSide;
   state.resolution=[];state.resolutionIndex=0;
   for(const[square,tile]of Object.entries(state.tiles))if(tile.expires&&tile.expires<=state.round)delete state.tiles[square];
@@ -98,6 +97,25 @@ function ray(state,unit,direction,max=7) {
   }
   return result;
 }
+export function isSquareAttacked(state,square,bySide){
+  return livingUnits(state,bySide).some(unit=>attackDirections(unit).some(direction=>getAttackTargets(state,unit,direction).includes(square)));
+}
+export function getCastleOptions(state,input){
+  const king=findUnit(state,input);if(!alive(king)||king.type!=='k'||king.hasMoved)return [];
+  const rank=king.color==='w'?'1':'8',home='e'+rank;
+  if(king.square!==home)return [];let kingSafe=null;
+  const result=[];
+  for(const [target,rookFrom,rookTo,path,crossed]of [['g','h','f',['f','g'],['f','g']],['c','a','d',['b','c','d'],['d','c']]]){
+    const rook=unitAt(state,rookFrom+rank);if(!rook||rook.type!=='r'||rook.color!==king.color||rook.hasMoved)continue;
+    if(path.some(file=>unitAt(state,file+rank)||solid(state,file+rank)))continue;
+    kingSafe??=!isSquareAttacked(state,home,other(king.color));if(!kingSafe)return [];
+    const safe=crossed.every(file=>{
+      const probe={...state,units:state.units.map(u=>u.id===king.id?{...u,square:file+rank}:u.id===rook.id&&file===target?{...u,square:rookTo+rank}:u)};
+      return !isSquareAttacked(probe,file+rank,other(king.color));
+    });
+    if(safe)result.push({target:target+rank,rookId:rook.id,rookFrom:rook.square,rookTo:rookTo+rank});
+  }return result;
+}
 export function getLegalMoves(state,input) {
   const unit=findUnit(state,input);if(!alive(unit))return [];
   const[x,y]=xy(unit.square);
@@ -112,7 +130,7 @@ export function getLegalMoves(state,input) {
     for(const dx of [-1,1]){const square=sq(x+dx,y+dy);if(square&&!solid(state,square))result.push(square);}
     return result;
   }
-  return attackDirections(unit).flatMap(direction=>ray(state,unit,direction,unit.type==='k'?1:7));
+  return [...attackDirections(unit).flatMap(direction=>ray(state,unit,direction,unit.type==='k'?1:7)),...(unit.type==='k'?getCastleOptions(state,unit).map(c=>c.target):[])];
 }
 export function getPawnArea(state,input){
   const unit=findUnit(state,input);if(!alive(unit))return [];
@@ -145,8 +163,9 @@ export function validateOrder(state,side,raw) {
   if(typeof order.unitId!=='string')return bad('Identificador de pieza no válido.');
   const unit=findUnit(state,order.unitId);
   if(!alive(unit)||unit.color!==side)return bad('La pieza ya no está disponible.');
-  if(order.facing&&!FACINGS.includes(order.facing))return bad('Orientación no válida.');
+  delete order.facing;delete order.castle;
   if(order.kind==='move'&&(!getLegalMoves(state,unit).includes(order.target)||unitAt(state,order.target)))return bad('Movimiento fuera del alcance o bloqueado.');
+  if(order.kind==='move'&&unit.type==='k'){const castle=getCastleOptions(state,unit).find(c=>c.target===order.target);if(castle)order.castle=castle;}
   if(order.kind==='attack'){
     const aimed=attackOrderFor(state,unit,order.target);
     if(!aimed)return bad('Selecciona una pieza aliada o enemiga al alcance para atacar.');
@@ -173,23 +192,13 @@ function checkWinner(state,event) {
   state.winner=defeated.length===2?'draw':other(defeated[0].color);state.phase='finished';state.activePlanner=null;
   event.winner=state.winner;
 }
-export function incomingDamage(attacker,defender) {
-  const[a,b]=xy(attacker.square),[x,y]=xy(defender.square),dx=a-x,dy=b-y,[fx,fy]=DIRECTIONS[defender.facing]??DIRECTIONS.N;
-  // The forward 90-degree sector is protected; orthogonal flanks and rear are vulnerable.
-  const front=(dx*fx+dy*fy)>0&&Math.abs(dx*fy-dy*fx)<=(dx*fx+dy*fy);
-  return front?2:4;
-}
-function strike(state,attacker,defender,event,bonus=0,fixed=null) {
+export function incomingDamage(){return 2;}
+function strike(state,attacker,defender,event){
   if(!alive(defender))return;
-  const base=fixed??incomingDamage(attacker,defender)+bonus;
-  const armor=defender.armor>0?1:0,guard=defender.guard>0?2:0;
-  if(armor)defender.armor--;if(guard)defender.guard=0;
-  const damage=Math.max(1,base-armor-guard);
-  defender.hp=Math.max(0,defender.hp-damage);
-  event.targets.push({id:defender.id,square:defender.square,damage,hp:defender.hp,dead:defender.hp===0,front:fixed===null?incomingDamage(attacker,defender)===2:null,absorbed:armor+guard});
+  const damage=2;defender.hp=Math.max(0,defender.hp-damage);
+  event.targets.push({id:defender.id,square:defender.square,damage,hp:defender.hp,dead:defender.hp===0});
   if(defender.counterUntil>0&&defender.counterUntil===state.round&&attacker&&attacker.id!==defender.id&&attacker.hp>0){
-    attacker.hp=Math.max(0,attacker.hp-damage);
-    event.targets.push({id:attacker.id,square:attacker.square,damage,hp:attacker.hp,dead:attacker.hp===0,reflected:true});
+    attacker.hp=Math.max(0,attacker.hp-2);event.targets.push({id:attacker.id,square:attacker.square,damage:2,hp:attacker.hp,dead:attacker.hp===0,reflected:true});
   }
 }
 function applyOrder(state,side,raw) {
@@ -203,23 +212,22 @@ function applyOrder(state,side,raw) {
   if(order.kind==='block'){unit.guard=1;unit.guardUntil=state.round;unit.counterUntil=state.round;event.message=`${name}: bloqueo y devolución de daño durante esta ronda.`;}
   if(order.kind==='move'){
     unit.square=order.target;unit.hasMoved=true;event.to=unit.square;event.message=`${name}: ${event.from} → ${event.to}.`;
+    if(order.castle){const rook=findUnit(state,order.castle.rookId);rook.square=order.castle.rookTo;rook.hasMoved=true;event.castle={...order.castle};event.message=`Rey: enroque ${event.from} → ${event.to}; torre ${order.castle.rookFrom} → ${order.castle.rookTo}.`;}
     const trap=state.tiles[unit.square];
     if(trap?.kind==='trap'){delete state.tiles[unit.square];unit.hp=Math.max(0,unit.hp-2);event.targets.push({id:unit.id,square:unit.square,damage:2,hp:unit.hp,dead:unit.hp===0,trap:true});checkWinner(state,event);}
   }
   if(order.kind==='attack'){
-    event.direction=order.direction;event.target=order.target;const bonus=unit.boost?1:0;unit.boost=0;
+    event.direction=order.direction;event.target=order.target;
     const victims=unit.type==='n'?getAttackTargets(state,unit,order.direction).map(square=>unitAt(state,square)).filter(Boolean):[unitAt(state,order.target)];
-    for(const target of victims){if(unit.hp<=0||state.winner)break;strike(state,unit,target,event,bonus);checkWinner(state,event);}
+    for(const target of victims){if(unit.hp<=0||state.winner)break;strike(state,unit,target,event);checkWinner(state,event);}
     event.message=`${name}: ataque ${order.direction}.`;
   }
   if(order.kind==='ultimate'){
     unit.charged=false;event.message=`${name}: ${ABILITIES[unit.type].name}.`;
     const targetIds=[...new Set(getUltimateTargets(state,unit).map(square=>unitAt(state,square)?.id).filter(Boolean))];
-    const bonus=unit.boost?1:0;unit.boost=0;
-    for(const id of targetIds){if(unit.hp<=0||state.winner)break;strike(state,unit,findUnit(state,id),event,bonus);checkWinner(state,event);}
+    for(const id of targetIds){if(unit.hp<=0||state.winner)break;strike(state,unit,findUnit(state,id),event);checkWinner(state,event);}
   }
-  if(order.facing&&unit.hp>0&&event.kind==='move'&&event.from!==event.to)unit.facing=order.facing;
-  event.facing=unit.facing;return event;
+  return event;
 }
 export function previewPlan(state,side,orders=[]) {
   const projected=clone({...state,log:[],plans:{w:[],b:[]},resolution:[]});projected.forecastErrors=[];
@@ -242,6 +250,7 @@ export function validatePlan(state,side,orders=[]){
       const key=`${order.unitId}:${order.kind}`;
       if(used.has(key))return bad('Una misma pieza no puede repetir la misma acción en esta ronda.');
       used.add(key);
+      if(order.castle){const rookKey=`${order.castle.rookId}:move`;if(used.has(rookKey))return bad('La torre ya utilizó su movimiento en esta ronda.');used.add(rookKey);}
     }
     normalized.push(order);applyOrder(projected,side,order);
   }
@@ -262,7 +271,7 @@ export function resolveNext(state) {
   if(state.phase!=='resolution')return bad('No hay una secuencia pendiente.');
   const next=state.resolution[state.resolutionIndex++];
   if(!next)return bad('La secuencia ya terminó.');
-  const event=applyOrder(state,next.side,next.order);state.log.push(clone(event));
+  const event=applyOrder(state,next.side,next.order);state.lastSide=next.side;event.sequenceIndex=state.resolutionIndex-1;event.sequenceTotal=state.resolution.length;event.actionNumber=++state.actionNumber;state.log.push(clone(event));
   // Keep recent choreography bounded while preserving every complete event in callers if wanted.
   if(state.log.length>240)state.log.shift();
   const roundEnded=state.resolutionIndex>=state.resolution.length;
