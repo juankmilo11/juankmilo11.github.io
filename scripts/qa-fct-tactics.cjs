@@ -8,7 +8,7 @@ const buildRoot=path.resolve(__dirname,'../dist/tactics-qa-build');
  const {build}=await import(pathToFileURL(require.resolve('vite',{paths:[project]})).href);
  await build({root:project,logLevel:'warn',build:{outDir:buildRoot,emptyOutDir:true},plugins:[{name:'tactics-test-only',transform(code,id){
   if(id.replaceAll('\\','/').endsWith('/src/tactics-ui.js'))return code+`\nwindow.qaTactics={get:()=>structuredClone({match,viewer,draft,privacy,planning,secondsLeft}),load(s){phaseToken++;planning=false;resolving=false;privacy=false;roundPrepared=0;match=s;viewer='w';draft=[];selectedId=null;lastEvent=null;modeDialog.close();$('#result-dialog').close();prepareRound();}};`;
-  if(id.replaceAll('\\','/').endsWith('/src/tactics-board3d.js'))return code.replace('const observer=new ResizeObserver(resize);','window.qaTacticsScene={scene,units,terrain};const observer=new ResizeObserver(resize);');
+  if(id.replaceAll('\\','/').endsWith('/src/tactics-board3d.js'))return code.replace('const observer=new ResizeObserver(resize);','window.qaTacticsScene={scene,units,terrain,camera,renderer,THREE};const observer=new ResizeObserver(resize);');
  }}]});
  const types={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.webp':'image/webp','.png':'image/png','.ttf':'font/ttf','.mp3':'audio/mpeg','.wav':'audio/wav'};
  const server=http.createServer((req,res)=>{
@@ -23,7 +23,7 @@ const buildRoot=path.resolve(__dirname,'../dist/tactics-qa-build');
   browser=await chromium.launch({channel:'msedge',headless:true,args:['--enable-unsafe-swiftshader']});
   const engine=await import(pathToFileURL(path.join(project,'src/tactics-engine.js')).href);
   function battle(){const s=engine.createMatch({seed:11});engine.autoDeploy(s,'w');engine.autoDeploy(s,'b');Object.assign(s,{phase:'planning',round:3,firstSide:'w',deployed:{w:true,b:true},ready:{w:false,b:false},activePlanner:'w'});return s;}
-  for(const [width,height]of [[1440,1000],[390,844],[320,568]]){
+  for(const [width,height]of (process.env.FCT_QA_DESKTOP_ONLY?[[1440,1000]]:[[1440,1000],[390,844],[320,568]])){
    const page=await browser.newPage({viewport:{width,height},isMobile:width<740,hasTouch:width<740,reducedMotion:width<740?'reduce':'no-preference'}),errors=[];
    page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(20000);
    await page.goto(origin,{waitUntil:'domcontentloaded'});
@@ -64,7 +64,9 @@ const buildRoot=path.resolve(__dirname,'../dist/tactics-qa-build');
     await page.locator('[data-view="3d"]').click();await page.locator('#board-3d canvas').waitFor();
     assert.equal(await page.evaluate(()=>[...window.qaTacticsScene.units.values()].every(e=>!e.badge.visible&&!e.bearing.visible)),true,'3D health and foot arrows remain invisible');
     await page.screenshot({path:path.join(output,'board-3d.png')});
-    await page.locator('#unit-roster [data-unit="w-r"]').click();await page.locator('[data-action="attack"]').click();await page.locator('[data-direction="N"]').click();await page.locator('#add-order').click();
+    const hit=await page.evaluate(async()=>{const {THREE,camera,renderer,units}=window.qaTacticsScene,e=units.get('w-r');await e.visual.userData.ready;const p=new THREE.Box3().setFromObject(e.visual).getCenter(new THREE.Vector3()).project(camera),r=renderer.domElement.getBoundingClientRect();return{x:r.x+(p.x+1)*r.width/2,y:r.y+(1-p.y)*r.height/2};});
+    await page.mouse.click(hit.x,hit.y);assert.equal(await page.locator('#unit-name').textContent(),'Torre','3D figure remains selectable without hidden badge hitboxes');
+    await page.locator('[data-action="attack"]').click();await page.locator('[data-direction="N"]').click();await page.locator('#add-order').click();
     await page.locator('#result-dialog[open]').waitFor();assert.equal(await page.evaluate(()=>window.qaTactics.get().match.winner),'w');
    }
    assert.deepEqual(errors,[]);console.log(`OK ${width}: simplified menu, automatic visible armies, per-order timer reset, automatic resolution/next round, hidden health/arrows${width===1440?', timeout slot, edit protection and 3D victory':''}`);await page.close();
