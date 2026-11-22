@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { deviceRenderQuality } from './render-quality.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { buildLandscape, earthMaterial } from './environment.js';
 import { createMountainGeometry, createTileGeometry } from './mountain.js';
@@ -9,13 +10,14 @@ import { appearanceFor, appearanceKey } from './appearance.js';
 const FILES='abcdefgh', angles={N:Math.PI,E:Math.PI/2,S:0,W:-Math.PI/2};
 const location=s=>{const row=8-Number(s[1]),file=FILES.indexOf(s[0]);return new THREE.Vector3(file-3.5,tileElevation(row,file)+.015,row-3.5);};
 export async function createTacticsBoard3D(host,onSquare,{onDrag,onProject}={}){
+  let quality=deviceRenderQuality(),dirty=true,lastFrame=0;
   const scene=new THREE.Scene();scene.background=new THREE.Color(0x786653);scene.fog=new THREE.Fog(0x786653,19,40);
-  const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.25));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  const renderer=new THREE.WebGLRenderer({antialias:quality.antialias,powerPreference:'low-power'});renderer.setPixelRatio(Math.min(devicePixelRatio,quality.pixelRatio));renderer.shadowMap.enabled=quality.shadows;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;
   renderer.domElement.setAttribute('aria-label','Campo táctico 3D. Selecciona una casilla; arrastra el fondo para girar.');host.append(renderer.domElement);
   const camera=new THREE.PerspectiveCamera(39,1,.1,100);camera.position.set(0,9.5,12.5);
   const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,.3,0);controls.enableDamping=true;controls.minDistance=9;controls.maxDistance=24;controls.maxPolarAngle=Math.PI/2.15;controls.update();controls.saveState();
-  scene.add(new THREE.HemisphereLight(0xf0edd6,0x5e6651,2.2));const sun=new THREE.DirectionalLight(0xffebce,3);sun.position.set(-5,11,6);sun.castShadow=true;sun.shadow.intensity=.5;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=sun.shadow.camera.bottom=-11;sun.shadow.camera.right=sun.shadow.camera.top=11;sun.shadow.normalBias=.035;scene.add(sun);
+  scene.add(new THREE.HemisphereLight(0xf0edd6,0x5e6651,2.2));const sun=new THREE.DirectionalLight(0xffebce,3);sun.position.set(-5,11,6);sun.castShadow=true;sun.shadow.intensity=.5;sun.shadow.mapSize.set(quality.shadowSize,quality.shadowSize);sun.shadow.camera.left=sun.shadow.camera.bottom=-11;sun.shadow.camera.right=sun.shadow.camera.top=11;sun.shadow.normalBias=.035;scene.add(sun);
   const fill=new THREE.DirectionalLight(0xb1c4c0,1.2);fill.position.set(7,5,-8);scene.add(fill);
   const world=new THREE.Group();scene.add(world);buildLandscape(world);
   const mountain=new THREE.Mesh(createMountainGeometry(),earthMaterial({vertexColors:true}));mountain.receiveShadow=true;world.add(mountain);
@@ -27,13 +29,9 @@ export async function createTacticsBoard3D(host,onSquare,{onDrag,onProject}={}){
   }
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;let active=true,frame=0,disposed=false,terrainKey='',snapshot=null,busy=false;
   function pieceLook(unit){const look=appearanceFor(unit.type,unit.color);return snapshot?.opponent==='local'&&unit.color==='b'&&unit.type==='k'?{...look,character:'delita'}:look;}
-  function badge(){const canvas=document.createElement('canvas');canvas.width=128;canvas.height=40;const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthTest:false}));sprite.scale.set(.82,.26,1);sprite.position.y=1.35;sprite.userData.canvas=canvas;return sprite;}
-  function updateBadge(entry,unit){const canvas=entry.badge.userData.canvas,ctx=canvas.getContext('2d');ctx.clearRect(0,0,128,40);ctx.fillStyle='#14251de8';ctx.fillRect(0,0,128,40);ctx.fillStyle=unit.color==='w'?'#a6d8e9':'#edc47f';ctx.fillStyle='#314037';ctx.fillRect(5,5,118,8);ctx.fillStyle=unit.hp<=2?'#f28d77':'#b6d9a0';ctx.fillRect(5,5,118*Math.max(0,unit.hp)/6,8);ctx.fillStyle='#efe5ca';ctx.font='bold 17px sans-serif';ctx.textAlign='center';ctx.fillText(`${unit.hp}/6${unit.charged?'  ◆':''}${unit.guard?'  ◇':''}${unit.armor?'  ▣':''}`,64,32);entry.badge.material.map.needsUpdate=true;}
   function addUnit(unit){const look=pieceLook(unit),group=new THREE.Group(),visual=createCharacter(look,angles[unit.facing]??0,unit.type);group.add(visual);
-    const arrow=new THREE.Mesh(new THREE.ConeGeometry(.08,.22,3),new THREE.MeshBasicMaterial({color:unit.color==='w'?0xa8e3ef:0xf1c16c,transparent:true,opacity:.85}));arrow.rotation.x=-Math.PI/2;
-    const bearing=new THREE.Group();bearing.add(arrow);arrow.position.z=-.39;group.add(bearing);const hp=badge();group.add(hp);world.add(group);
-    const entry={group,visual,bearing,badge:hp,key:appearanceKey(look),unit:{...unit}};units.set(unit.id,entry);visual.userData.ready.catch(()=>{});return entry;}
-  function removeUnit(id){const e=units.get(id);if(!e)return;world.remove(e.group);releaseCharacter(e.visual);e.badge.material.map.dispose();e.badge.material.dispose();e.bearing.children.forEach(m=>{m.geometry.dispose();m.material.dispose();});units.delete(id);}
+    world.add(group);const entry={group,visual,key:appearanceKey(look),unit:{...unit}};units.set(unit.id,entry);visual.userData.ready.then(()=>{dirty=true;renderer.shadowMap.needsUpdate=true;}).catch(()=>{});return entry;}
+  function removeUnit(id){const e=units.get(id);if(!e)return;world.remove(e.group);releaseCharacter(e.visual);units.delete(id);}
   function clearGroup(group){for(const child of [...group.children]){child.traverse(m=>{m.geometry?.dispose();if(m.material)for(const mat of Array.isArray(m.material)?m.material:[m.material])mat.dispose();});group.remove(child);}}
   function drawTerrain(state){const data=state.tiles||{},key=JSON.stringify(data);if(key===terrainKey)return;terrainKey=key;clearGroup(terrain);
     for(const [square,t]of Object.entries(data)){if(!FILES.includes(square[0])||!/[1-8]/.test(square[1]))continue;let mesh;
@@ -43,8 +41,8 @@ export async function createTacticsBoard3D(host,onSquare,{onDrag,onProject}={}){
       if(mesh)terrain.add(mesh);
     }
   }
-  function render(state,{selectedSquare=null,targets=[],moveTargets=[],attackTargets=[],lastEvent=null}={}){snapshot=state;drawTerrain(state);const retained=new Set();
-    for(const unit of state.units||[]){const corpse=unit.type==='k'&&unit.hp<=0&&state.phase==='finished';if(!unit.square||(unit.hp<=0&&!corpse))continue;retained.add(unit.id);let e=units.get(unit.id);const key=appearanceKey(pieceLook(unit));if(e&&e.key!==key){removeUnit(unit.id);e=null;}e??=addUnit(unit);e.unit={...unit};if(!busy)e.group.position.copy(location(unit.square));e.visual.rotation.y=angles[unit.facing]??0;e.bearing.rotation.y=(angles[unit.facing]??0)-Math.PI;updateBadge(e,unit);e.badge.visible=false;e.bearing.visible=false;if(corpse)animateCharacter(e.visual,0,{kingPose:'defeated',reducedMotion:true});}
+  function render(state,{selectedSquare=null,targets=[],moveTargets=[],attackTargets=[],lastEvent=null,interactive=true}={}){snapshot={...state,interactive};dirty=true;renderer.shadowMap.needsUpdate=true;drawTerrain(state);const retained=new Set();
+    for(const unit of state.units||[]){const corpse=unit.type==='k'&&unit.hp<=0&&state.phase==='finished';if(!unit.square||(unit.hp<=0&&!corpse))continue;retained.add(unit.id);let e=units.get(unit.id);const key=appearanceKey(pieceLook(unit));if(e&&e.key!==key){removeUnit(unit.id);e=null;}e??=addUnit(unit);e.unit={...unit};if(!busy)e.group.position.copy(location(unit.square));e.visual.rotation.y=angles[unit.facing]??0;if(corpse)animateCharacter(e.visual,0,{kingPose:'defeated',reducedMotion:true});}
     for(const id of units.keys())if(!retained.has(id)&&!busy)removeUnit(id);
     const targetSet=new Set(targets);for(const [square,mark]of highlights){mark.visible=square===selectedSquare||targetSet.has(square)||square===lastEvent?.to;mark.material.color.setHex(square===selectedSquare?0x7cecff:attackTargets.includes(square)?moveTargets.includes(square)?0xffdf48:0xff6e44:0x20d4ff);mark.material.opacity=square===selectedSquare?.62:targetSet.has(square)?.72:.25;}
   }
@@ -56,6 +54,7 @@ export async function createTacticsBoard3D(host,onSquare,{onDrag,onProject}={}){
     if(from&&victimEntries.length&&event.kind!=='move')for(const {entry}of victimEntries){const end=entry.group.position.clone().add(new THREE.Vector3(0,.45,0)),start=from.clone().add(new THREE.Vector3(0,.5,0));effects.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([start,end]),new THREE.LineBasicMaterial({color,transparent:true,opacity:.7})));}
     const duration=reduced?100:event.kind==='move'?520:680,start=performance.now();
     await new Promise(resolve=>{function step(now){if(disposed){resolve();return;}const p=Math.min(1,(now-start)/duration),pulse=Math.sin(Math.PI*p);
+      dirty=true;renderer.shadowMap.needsUpdate=true;
       if(actor&&from){if(event.kind==='move'&&to){actor.group.position.lerpVectors(from,to,p*p*(3-2*p));if(!reduced)actor.group.position.y+=pulse*.62;}else if(!reduced){actor.group.position.copy(from).addScaledVector(direction,pulse*.13);actor.group.rotation.x=event.kind==='block'?-.08*pulse:.05*pulse;}}
       if(actor){animateCharacter(actor.visual,now/1000,{moving:event.kind==='move',reducedMotion:reduced});if(!reduced&&event.kind!=='move'){
         if(['attack','ultimate'].includes(event.kind)&&direction.lengthSq())actor.visual.rotation.y=Math.atan2(direction.x,direction.z);
@@ -63,26 +62,36 @@ export async function createTacticsBoard3D(host,onSquare,{onDrag,onProject}={}){
         for(const name of ['leftArm','rightArm'])if(rig?.[name]){rig[name].mesh.rotation.x=-pulse*(event.kind==='block'?1.1:event.kind==='focus'?.5:1.35);rig[name].mesh.rotation.z=pulse*(name==='leftArm'?.28:-.28);}
         if(rig?.body)rig.body.mesh.rotation.x=pulse*.12;
       }}
-      for(const {entry,target}of victimEntries){if(target.dead){animateCharacter(entry.visual,now/1000,{kingPose:'defeated',reducedMotion:true});entry.group.position.y=(entry.unit.square?location(entry.unit.square).y:0);entry.badge.visible=false;}else if(!reduced&&target.damage)entry.group.rotation.z=Math.sin(p*Math.PI*4)*.07*(1-p);}
+      for(const {entry,target}of victimEntries){if(target.dead){animateCharacter(entry.visual,now/1000,{kingPose:'defeated',reducedMotion:true});entry.group.position.y=(entry.unit.square?location(entry.unit.square).y:0);}else if(!reduced&&target.damage)entry.group.rotation.z=Math.sin(p*Math.PI*4)*.07*(1-p);}
       effects.children.forEach(m=>{if(m.material?.transparent)m.material.opacity=(1-p)*.8;if(m.geometry?.type==='RingGeometry')m.scale.setScalar(1+p*.8);});
       if(p<1)requestAnimationFrame(step);else resolve();}requestAnimationFrame(step);});
-    busy=false;for(const e of units.values()){e.group.rotation.set(0,0,0);e.badge.visible=false;}clearGroup(effects);if(nextState)render(nextState);else if(snapshot)render(snapshot);
+    busy=false;for(const e of units.values()){e.group.rotation.set(0,0,0);}clearGroup(effects);if(nextState)render(nextState);else if(snapshot)render(snapshot);
   }
   const ray=new THREE.Raycaster(),pointer=new THREE.Vector2();let down=null;
   function hit(e){const rect=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);ray.setFromCamera(pointer,camera);const all=[...tiles.values(),...Array.from(units.values(),v=>v.visual)];const intersections=ray.intersectObjects(all,true);for(const h of intersections){let o=h.object;while(o&&!o.userData.square&&!Array.from(units.values()).some(u=>u.group===o))o=o.parent;const unit=Array.from(units.values()).find(u=>u.group===o);if(unit)return unit.unit.square;if(o?.userData.square)return o.userData.square;}return null;}
   function ground(e){const rect=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);ray.setFromCamera(pointer,camera);return ray.intersectObjects([...tiles.values()],false)[0]?.object.userData.square??null;}
   renderer.domElement.addEventListener('pointerdown',e=>{
     if(e.button!==0)return;const square=hit(e),entry=[...units.values()].find(u=>u.unit.square===square&&u.unit.color==='w');
-    down={x:e.clientX,y:e.clientY,square,entry:snapshot?.phase==='planning'&&onDrag?entry:null,dragging:false,origin:entry?.group.position.clone()};
-    if(down.entry){controls.enabled=false;renderer.domElement.setPointerCapture(e.pointerId);}
+    down={x:e.clientX,y:e.clientY,square,entry:snapshot?.phase==='planning'&&snapshot.interactive&&onDrag?entry:null,dragging:false,origin:entry?.group.position.clone()};
+    if(down.entry){controls.enabled=false;renderer.domElement.style.cursor='grabbing';renderer.domElement.setPointerCapture(e.pointerId);}
   },true);
-  renderer.domElement.addEventListener('pointermove',e=>{if(!down?.entry)return;if(Math.hypot(e.clientX-down.x,e.clientY-down.y)>6)down.dragging=true;if(!down.dragging)return;const square=ground(e);if(square){down.entry.group.position.copy(location(square));down.entry.group.position.y+=.14;}});
-  renderer.domElement.addEventListener('pointerup',e=>{if(!down)return;const gesture=down;down=null;if(gesture.entry){gesture.entry.group.position.copy(gesture.origin);controls.enabled=true;if(renderer.domElement.hasPointerCapture(e.pointerId))renderer.domElement.releasePointerCapture(e.pointerId);if(gesture.dragging)onDrag(gesture.square,ground(e));else onSquare(hit(e));}else if(Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)<6)onSquare(hit(e));},true);
+  renderer.domElement.addEventListener('pointermove',e=>{if(!down?.entry)return;if(Math.hypot(e.clientX-down.x,e.clientY-down.y)>6)down.dragging=true;if(!down.dragging)return;const square=ground(e);if(square){down.entry.group.position.copy(location(square));down.entry.group.position.y+=.14;dirty=true;renderer.shadowMap.needsUpdate=true;}});
+  renderer.domElement.addEventListener('pointerup',e=>{if(!down)return;const gesture=down;down=null;if(gesture.entry){gesture.entry.group.position.copy(gesture.origin);controls.enabled=true;renderer.domElement.style.cursor='grab';dirty=true;renderer.shadowMap.needsUpdate=true;if(renderer.domElement.hasPointerCapture(e.pointerId))renderer.domElement.releasePointerCapture(e.pointerId);if(gesture.dragging)onDrag(gesture.square,ground(e));else onSquare(hit(e));}else if(Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)<6)onSquare(hit(e));},true);
   renderer.domElement.addEventListener('pointercancel',()=>{if(down?.entry)down.entry.group.position.copy(down.origin);down=null;controls.enabled=true;});renderer.domElement.style.cursor='grab';
   function projectSquare(square){const p=location(square).add(new THREE.Vector3(0,.5,0)).project(camera),r=renderer.domElement.getBoundingClientRect();return{x:(p.x+1)*r.width/2,y:(1-p.y)*r.height/2};}
-  function resize(){const w=Math.max(1,host.clientWidth),h=Math.max(1,host.clientHeight);renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=h>w?49:39;camera.updateProjectionMatrix();}
-  controls.addEventListener('change',()=>onProject?.());
+  function resize(){const w=Math.max(1,host.clientWidth),h=Math.max(1,host.clientHeight);renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=h>w?49:39;camera.updateProjectionMatrix();dirty=true;}
+  controls.addEventListener('change',()=>{dirty=true;onProject?.();});
   const observer=new ResizeObserver(resize);observer.observe(host);resize();
-  function loop(now){if(disposed)return;frame=requestAnimationFrame(loop);if(!active||document.hidden||!host.clientWidth||!host.clientHeight)return;if(!busy)for(const e of units.values())animateCharacter(e.visual,now/1000,{reducedMotion:reduced,phase:e.group.id,selected:false,kingPose:e.unit.hp<=0?'defeated':'standing'});controls.update();renderer.render(scene,camera);}frame=requestAnimationFrame(loop);
-  return {render,play,resize,projectSquare,resetCamera(){controls.reset();},setActive(value){active=value;if(value)resize();},dispose(){disposed=true;cancelAnimationFrame(frame);observer.disconnect();controls.dispose();for(const id of units.keys())removeUnit(id);clearGroup(effects);clearGroup(terrain);scene.traverse(m=>{m.geometry?.dispose();if(m.material)for(const mat of Array.isArray(m.material)?m.material:[m.material])mat.dispose();});renderer.dispose();renderer.domElement.remove();}};
+  function loop(now){
+    if(disposed||!active||document.hidden)return;frame=requestAnimationFrame(loop);
+    if(!host.clientWidth||!host.clientHeight||now-lastFrame<1000/quality.fps)return;lastFrame=now;
+    controls.update();if(!quality.idle&&!busy&&!dirty)return;
+    if(!busy)for(const e of units.values())animateCharacter(e.visual,now/1000,{reducedMotion:reduced||!quality.idle,phase:e.group.id,selected:false,kingPose:e.unit.hp<=0?'defeated':'standing'});
+    renderer.render(scene,camera);dirty=false;
+  }
+  function schedule(){cancelAnimationFrame(frame);if(active&&!document.hidden&&!disposed)frame=requestAnimationFrame(loop);}
+  document.addEventListener('visibilitychange',schedule);schedule();
+  function setQuality(lite){quality=deviceRenderQuality(lite);renderer.setPixelRatio(Math.min(devicePixelRatio,quality.pixelRatio));renderer.shadowMap.enabled=quality.shadows;renderer.shadowMap.needsUpdate=true;controls.enableDamping=quality.idle;dirty=true;resize();}
+  setQuality(false);
+  return {render,play,resize,projectSquare,setQuality,resetCamera(){controls.reset();},setActive(value){active=value;if(value)resize();schedule();},dispose(){disposed=true;cancelAnimationFrame(frame);document.removeEventListener('visibilitychange',schedule);observer.disconnect();controls.dispose();for(const id of units.keys())removeUnit(id);clearGroup(effects);clearGroup(terrain);scene.traverse(m=>{m.geometry?.dispose();if(m.material)for(const mat of Array.isArray(m.material)?m.material:[m.material])mat.dispose();});renderer.dispose();renderer.domElement.remove();}};
 }

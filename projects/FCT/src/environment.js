@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { terrainPalette, islandRadius, groundHeight, shoulderAngles } from './terrain.js';
+import { batchStaticScene } from './static-scene.js';
 
 // Seeded variation keeps the landscape stable between games and screenshots.
 function randomSource(seed) {
@@ -237,4 +238,5 @@ export function buildLandscape(world) {
       crown.scale.set(0.7, 0.62, 0.65);
     }
   }
+  batchStaticScene(world);
 }

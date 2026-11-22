@@ -62,7 +62,7 @@ test('opening plans do not disguise a second attack as an occupied movement',()=
     else if(order.kind!=='pass')attacks++;
     projected=previewPlan(projected,'b',[order]);
   }
-  assert.ok(moves<=1&&attacks<=1);
+  assert.ok(moves<=1&&attacks===0);
   assert.equal(submitPlan(state,'b',orders).ok,true);
 });
 
@@ -75,10 +75,10 @@ test('AI repositions to create an attack instead of refreshing guard indefinitel
   assert.ok(['N','E','S','W'].includes(movement.facing));
 });
 
-test('AI uses a charged supporting bishop to heal its wounded king',()=>{
-  const state=fixture({'w-k':{square:'a1'},'b-k':{square:'h8',hp:2},'b-b':{square:'g7',charged:true}});
-  const [first]=planAI(state,'b');
-  assert.deepEqual(first,{unitId:'b-b',kind:'ultimate',mode:'heal',target:'h8'});
+test('AI uses a charged bishop area attack without obsolete healing modes',()=>{
+  const state=fixture({'w-k':{square:'a1'},'w-r':{square:'e5',hp:2},'b-k':{square:'h8'},'b-b':{square:'d4',charged:true}});
+  const orders=planAI(state,'b'),result=previewPlan(state,'b',orders);
+  assert.equal(result.units.find(u=>u.id==='w-r').hp,0);assert.ok(orders.every(o=>!['heal','fracture','obstacle','rally'].includes(o.mode)));
 });
 
 test('a king approaches the opponent when no supporting special pieces remain',()=>{

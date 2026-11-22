@@ -3,13 +3,13 @@ export const UNIT_NAMES = {p:'Peón',n:'Caballo',b:'Alfil',r:'Torre',q:'Reina',k
 export const DIRECTIONS = {N:[0,1],NE:[1,1],E:[1,0],SE:[1,-1],S:[0,-1],SW:[-1,-1],W:[-1,0],NW:[-1,1]};
 export const ABILITIES = {
   p:{name:'Vanguardia',description:'Ataca las dos casillas del frente y ambas diagonales delanteras, incluidos aliados.',modes:['sweep']},
-  n:{name:'Tormenta ecuestre',description:'Ataca las ocho casillas en L, incluidos aliados.',modes:['storm']},
-  b:{name:'Cruz astral / Sanación',description:'Ataca las cuatro diagonales hasta el primer objetivo, o cura 3 al primer aliado de una diagonal.',modes:['nova','heal']},
-  r:{name:'Bastión / Barricada',description:'Obtiene 2 cargas de armadura y reflejo, o crea un obstáculo adyacente durante dos rondas.',modes:['bastion','obstacle']},
-  q:{name:'Corona / Fractura',description:'Ataca las ocho direcciones, o destruye una casilla vacía a distancia 3. Máximo dos fracturas por partida.',modes:['nova','fracture']},
-  k:{name:'Estandarte',description:'Cura 2 al rey; aliados adyacentes ganan una carga de armadura y potencian su siguiente ataque.',modes:['rally']},
+  n:{name:'Tormenta ecuestre',description:'Ataca las ocho casillas en L, incluidos aliados.',modes:['sweep']},
+  b:{name:'Cruz astral',description:'Ataca las cuatro diagonales hasta el primer cuerpo de cada línea, incluidos aliados.',modes:['sweep']},
+  r:{name:'Cruz de acero',description:'Ataca las cuatro líneas rectas hasta el primer cuerpo de cada línea, incluidos aliados.',modes:['sweep']},
+  q:{name:'Corona',description:'Ataca las ocho direcciones hasta el primer cuerpo de cada línea, incluidos aliados.',modes:['sweep']},
+  k:{name:'Cerco real',description:'Ataca las ocho casillas adyacentes, incluidos aliados.',modes:['sweep']},
 };
-const TYPES=['p','p','p','r','n','b','q','k'];
+const TYPES=[...Array(8).fill('p'),'r','n','b','q','k','b','n','r'];
 const FACINGS=['N','E','S','W'];
 const DIAGONALS=['NE','SE','SW','NW'];
 const ORTHOGONALS=['N','E','S','W'];
@@ -37,16 +37,16 @@ function nextRandom(state) {
 }
 export function roundRules(input) {
   const round=typeof input==='number'?input:input.round;
-  return round<=2?{seconds:10,actions:2,maxMoves:1,maxOther:1}:{seconds:10,actions:3,maxMoves:3,maxOther:3};
+  return round<=2?{seconds:15,actions:1,maxMoves:1,maxOther:0}:{seconds:15,actions:3,maxMoves:3,maxOther:3};
 }
 export function createMatch({seed=Date.now(),opponent='ai'}={}) {
   let normalized=typeof seed==='number'?seed: [...String(seed)].reduce((n,c)=>Math.imul(n,31)+c.charCodeAt(0),7);
   const units=[];
   for(const color of ['w','b']) {
-    let pawn=0;
-    for(const type of TYPES)units.push({id:`${color}-${type}${type==='p'?++pawn:''}`,color,type,square:null,hp:6,maxHp:6,facing:color==='w'?'N':'S',charged:type==='k',armor:0,guard:0,guardUntil:0,reflect:0,boost:0,hasMoved:false});
+    const counts={};
+    TYPES.forEach((type,index)=>{const count=counts[type]=(counts[type]??0)+1;units.push({id:`${color}-${type}${type==='p'||count>1?count:''}`,color,type,homeSquare:sq(index%8,(color==='w'?(index<8?2:1):(index<8?7:8))-1),square:null,hp:6,maxHp:6,facing:color==='w'?'N':'S',charged:type==='k',armor:0,guard:0,guardUntil:0,counterUntil:0,reflect:0,boost:0,hasMoved:false});});
   }
-  return {version:1,opponent:'ai',rng:(normalized>>>0)||0x9e3779b9,units,tiles:{},phase:'deployment',round:0,firstSide:'w',activePlanner:'w',ready:{w:false,b:false},deployed:{w:false,b:false},plans:{w:[],b:[]},winner:null,log:[],dice:null,diceWinner:null,fractures:0,resolution:[],resolutionIndex:0,revision:0};
+  return {version:2,opponent:'ai',rng:(normalized>>>0)||0x9e3779b9,units,tiles:{},phase:'deployment',round:0,firstSide:'w',activePlanner:'w',ready:{w:false,b:false},deployed:{w:false,b:false},plans:{w:[],b:[]},winner:null,log:[],dice:null,diceWinner:null,fractures:0,resolution:[],resolutionIndex:0,revision:0};
 }
 export function placeUnit(state,side,id,square) {
   if(state.phase!=='deployment'||state.deployed[side])return bad('El despliegue ya está cerrado.');
@@ -60,15 +60,12 @@ export function placeUnit(state,side,id,square) {
 export function autoDeploy(state,side) {
   if(!['w','b'].includes(side))return bad('Bando no válido.');
   if(state.phase!=='deployment'||state.deployed[side])return bad('El despliegue ya está cerrado.');
-  const home=[];for(const rank of side==='w'?[1,2]:[8,7])for(let file=0;file<8;file++)home.push(sq(file,rank-1));
-  // Randomize all 16 home squares, not only a fixed chess back rank.
-  for(let i=home.length-1;i>0;i--){const j=Math.floor(nextRandom(state)*(i+1));[home[i],home[j]]=[home[j],home[i]];}
-  state.units.filter(unit=>unit.color===side).forEach((unit,index)=>{unit.square=home[index];});
+  state.units.filter(unit=>unit.color===side).forEach(unit=>{unit.square=unit.homeSquare;});
   state.revision++;return good();
 }
 export function confirmDeployment(state,side) {
   if(state.phase!=='deployment'||state.deployed[side])return bad('El despliegue ya está cerrado.');
-  if(!['w','b'].includes(side)||state.units.filter(unit=>unit.color===side&&alive(unit)).length!==8)return bad('Debes ubicar las ocho piezas.');
+  if(!['w','b'].includes(side)||state.units.filter(unit=>unit.color===side&&alive(unit)&&unit.square===unit.homeSquare).length!==16)return bad('Las dieciséis piezas deben estar en su posición inicial de ajedrez.');
   state.deployed[side]=true;state.ready[side]=true;state.activePlanner=other(side);
   if(state.deployed.w&&state.deployed.b){state.phase='initiative';state.activePlanner=null;state.ready={w:false,b:false};}
   state.revision++;return good();
@@ -79,14 +76,10 @@ export function rollInitiative(state) {
   state.dice={w,b,winner:w>b?'w':'b',rolls};state.diceWinner=state.dice.winner;state.activePlanner=state.dice.winner;state.revision++;
   return good({dice:clone(state.dice),winner:state.dice.winner,rolls:clone(rolls)});
 }
-export function chooseInitiative(state,side,{first=true,unitId}={}) {
+export function chooseInitiative(state,side,{first=true}={}) {
   if(state.phase!=='initiative'||!state.dice||state.dice.winner!==side)return bad('Solo el ganador de la tirada puede elegir.');
-  if(first!==true){
-    const unit=findUnit(state,unitId);
-    if(!unit||unit.color!==side||unit.type==='q'||unit.type==='k')return bad('Elige peón, caballo, alfil o torre: los reyes ya empiezan cargados.');
-    unit.charged=true;
-  }
-  state.firstSide=first?side:other(side);state.dice.choice={side,first:Boolean(first),unitId:first?null:unitId};
+  state.firstSide=first?side:other(side);state.dice.choice={side,first:Boolean(first)};
+  for(const unit of state.units)unit.charged=unit.type==='k'&&unit.color!==state.firstSide;
   startRound(state);return good();
 }
 export function startRound(state) {
@@ -96,7 +89,7 @@ export function startRound(state) {
   state.phase='planning';state.ready={w:false,b:false};state.plans={w:[],b:[]};state.activePlanner=state.firstSide;
   state.resolution=[];state.resolutionIndex=0;
   for(const[square,tile]of Object.entries(state.tiles))if(tile.expires&&tile.expires<=state.round)delete state.tiles[square];
-  for(const unit of state.units)if(unit.guardUntil<state.round)unit.guard=0;
+  for(const unit of state.units){if(unit.guardUntil<state.round)unit.guard=0;if(unit.counterUntil<state.round)unit.counterUntil=0;}
   state.revision++;return good({rules:roundRules(state)});
 }
 
@@ -137,13 +130,9 @@ export function getAttackTargets(state,input,direction) {
   }
   return ray(state,unit,direction,['p','k'].includes(unit.type)?1:7);
 }
-const firstTarget=(state,unit,direction,max)=>ray(state,unit,direction,max).map(square=>unitAt(state,square)).find(Boolean);
-function healTarget(state,unit,target) {
-  const ally=unitAt(state,target);
-  if(!ally||ally.color!==unit.color)return false;
-  if(unit.type==='p')return adjacent(unit.square,target);
-  if(unit.type==='b')return DIAGONALS.some(direction=>firstTarget(state,unit,direction)?.id===ally.id);
-  return false;
+export function getUltimateTargets(state,input){
+  const unit=findUnit(state,input);if(!alive(unit))return [];
+  return unit.type==='p'?getPawnArea(state,unit):[...new Set(attackDirections(unit).flatMap(direction=>getAttackTargets(state,unit,direction)))];
 }
 export function validateOrder(state,side,raw) {
   if(!raw||!['move','attack','block','focus','ultimate','pass'].includes(raw.kind))return bad('Acción desconocida.');
@@ -163,16 +152,6 @@ export function validateOrder(state,side,raw) {
     if(!unit.charged)return bad('Primero debes cargar la definitiva con Focus.');
     order.mode??=ABILITIES[unit.type].modes[0];
     if(!ABILITIES[unit.type].modes.includes(order.mode))return bad('Variante de definitiva no válida.');
-    if(order.mode==='heal'&&!healTarget(state,unit,order.target))return bad('Elige un aliado al alcance de la curación.');
-    if(['trap','obstacle'].includes(order.mode)){
-      if(!validSquare(order.target)||!adjacent(unit.square,order.target)||order.target===unit.square||unitAt(state,order.target)||state.tiles[order.target])return bad('Elige una casilla adyacente vacía y libre.');
-      if(order.mode==='trap'&&Object.values(state.tiles).filter(tile=>tile.kind==='trap'&&tile.owner===side).length>=2)return bad('Cada bando puede mantener dos trampas.');
-    }
-    if(order.mode==='fracture'){
-      if(state.fractures>=2)return bad('Ya se han creado las dos fracturas de la partida.');
-      const target=order.target;
-      if(!validSquare(target)||unitAt(state,target)||state.tiles[target]||!ALL.some(direction=>ray(state,unit,direction,3).includes(target)))return bad('Fractura requiere una casilla vacía visible a distancia máxima 3.');
-    }
   }
   return good({order});
 }
@@ -202,9 +181,9 @@ function strike(state,attacker,defender,event,bonus=0,fixed=null) {
   const damage=Math.max(1,base-armor-guard);
   defender.hp=Math.max(0,defender.hp-damage);
   event.targets.push({id:defender.id,square:defender.square,damage,hp:defender.hp,dead:defender.hp===0,front:fixed===null?incomingDamage(attacker,defender)===2:null,absorbed:armor+guard});
-  if(defender.reflect>0&&attacker&&attacker.id!==defender.id&&attacker.hp>0){
-    defender.reflect--;attacker.hp=Math.max(0,attacker.hp-1);
-    event.targets.push({id:attacker.id,square:attacker.square,damage:1,hp:attacker.hp,dead:attacker.hp===0,reflected:true});
+  if(defender.counterUntil===state.round&&attacker&&attacker.id!==defender.id&&attacker.hp>0){
+    attacker.hp=Math.max(0,attacker.hp-damage);
+    event.targets.push({id:attacker.id,square:attacker.square,damage,hp:attacker.hp,dead:attacker.hp===0,reflected:true});
   }
 }
 function applyOrder(state,side,raw) {
@@ -215,10 +194,11 @@ function applyOrder(state,side,raw) {
   const unit=findUnit(state,order.unitId);event.from=unit.square;event.to=unit.square;event.mode=order.mode;
   const name=UNIT_NAMES[unit.type];
   if(order.kind==='focus'){unit.charged=true;event.message=`${name}: definitiva cargada.`;}
-  if(order.kind==='block'){unit.guard=1;unit.guardUntil=state.round+1;event.message=`${name}: guardia hasta el siguiente impacto.`;}
+  if(order.kind==='block'){unit.guard=1;unit.guardUntil=state.round;unit.counterUntil=state.round;event.message=`${name}: bloqueo y devolución de daño durante esta ronda.`;}
   if(order.kind==='move'){
     const target=unitAt(state,order.target);
     if(target){
+      if(state.round<=2){event.kind='fizzle';event.message='Destino ocupado: en la apertura solo se permite mover.';return event;}
       event.kind='attack';event.convertedMove=true;event.direction=directionBetween(unit.square,order.target);
       const targets=unit.type==='n'?getAttackTargets(state,unit,event.direction).map(square=>unitAt(state,square)).filter(Boolean):[target];
       const bonus=unit.boost?1:0;unit.boost=0;
@@ -241,31 +221,15 @@ function applyOrder(state,side,raw) {
   }
   if(order.kind==='ultimate'){
     unit.charged=false;event.message=`${name}: ${ABILITIES[unit.type].name}.`;
-    if(order.mode==='heal'){
-      const target=unitAt(state,order.target),healed=Math.min(3,target.maxHp-target.hp);target.hp+=healed;event.targets.push({id:target.id,square:target.square,heal:healed,hp:target.hp});
-    }else if(['trap','obstacle','fracture'].includes(order.mode)){
-      const kind=order.mode==='fracture'?'void':order.mode;
-      state.tiles[order.target]={kind,owner:side,...(kind==='obstacle'?{expires:state.round+2}:{})};
-      if(kind==='void')state.fractures++;event.tile={square:order.target,...state.tiles[order.target]};
-    }else if(unit.type==='r'){
-      unit.armor=2;unit.reflect=2;event.buffs=[unit.id];
-    }else if(unit.type==='k'){
-      const healed=Math.min(2,unit.maxHp-unit.hp);unit.hp+=healed;event.buffs=[];
-      if(healed)event.targets.push({id:unit.id,square:unit.square,heal:healed,hp:unit.hp});
-      for(const ally of livingUnits(state,side))if(adjacent(unit.square,ally.square)){ally.armor=Math.min(2,ally.armor+1);ally.boost=1;event.buffs.push(ally.id);}
-    }else{
-      const directions=unit.type==='n'?DIAGONALS:unit.type==='b'?DIAGONALS:ALL;
-      const area=unit.type==='p'?getPawnArea(state,unit):directions.flatMap(direction=>getAttackTargets(state,unit,direction));
-      const targetIds=[...new Set(area.map(square=>unitAt(state,square)?.id).filter(Boolean))];
-      const bonus=unit.boost?1:0;unit.boost=0;
-      for(const id of targetIds){if(unit.hp<=0||state.winner)break;strike(state,unit,findUnit(state,id),event,bonus);checkWinner(state,event);}
-    }
+    const targetIds=[...new Set(getUltimateTargets(state,unit).map(square=>unitAt(state,square)?.id).filter(Boolean))];
+    const bonus=unit.boost?1:0;unit.boost=0;
+    for(const id of targetIds){if(unit.hp<=0||state.winner)break;strike(state,unit,findUnit(state,id),event,bonus);checkWinner(state,event);}
   }
   if(order.facing&&unit.hp>0&&event.kind==='move'&&event.from!==event.to)unit.facing=order.facing;
   event.facing=unit.facing;return event;
 }
 export function previewPlan(state,side,orders=[]) {
-  const projected=clone(state);projected.forecastErrors=[];
+  const projected=clone({...state,log:[],plans:{w:[],b:[]},resolution:[]});projected.forecastErrors=[];
   // Never simulate or inspect an opponent's sealed orders when forecasting.
   projected.plans={w:[],b:[]};projected.resolution=[];
   for(const order of orders){
@@ -285,7 +249,7 @@ export function submitPlan(state,side,orders=[]) {
     const result=validateOrder(projected,side,order);if(!result.ok)return result;
     const category=orderCategory(projected,result.order);
     moveCount+=category==='move'?1:0;otherCount+=category==='other'?1:0;
-    if(moveCount>rules.maxMoves||otherCount>rules.maxOther)return bad('En las dos primeras rondas solo puedes preparar un movimiento y una acción.');
+    if(moveCount>rules.maxMoves||otherCount>rules.maxOther)return bad('En las dos primeras rondas solo puedes preparar un movimiento.');
     applyOrder(projected,side,result.order);
     if(projected.winner&&order!==orders.at(-1))return bad('No puedes preparar órdenes después de terminar la partida.');
   }

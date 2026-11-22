@@ -456,3 +456,8 @@ button { cursor: pointer; font: inherit; }
 @media(prefers-reduced-motion:reduce){.enlaces[aria-busy="true"] .enlace,.escenario:disabled{animation:none}.enlaces[aria-busy="true"] .icono_imagen,.escenario:disabled .yin-yang{filter:none}}
 
 @media(prefers-reduced-motion:reduce){.enlace .icono-abstracto{transition:none}}
+
+.ventana-fct{border-color:#ad4e16;box-shadow:0 0 0 1px #ffd29b,0 16px 50px #0008}
+.ventana-fct .barra-ventana{color:#fff9ee;background-image:linear-gradient(#ffc481 0%,#e99445 12%,#c4631d 26%,#b55212 76%,#8c3b09 100%);border-top-color:#ffe1b6;box-shadow:inset 0 1px #ffd8a4,inset 0 -1px #713006}
+.ventana-fct .barra-ventana h2{text-shadow:1px 1px #713006}
+.ventana-fct .abrir-pestana{background:linear-gradient(135deg,#ffd39b,#df8a36 48%,#a64d0b);box-shadow:inset 1px 1px #ffffff80,0 1px 1px #713006}

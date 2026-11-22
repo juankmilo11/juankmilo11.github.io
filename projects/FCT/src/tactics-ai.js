@@ -36,11 +36,7 @@ function candidates(state,side) {
     orders.push({unitId:unit.id,kind:'block'},{unitId:unit.id,kind:'focus'});
     if(!unit.charged)continue;
     orders.push({unitId:unit.id,kind:'ultimate'});
-    if(unit.type==='b')for(const ally of allies)orders.push({unitId:unit.id,kind:'ultimate',mode:'heal',target:ally.square});
-    if(unit.type==='r')for(const target of neighbors(unit.square))orders.push({unitId:unit.id,kind:'ultimate',mode:'obstacle',target});
-    if(unit.type==='q')for(const direction of DIRECTIONS)for(const target of getAttackTargets(state,unit,direction)){
-      if(distance(unit.square,target)<=3)orders.push({unitId:unit.id,kind:'ultimate',mode:'fracture',target});
-    }
+
   }
   return orders;
 }
@@ -61,7 +57,7 @@ function positionScore(state,side) {
     score+=(friendly?1.2:-1)*(weight*9+unit.hp*(unit.type==='k'?23:weight+5));
     const nearest=Math.min(8,...units.filter(other=>other.color!==unit.color).map(other=>distance(unit.square,other.square)));
     if(friendly){
-      score+=Math.min(unit.armor||0,2)*.9+Math.min(unit.reflect||0,2)*.7+(unit.guard?.8:0)+(unit.boost?1.2:0);
+      score+=Math.min(unit.armor||0,2)*.9+Math.min(unit.reflect||0,2)*.7+(unit.guard?.8:0)+(unit.counterUntil===state.round?1:0)+(unit.boost?1.2:0);
       if(unit.charged)score+=unit.type==='q'?2.2:nearest<=4?1.1:.35;
       if(unit.type!=='k')score+=(8-nearest)*.85;
       else if(allies.some(ally=>!['k','p'].includes(ally.type)))score+=Math.min(nearest,3)*.45;
@@ -117,14 +113,12 @@ export function planAI(state,side='b') {
       if(!validation.ok)continue;
       const order=validation.order??candidate,key=JSON.stringify(order);
       if(seen.has(key))continue;seen.add(key);
-      const proposal=[...orders,order];
-      const forecast=previewPlan(observation,side,proposal);
-      if(forecast.forecastErrors?.length)continue;
-      if(forecast.phase==='finished'&&forecast.winner!==side)continue;
-      // validateOrder can be position-only: enforce the opening quota here too.
       const moves=movesUsed+(order.kind==='move'&&!unitAt(projected,order.target)?1:0);
       const others=otherUsed+(order.kind!=='pass'&&!(order.kind==='move'&&!unitAt(projected,order.target))?1:0);
       if(moves>rules.maxMoves||others>rules.maxOther)continue;
+      const forecast=previewPlan(projected,side,[order]);
+      if(forecast.forecastErrors?.length)continue;
+      if(forecast.phase==='finished'&&forecast.winner!==side)continue;
       const score=positionScore(forecast,side)+tieBreak(order,observation.round,side);
       if(score>bestScore){best=order;bestScore=score;bestMoves=moves;bestOthers=others;}
     }

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { deviceRenderQuality } from './render-quality.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { buildLandscape, earthMaterial } from './environment.js';
 import { tileElevation, terrainPalette } from './terrain.js';
@@ -23,15 +24,16 @@ const palette = {
 };
 
 export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => true) {
+  const quality = deviceRenderQuality();
   const scene = new THREE.Scene();
   scene.background = createSunsetSky();
   scene.fog = new THREE.Fog(0x705442, 14, 34);
   const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
   camera.position.set(0, 7.8, 11.5);
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
-  renderer.shadowMap.enabled = true;
+  const renderer = new THREE.WebGLRenderer({ antialias: quality.antialias, alpha: false, powerPreference:'low-power' });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, quality.pixelRatio));
+  renderer.shadowMap.enabled = quality.shadows;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -44,7 +46,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
   const sun = new THREE.DirectionalLight(0xffefd9, 3.0);
   sun.position.set(-5, 11, 6);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024);
+  sun.shadow.mapSize.set(quality.shadowSize, quality.shadowSize);
   sun.shadow.camera.left = -10;
   sun.shadow.camera.right = 10;
   sun.shadow.camera.top = 10;
@@ -86,7 +88,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
 
   buildLandscape(world);
   const terrainMesh = buildBoard(world, tileMeshes, tileHeights, tileMaterials);
-  const fieldLife = addFieldLife(world,reducedMotion);
+  const fieldLife = addFieldLife(world,reducedMotion || !quality.idle);
   for (const tile of tileMeshes) {
     const square = tile.userData.square;
     const highlightMaterial = new THREE.MeshBasicMaterial({
@@ -115,7 +117,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
   const selectionMarker=new THREE.Mesh(new THREE.ShapeGeometry(selectionOutline),new THREE.MeshBasicMaterial({color:palette.selected,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false}));
   selectionMarker.name='selected-square-indicator';selectionMarker.rotation.x=-Math.PI/2;
   selectionMarker.visible=false;selectionMarker.renderOrder=4;world.add(selectionMarker);
-  const windParticles = buildWindParticles(world, reducedMotion);
+  const windParticles = buildWindParticles(world, reducedMotion || !quality.idle);
 
   const dropIndicatorMaterial = new THREE.MeshBasicMaterial({
     color: palette.target,
@@ -563,11 +565,13 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
   observer.observe(host);
   resize();
 
-  let previousFrameTime = 0;
+  let previousFrameTime = 0, previousRenderTime = 0;
   function animate() {
     requestAnimationFrame(animate);
     if (document.hidden || !host.clientWidth || !host.clientHeight) { previousFrameTime = 0; return; }
     const now = performance.now();
+    if (now - previousRenderTime < 1000 / quality.fps) return;
+    previousRenderTime = now;
     const time = now * 0.001;
     fieldLife.update(time);
     const delta = previousFrameTime ? Math.min((now - previousFrameTime) / 1000, 0.05) : 0;
@@ -578,7 +582,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
       const idle = piece.userData.idleAnimation;
       const motion = piece.userData.moveAnimation;
       if (!base || !idle) continue;
-      animateCharacter(piece.userData.visual, time, { moving: Boolean(motion), selected: piece.userData.selected, reducedMotion, phase: idle.phase, kingPose:piece.userData.kingPose });
+      animateCharacter(piece.userData.visual, time, { moving: Boolean(motion), selected: piece.userData.selected, reducedMotion: reducedMotion || (!quality.idle && !motion), phase: idle.phase, kingPose:piece.userData.kingPose });
 
       if (motion) {
         const progress = Math.min(1, (now - motion.startTime) / motion.duration);
@@ -602,7 +606,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
       }
 
       piece.position.copy(base);
-      if (!reducedMotion && piece.userData.kingPose==='standing') piece.position.y += floatOffset(time,idle);
+      if (!reducedMotion && quality.idle && piece.userData.kingPose==='standing') piece.position.y += floatOffset(time,idle);
       piece.rotation.set(0,0,0);
       piece.scale.setScalar(1);
     }
@@ -623,7 +627,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
     for (const mesh of capturedMeshes) {
       const cheer = mesh.userData.cheer;
       const base = mesh.userData.capturedPosition;
-      const pose = cheer && !reducedMotion ? cheerPose(time,cheer) : {lift:0,tilt:0,strength:0};
+      const pose = cheer && !reducedMotion && quality.idle ? cheerPose(time,cheer) : {lift:0,tilt:0,strength:0};
       animateCharacter(mesh.userData.visual,time,{ reducedMotion, phase: mesh.userData.idleAnimation.phase, cheer: pose.strength });
       if (!base) continue;
       mesh.position.set(base.x,base.y+pose.lift,base.z);

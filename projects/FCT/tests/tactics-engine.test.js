@@ -19,12 +19,12 @@ function duel(state,w,b=[]) {
   const events=[];while(state.phase==='resolution')events.push(resolveNext(state).event);return events;
 }
 
-test('each side has three pawns and one of each special; only kings start charged',()=>{
+test('each side has eight pawns and the standard sixteen chess pieces; only kings start charged',()=>{
   const state=createMatch();
   for(const color of ['w','b']){
     const army=state.units.filter(unit=>unit.color===color);
-    assert.equal(army.length,8);assert.equal(army.filter(unit=>unit.type==='p').length,3);
-    for(const type of ['r','n','b','q','k'])assert.equal(army.filter(unit=>unit.type===type).length,1);
+    assert.equal(army.length,16);assert.equal(army.filter(unit=>unit.type==='p').length,8);
+    for(const type of ['r','n','b','q','k'])assert.equal(army.filter(unit=>unit.type===type).length,['r','n','b'].includes(type)?2:1);
     for(const piece of army){assert.equal(piece.hp,6);assert.equal(piece.charged,piece.type==='k');}
   }
 });
@@ -47,46 +47,47 @@ test('deployment accepts only free home squares, seals placements and reveals bo
   assert.equal(state.phase,'planning');assert.ok(publicView(state,'w').units.every(piece=>piece.square));
 });
 
-test('seeded dice reroll ties and the winner trades initiative for one non-royal charge',()=>{
-  let chosen;
-  for(let seed=1;seed<200;seed++){const state=deployed(seed),roll=rollInitiative(state);if(roll.rolls.length>1){chosen=state;break;}}
-  assert.ok(chosen,'some deterministic seeds produce tied rolls');
-  const winner=chosen.dice.winner;
-  for(const roll of chosen.dice.rolls.slice(0,-1))assert.equal(roll.w,roll.b);
-  assert.notEqual(chosen.dice.w,chosen.dice.b);
-  assert.equal(chooseInitiative(chosen,winner==='w'?'b':'w',{first:true}).ok,false);
-  assert.equal(chooseInitiative(chosen,winner,{first:false,unitId:`${winner}-q`}).ok,false);
-  assert.equal(chooseInitiative(chosen,winner,{first:false,unitId:`${winner}-k`}).ok,false);
-  assert.equal(chooseInitiative(chosen,winner,{first:false,unitId:`${winner}-n`}).ok,true);
-  assert.notEqual(chosen.firstSide,winner);assert.equal(unit(chosen,`${winner}-n`).charged,true);
-  const copy=deployed(43),again=deployed(43);assert.deepEqual(rollInitiative(copy),rollInitiative(again));
+test('dice winner chooses order; only the second player king starts charged',()=>{
+  const state=deployed(43),again=deployed(43);assert.deepEqual(rollInitiative(state),rollInitiative(again));
+  const winner=state.dice.winner;assert.equal(chooseInitiative(state,winner==='w'?'b':'w').ok,false);
+  assert.equal(chooseInitiative(state,winner,{first:false}).ok,true);assert.notEqual(state.firstSide,winner);
+  for(const u of state.units)assert.equal(u.charged,u.type==='k'&&u.color!==state.firstSide);
+  const first=deployed(11);rollInitiative(first);chooseInitiative(first,first.dice.winner,{first:true});
+  assert.equal(unit(first,`${first.firstSide}-k`).charged,false);
+  assert.equal(first.units.filter(u=>u.charged).length,1);
 });
 
-test('opening quotas count occupied moves as attacks; later rounds allow three free actions',()=>{
-  const state=fixture({'w-r':'d4','b-r':'d6'},1);
-  assert.deepEqual(roundRules(state),{seconds:10,actions:2,maxMoves:1,maxOther:1});
-  assert.equal(orderCategory(state,{kind:'move',target:'d6'}),'other');
-  assert.equal(submitPlan(state,'w',[{unitId:'w-r',kind:'move',target:'d6'},{unitId:'w-r',kind:'attack',direction:'N'}]).ok,false);
-  assert.equal(submitPlan(state,'w',[{unitId:'w-r',kind:'move',target:'d5'},{unitId:'w-r',kind:'attack',direction:'N'}]).ok,true);
-  const later=fixture({'w-r':'d4','b-r':'d6'});
-  assert.equal(roundRules(later).seconds,10);
+test('standard positions are identical across seeds, with all files occupied',()=>{
+  const a=deployed(1),b=deployed(999);assert.deepEqual(a.units.map(u=>u.square),b.units.map(u=>u.square));
+  for(const [id,square]of Object.entries({'w-r':'a1','w-r2':'h1','w-n':'b1','w-n2':'g1','w-b':'c1','w-b2':'f1','w-q':'d1','w-k':'e1','b-k':'e8','b-q':'d8','w-p8':'h2','b-p1':'a7'}))assert.equal(unit(a,id).square,square);
+  assert.equal(new Set(a.units.map(u=>u.square)).size,32);
+});
+
+test('opening has exactly one empty-square movement; round three has three actions and 15 seconds',()=>{
+  for(const round of [1,2]){
+    const state=fixture({'w-r':'d4','b-r':'d6'},round);
+    assert.deepEqual(roundRules(state),{seconds:15,actions:1,maxMoves:1,maxOther:0});
+    for(const order of [{kind:'block'},{kind:'focus'},{kind:'attack',direction:'N'},{kind:'move',target:'d6'}])assert.equal(submitPlan(structuredClone(state),'w',[{unitId:'w-r',...order}]).ok,false);
+    assert.equal(submitPlan(state,'w',[{unitId:'w-r',kind:'move',target:'d5'}]).ok,true);
+  }
+  const later=fixture({'w-r':'d4','b-r':'d6'});assert.equal(roundRules(later).seconds,15);
   assert.equal(submitPlan(later,'w',[{unitId:'w-r',kind:'block'},{unitId:'w-r',kind:'focus'},{unitId:'w-r',kind:'ultimate'}]).ok,true);
 });
 
 test('sealed plans stay hidden and resolve A1 B1 A2 B2 without using future enemy orders',()=>{
-  const state=fixture({'w-r':'c3','b-r':'f6'},1);
+  const state=fixture({'w-r':'c3','b-r':'f6'},3);
   const w=[{unitId:'w-r',kind:'move',target:'c4'},{unitId:'w-r',kind:'focus'}];
   const b=[{unitId:'b-r',kind:'focus'},{unitId:'b-r',kind:'move',target:'f5'}];
   assert.equal(submitPlan(state,'w',w).ok,true);
   assert.deepEqual(publicView(state,'b').plans.w,[]);
   assert.equal(submitPlan(state,'b',b).ok,true);
   const events=[];while(state.phase==='resolution')events.push(resolveNext(state).event);
-  assert.deepEqual(events.map(event=>event.side),['w','b','w','b']);
-  assert.deepEqual(events.map(event=>event.kind),['move','focus','focus','move']);
-  assert.equal(state.round,2);assert.equal(state.phase,'planning');assert.deepEqual(state.ready,{w:false,b:false});
+  assert.deepEqual(events.map(event=>event.side),['w','b','w','b','w','b']);
+  assert.deepEqual(events.map(event=>event.kind),['move','focus','focus','move','pass','pass']);
+  assert.equal(state.round,4);assert.equal(state.phase,'planning');assert.deepEqual(state.ready,{w:false,b:false});
   assert.equal(state.firstSide,'b','the opening roll grants only the first round initiative');
   const secondRound=duel(state,[{unitId:'w-r',kind:'block'}],[{unitId:'b-r',kind:'block'}]);
-  assert.deepEqual(secondRound.map(event=>event.side),['b','w','b','w']);
+  assert.deepEqual(secondRound.map(event=>event.side),['b','w','b','w','b','w']);
   assert.equal(state.firstSide,'w','initiative alternates again for round three');
 });
 
@@ -141,14 +142,16 @@ test('only an actual movement grants a free facing choice, not an attack or occu
   assert.equal(unit(moved,'w-r').facing,'S');
 });
 
-test('guards, armor and reflect consume bounded resources; focus charges a spent ultimate',()=>{
-  const state=fixture({'w-r':'d4','b-r':'d7'});unit(state,'w-r').charged=true;
-  const defended=previewPlan(state,'w',[{unitId:'w-r',kind:'ultimate'},{unitId:'w-r',kind:'block'}]);
-  const hit=previewPlan(defended,'b',[{unitId:'b-r',kind:'attack',direction:'S'}]);
-  assert.equal(unit(hit,'w-r').hp,5);assert.equal(unit(hit,'w-r').armor,1);assert.equal(unit(hit,'w-r').guard,0);assert.equal(unit(hit,'w-r').reflect,1);assert.equal(unit(hit,'b-r').hp,5);
-  assert.equal(validateOrder(hit,'w',{unitId:'w-r',kind:'ultimate'}).ok,false);
-  const focused=previewPlan(hit,'w',[{unitId:'w-r',kind:'focus'}]);assert.equal(unit(focused,'w-r').charged,true);
-  assert.equal(validateOrder(focused,'w',{unitId:'w-r',kind:'focus'}).ok,false);
+test('block returns actual received damage during the round, expires, and does not recurse',()=>{
+  const state=fixture({'w-r':'d4','b-r':'d7'});
+  const defended=previewPlan(state,'w',[{unitId:'w-r',kind:'block'}]);
+  const hit=previewPlan(defended,'b',[{unitId:'b-r',kind:'attack',direction:'S'},{unitId:'b-r',kind:'attack',direction:'S'}]);
+  assert.equal(unit(hit,'w-r').hp,3);assert.equal(unit(hit,'b-r').hp,3);assert.equal(unit(hit,'w-r').guard,0);
+  duel(hit,[]);assert.equal(unit(hit,'w-r').counterUntil,0);
+  const expired=previewPlan(hit,'b',[{unitId:'b-r',kind:'attack',direction:'S'}]);assert.equal(unit(expired,'b-r').hp,3);
+  const both=previewPlan(defended,'b',[{unitId:'b-r',kind:'block'},{unitId:'b-r',kind:'attack',direction:'S'}]);
+  assert.equal(unit(both,'b-r').hp,5,'reflected damage cannot reflect again');
+  const focused=previewPlan(state,'w',[{unitId:'w-r',kind:'focus'},{unitId:'w-r',kind:'ultimate'}]);assert.equal(unit(focused,'w-r').charged,false);
 });
 
 test('bishop ultimate hits the first target in all four diagonals without x-ray',()=>{
@@ -158,33 +161,28 @@ test('bishop ultimate hits the first target in all four diagonals without x-ray'
   assert.equal(unit(result,'b-r').hp,6);assert.equal(unit(result,'w-b').square,'d4');
 });
 
-test('healing is capped, traps trigger on allies too, and obstacles expire after two rounds',()=>{
-  const state=fixture({'w-b':'c4','w-p1':'d4','w-r':'d5','b-r':'g6'});unit(state,'w-b').charged=true;unit(state,'w-r').hp=5;
-  const healed=previewPlan(state,'w',[{unitId:'w-b',kind:'ultimate',mode:'heal',target:'d5'}]);assert.equal(unit(healed,'w-r').hp,6);
-  const trapState=structuredClone(state);trapState.tiles.e5={kind:'trap',owner:'w'};const trapped=previewPlan(trapState,'w',[{unitId:'w-r',kind:'move',target:'e5'}]);
-  assert.equal(unit(trapped,'w-r').hp,3);assert.equal(trapped.tiles.e5,undefined);
-  unit(state,'w-r').charged=true;
-  const barricade=previewPlan(state,'w',[{unitId:'w-r',kind:'ultimate',mode:'obstacle',target:'e5'}]);
-  assert.equal(barricade.tiles.e5.expires,5);assert.ok(!getLegalMoves(barricade,'w-r').includes('e5'));
-  duel(barricade,[]);assert.ok(barricade.tiles.e5);duel(barricade,[]);assert.equal(barricade.tiles.e5,undefined);
+test('rook, queen and king ultimates strike every legal direction, including allies',()=>{
+  for(const type of ['r','q','k']){
+    const id=`w-${type}`,state=fixture({[id]:'d4','w-p1':'d5','b-p1':'e4','b-p2':'d3','b-p3':'c4','b-p4':'e5','b-r':'d6'});
+    unit(state,id).charged=true;const result=previewPlan(state,'w',[{unitId:id,kind:'ultimate'}]);
+    for(const victim of ['w-p1','b-p1','b-p2','b-p3'])assert.ok(unit(result,victim).hp<6,type+' cardinal '+victim);
+    assert.equal(unit(result,'b-r').hp,6,'a body stops a ray');assert.equal(unit(result,id).square,'d4');assert.equal(unit(result,id).charged,false);
+    assert.equal(unit(result,'b-p4').hp<6,type!=='r','only king/queen hit diagonals');
+    assert.deepEqual(result.tiles,{});
+    assert.equal(validateOrder(state,'w',{unitId:id,kind:'ultimate',mode:'heal',target:'d5'}).ok,false);
+  }
 });
 
-test('queen fractures are permanent, cannot destroy occupied squares and are globally capped',()=>{
-  const state=fixture({'w-q':'d4','b-q':'f6','w-p1':'e4'});unit(state,'w-q').charged=true;
-  assert.equal(validateOrder(state,'w',{unitId:'w-q',kind:'ultimate',mode:'fracture',target:'e4'}).ok,false);
-  const once=previewPlan(state,'w',[{unitId:'w-q',kind:'ultimate',mode:'fracture',target:'c4'}]);
-  assert.equal(once.tiles.c4.kind,'void');
-  unit(once,'b-q').charged=true;const twice=previewPlan(once,'b',[{unitId:'b-q',kind:'ultimate',mode:'fracture',target:'f5'}]);
-  assert.equal(twice.fractures,2);unit(twice,'w-q').charged=true;
-  assert.equal(validateOrder(twice,'w',{unitId:'w-q',kind:'ultimate',mode:'fracture',target:'d5'}).ok,false);
+test('a move without a facing keeps its previous orientation and still executes',()=>{
+  const state=fixture({'w-r':'d4'});unit(state,'w-r').facing='W';
+  const result=previewPlan(state,'w',[{unitId:'w-r',kind:'move',target:'e4'}]);
+  assert.equal(unit(result,'w-r').square,'e4');assert.equal(unit(result,'w-r').facing,'W');
 });
 
-test('king rally protects nearby allies and boosts only their next attack',()=>{
-  const state=fixture({'w-k':'d4','w-r':'d5','b-r':'d7'});unit(state,'w-k').hp=3;
-  const rally=previewPlan(state,'w',[{unitId:'w-k',kind:'ultimate'}]);
-  assert.equal(unit(rally,'w-k').hp,5);assert.equal(unit(rally,'w-r').armor,1);assert.equal(unit(rally,'w-r').boost,1);
-  const attack=previewPlan(rally,'w',[{unitId:'w-r',kind:'attack',direction:'N'}]);
-  assert.equal(unit(attack,'b-r').hp,3);assert.equal(unit(attack,'w-r').boost,0);
+test('a reflected killing blow can defeat both kings without a damage loop',()=>{
+  const state=fixture({'w-k':'d4','b-k':'d5'});unit(state,'w-k').hp=1;unit(state,'b-k').hp=1;
+  const guarded=previewPlan(state,'b',[{unitId:'b-k',kind:'block'}]);
+  const result=previewPlan(guarded,'w',[{unitId:'w-k',kind:'attack',direction:'N'}]);assert.equal(result.winner,'draw');
 });
 
 test('stale orders fizzle but preserve the interleaved slot; killing a king ends immediately',()=>{

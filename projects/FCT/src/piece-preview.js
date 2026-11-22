@@ -1,10 +1,12 @@
 import * as THREE from 'three';
+import { deviceRenderQuality } from './render-quality.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createCharacter, animateCharacter, releaseCharacter } from './character-model.js';
 
 export function createPiecePreview(host) {
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+  const quality = deviceRenderQuality();
+  const renderer = new THREE.WebGLRenderer({ antialias: quality.antialias, alpha: true, powerPreference:'low-power' });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, quality.pixelRatio));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   host.append(renderer.domElement);
@@ -28,7 +30,7 @@ export function createPiecePreview(host) {
     ring.rotation.x = -Math.PI / 2; ring.position.set(x,0,0); scene.add(ring);
   }
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let models = [], frame = 0, active = false, rotating = !reducedMotion, token = 0, previousTime = 0;
+  let models = [], frame = 0, active = false, rotating = !reducedMotion, token = 0, previousTime = 0, lastRender = 0;
   function resize() {
     const width = Math.max(1, host.clientWidth), height = Math.max(1, host.clientHeight);
     renderer.setSize(width,height,false); camera.aspect = width/height; camera.updateProjectionMatrix();
@@ -36,6 +38,9 @@ export function createPiecePreview(host) {
   new ResizeObserver(resize).observe(host);
   function render(now) {
     if (!active) return;
+    frame = requestAnimationFrame(render);
+    if (document.hidden || now-lastRender<1000/quality.fps) return;
+    lastRender=now;
     const time = now * 0.001;
     const delta = previousTime ? Math.min((now-previousTime)/1000,0.05) : 0;
     previousTime = now;
@@ -43,7 +48,7 @@ export function createPiecePreview(host) {
       animateCharacter(model,time,{ reducedMotion });
       if (rotating) model.rotation.y += delta * 0.4;
     }
-    controls.update(); renderer.render(scene,camera); frame = requestAnimationFrame(render);
+    controls.update(); renderer.render(scene,camera);
   }
   return {
     async setLooks(human,role) {

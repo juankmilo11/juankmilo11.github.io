@@ -13,7 +13,7 @@ for(let index=0;index<games;index++){
   for(const side of ['w','b']){autoDeploy(state,side);confirmDeployment(state,side);}
   rollInitiative(state);
   const first=index%2===0;
-  chooseInitiative(state,state.diceWinner,{first,unitId:`${state.diceWinner}-n`});
+  chooseInitiative(state,state.diceWinner,{first});
   const initialFirstSide=state.firstSide;
   while(!state.winner&&state.round<=maxRounds){
     // Both plans are generated from exactly the same revealed round position.
@@ -30,7 +30,7 @@ for(let index=0;index<games;index++){
       const result=resolveNext(state);if(!result.ok)throw new Error(result.error);
     }
   }
-  const result={seed:1103+index*137,winner:state.winner??'round-limit',round:Math.min(state.round,maxRounds),firstSide:initialFirstSide,lastRoundFirstSide:state.firstSide,dieWinner:state.diceWinner,choice:first?'initiative':'charged-knight'};
+  const result={seed:1103+index*137,winner:state.winner??'round-limit',round:Math.min(state.round,maxRounds),firstSide:initialFirstSide,lastRoundFirstSide:state.firstSide,dieWinner:state.diceWinner,choice:first?'initiative':'second-king-charge'};
   results.push(result);console.error(`Simulation ${index+1}/${games}: ${JSON.stringify(result)}`);
 }
 const decided=results.filter(result=>['w','b'].includes(result.winner));

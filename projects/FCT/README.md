@@ -9,35 +9,50 @@ move/capture audio for both sides (including en passant).
 
 ## Fantasy Chess Tactics
 
-The main **JUGAR** button opens `tactics.html` directly in 3D, without a second
-start dialog. This is the 8-vs-8 game against AI.
-Both armies are placed automatically and randomly on their home two rows and
-are visible before initiative. There is no manual deployment or local two-player
-mode. Players prepare orders; each new order gets **10 active seconds**. An
-expired slot becomes a wait. Completing the queue starts combat automatically,
-and the next round starts immediately after resolution. Opening rounds keep
-one movement and one other action; later rounds keep three free actions.
-Selecting a unit shows legal squares and Block/Focus/Ultimate controls next to
-it. Clicking or dragging to a square offers Move/Attack there; choosing an attack
-queues it immediately. Choosing a move displays four facing arrows on the field,
-and choosing a facing queues the move. Ultimate variants and targets use the
-same field controls. The sidebar's unit inspector and queue are informational.
+The main **JUGAR** button opens `tactics.html` directly in 3D. There are 16
+units per side in the standard chess opening position. The dice winner chooses
+first or second; only the second player's king starts charged. Initiative
+alternates after each round. The first two rounds allow one movement and no
+other actions per side. Later rounds allow three secret orders, with **15 active
+seconds per order**, executed interleaved against the AI.
 
-Pawns can always move one or two clear squares forward, or to either forward
-diagonal even if empty. Their Vanguardia ultimate strikes all four of those
-squares, including allies; a solid tile directly ahead blocks the second square.
+Selecting or dragging a unit shows translucent Move/Attack buttons on the field.
+Move confirms the order immediately using the previous facing; four optional
+arrows allow a change. On the last slot they remain for 2.5 seconds, after which
+combat starts automatically even if no facing was chosen. Earlier slots allow
+continuing to another piece directly. There is no roster, board legend, queue
+confirmation or unit-action sidebar. The compact cream/dark-outline HUD takes
+inspiration from Nintendo handheld battle screens without copying game artwork.
 
-HP and facing remain part of the rules, while health bars and foot arrows are
-invisible in both views. Legal move/attack squares have stronger fills and edges.
-Class ultimates, friendly fire, bishop healing, barricades and permanent fractures
-are handled by the deterministic engine. **Partida clásica** remains available.
+All ultimates attack the class's complete area, including allies. Sliding rays
+stop at the first body; knights hit all eight L destinations, kings all adjacent
+squares, and pawns the two front squares plus forward diagonals. Pawns retain
+their extended one/two-square and diagonal movement. Blocking absorbs 2 on the
+next hit (minimum damage 1) and reflects actual received damage throughout the
+current round, with no reflection chains. The game ends when a king falls.
 
-See [the Spanish rules and initial balance study](TACTICS.md). Run
-`node scripts/qa-fct-tactics.cjs` from the repository root with Playwright/Edge
-configured below to test embedded homepage windows/new-tab links, direct 3D
-entry, field commands/facing, automatic battle/round flow, pawn moves, dragging
-in both views and visible indicators at desktop/mobile sizes.
-Test hooks never ship in production.
+**Revisar partida** is available from the result screen and the toolbar. Its
+history stores one compact board snapshot per resolved action, including deaths,
+charge, facing and blocks. Start/previous/next/end and a slider traverse the
+history without changing the live match. Reviewing pauses the order clock.
+
+The homepage embeds FCT in an orange window; all app windows provide a new-tab
+action. **Partida clásica** remains available.
+
+Rendering uses automatic hardware budgets and a manual **Ligero** option.
+Low-power tactical boards disable shadows/idle motion and render on changes,
+with animations capped at 30 fps. Hidden/inactive tactical views stop their
+render loop. Classic boards and previews share resolution/frame budgets.
+Static scenery is merged by material; character geometry remains cached.
+Sprite palettes and poses are separate cacheable assets, so entering a match
+loads only the appearances it uses. AI planning runs in a Web Worker; repeated
+board forecasts are cached and the 64 DOM squares are reused. Low-end physical
+devices still require device testing; browser emulation verifies these budgets.
+
+See [the Spanish rules](TACTICS.md). Run `node scripts/qa-fct-tactics.cjs` from
+the root with Playwright/Edge configured below for desktop/mobile rules, HUD,
+dragging, optional facing, review and render-budget checks. Test hooks stay out
+of production.
 
 ## Character appearances
 
