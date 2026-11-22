@@ -4,8 +4,8 @@
 
 El tablero es 8×8 y cada ejército tiene 16 piezas: 8 peones, 2 torres, 2
 caballos, 2 alfiles, reina y rey. Se colocan en las posiciones iniciales del
-ajedrez: torres en las esquinas, reina en d, rey en e y peones en la segunda
-fila de cada bando. No hay despliegue manual ni aleatorio. Se juega contra IA.
+Ajedrez960: primera fila aleatoria compartida por ambos bandos, con alfiles en
+colores opuestos y rey entre ambas torres. Peones en su fila habitual. Se juega contra IA.
 
 El ganador de la tirada elige jugar primero o segundo. Todas las piezas,
 incluidos ambos reyes, comienzan sin definitiva cargada. La alternancia es continua también entre rondas: A1, B1, A2, B2;
@@ -13,7 +13,7 @@ la siguiente vuelve a comenzar por A. Nunca actúa dos veces seguidas un bando.
 
 ## Rondas y órdenes
 
-Todas las rondas permiten dos acciones por bando, con 15 segundos activos para
+Todas las rondas permiten dos acciones por bando, con 20 segundos activos para
 cada acción. Se preparan en secreto y se ejecutan A1, B1, A2, B2. Al completar
 la secuencia, el combate y la siguiente ronda comienzan automáticamente.
 Si el tiempo se agota, ese hueco se convierte en espera.
@@ -46,18 +46,17 @@ consume el movimiento de ambas durante esa ronda; cuesta una orden.
 Atacar no mueve al atacante. Se elige una dirección y el primer cuerpo de esa
 línea recibe el daño, aliado o enemigo. El caballo golpea los dos destinos en L
 de un cuadrante. Declarar un ataque exige elegir un cuerpo. Una orden de movimiento cuyo destino
-se ocupe antes de ejecutarse, o un ataque cuyo destino quede vacío, falla y
-consume su hueco, sin cambiar de tipo automáticamente.
+se ocupe antes de ejecutarse, falla y consume su hueco. El ataque mantiene su dirección y golpea al primer
+cuerpo presente al ejecutarse, aunque ya no sea el objetivo original.
 
 ## Vida y bloqueo
 
 Todas las piezas tienen 6 de vida. Todos los impactos hacen exactamente 2 de
 daño, independientemente de la dirección. No existe elección de orientación.
 
-Bloquear devuelve 2 al atacante por cada impacto recibido durante el resto de
-esa ronda; el defensor también recibe 2. La devolución no se encadena y se aplica
-incluso si el defensor muere. Al comenzar la siguiente ronda caduca el bloqueo.
-Una devolución puede abatir simultáneamente ambos reyes y producir tablas.
+Bloquear absorbe por completo el próximo impacto y devuelve 2 al atacante sin
+cadenas. Cada pieza puede activarlo una sola vez. El escudo persiste hasta recibir
+un impacto; el del rey caduca al terminar la ronda siguiente.
 
 ## Definitivas
 
@@ -132,12 +131,29 @@ primera ronda, restricción por pieza, objetivos ocupados obligatorios, arrastre
 deselección, colores, consulta del rival, alternancia continua, daño fijo,
 enroques comparados con chess.js, revisión animada y finales de partida.
 
-Reproducir la regresión: `node projects/FCT/scripts/simulate-tactics.mjs --games=4 --rounds=50`.
-Las cuatro simulaciones de esta revisión terminaron sin planes inválidos ni límite
-de rondas (media de 20 rondas; unos 161 ms por plan en el entorno de desarrollo).
-Usaron bloqueo, focus y definitivas además de movimiento/ataque. Ganó el bando
-negro en los dos patrones de iniciativa repetidos, dos veces comenzando y dos
-jugando segundo. Esta muestra no establece balance contra humanos. Las semillas
-de dado no representan posiciones o estrategias independientes. La emulación
-móvil comprueba los presupuestos gráficos; quedan pendientes mediciones en
-equipos físicos modestos.
+Reproducir la regresión: `node projects/FCT/scripts/simulate-tactics.mjs --games=2 --rounds=60`.
+Las dos simulaciones con formación 960 y escudos de un uso terminaron sin planes
+inválidos ni límite de rondas (11 y 20 rondas). Usaron movimiento, ataque, bloqueo,
+focus y definitiva. Es una comprobación funcional pequeña, no una validación del
+balance humano. Las pruebas del navegador cubren escritorio y móvil emulado;
+quedan pendientes mediciones en equipos físicos modestos.
+
+## Revisión actual de reglas
+
+La primera fila se sortea como Ajedrez960, idéntica para ambos bandos: alfiles
+en colores opuestos y rey entre torres. Los peones conservan su fila. El enroque
+adapta los trayectos a esta formación y termina con rey en c/g y torre en d/f.
+Se puede declarar seleccionando el rey y su torre.
+
+Cada acción dispone de 20 segundos. Atacantes es el bando que actúa primero;
+Defensores actúa segundo. El HUD recuerda el rol de Tú/IA durante la partida.
+Los ataques conservan su dirección y alcanzan al primer cuerpo que haya en ella
+al ejecutarse, incluso aliado y aunque el objetivo original se haya desplazado.
+El caballo mantiene su ataque al cuadrante de dos destinos en L.
+
+El escudo absorbe por completo un impacto y devuelve 2 al atacante, sin cadenas.
+Cada pieza puede activarlo una única vez por partida. Persiste hasta recibir
+un impacto; en el rey caduca al finalizar la ronda siguiente a su activación.
+Esta revisión sustituye las reglas anteriores de bloqueo, objetivos y formación.
+
+Formación y enroque 960 basados en las [reglas de FIDE](https://handbook.fide.com/chapter/e012023).

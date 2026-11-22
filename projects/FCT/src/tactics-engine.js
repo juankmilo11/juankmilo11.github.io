@@ -33,15 +33,21 @@ function nextRandom(state) {
   let x=state.rng>>>0;x^=x<<13;x^=x>>>17;x^=x<<5;state.rng=x>>>0;
   return state.rng/4294967296;
 }
-export function roundRules(){return {seconds:15,actions:2,maxMoves:2,maxOther:2};}
+export function roundRules(){return {seconds:20,actions:2,maxMoves:2,maxOther:2};}
 export function createMatch({seed=Date.now(),opponent='ai'}={}) {
   let normalized=typeof seed==='number'?seed: [...String(seed)].reduce((n,c)=>Math.imul(n,31)+c.charCodeAt(0),7);
   const units=[];
   for(const color of ['w','b']) {
     const counts={};
-    TYPES.forEach((type,index)=>{const count=counts[type]=(counts[type]??0)+1;units.push({id:`${color}-${type}${type==='p'||count>1?count:''}`,color,type,homeSquare:sq(index%8,(color==='w'?(index<8?2:1):(index<8?7:8))-1),square:null,hp:6,maxHp:6,charged:false,guard:0,guardUntil:0,counterUntil:0,hasMoved:false});});
+    TYPES.forEach((type,index)=>{const count=counts[type]=(counts[type]??0)+1;units.push({id:`${color}-${type}${type==='p'||count>1?count:''}`,color,type,homeSquare:sq(index%8,(color==='w'?(index<8?2:1):(index<8?7:8))-1),square:null,hp:6,maxHp:6,charged:false,blockUsed:false,guard:0,guardUntil:0,counterUntil:0,hasMoved:false});});
   }
-  return {version:4,opponent:'ai',rng:(normalized>>>0)||0x9e3779b9,units,tiles:{},phase:'deployment',round:0,firstSide:'w',lastSide:null,actionNumber:0,activePlanner:'w',ready:{w:false,b:false},deployed:{w:false,b:false},plans:{w:[],b:[]},winner:null,log:[],dice:null,diceWinner:null,fractures:0,resolution:[],resolutionIndex:0,revision:0};
+  const layout=Array(8).fill(null);let rngState={rng:(normalized>>>0)||0x9e3779b9};
+  for(let warmup=0;warmup<8;warmup++)nextRandom(rngState);
+  const choose=items=>items[Math.floor(nextRandom(rngState)*items.length)],empty=()=>layout.map((v,i)=>v===null?i:null).filter(i=>i!==null);
+  layout[choose([0,2,4,6])]='b';layout[choose([1,3,5,7])]='b';layout[choose(empty())]='q';
+  layout[choose(empty())]='n';layout[choose(empty())]='n';empty().forEach((file,i)=>layout[file]=['r','k','r'][i]);
+  for(const color of ['w','b']){const counts={};layout.forEach((type,file)=>{const list=units.filter(u=>u.color===color&&u.type===type);const u=list[counts[type]??0];counts[type]=(counts[type]??0)+1;u.homeSquare=sq(file,color==='w'?0:7);});}
+  return {version:5,opponent:'ai',rng:rngState.rng,units,tiles:{},phase:'deployment',round:0,firstSide:'w',lastSide:null,actionNumber:0,activePlanner:'w',ready:{w:false,b:false},deployed:{w:false,b:false},plans:{w:[],b:[]},winner:null,log:[],dice:null,diceWinner:null,fractures:0,resolution:[],resolutionIndex:0,revision:0};
 }
 export function placeUnit(state,side,id,square) {
   if(state.phase!=='deployment'||state.deployed[side])return bad('El despliegue ya está cerrado.');
@@ -60,7 +66,7 @@ export function autoDeploy(state,side) {
 }
 export function confirmDeployment(state,side) {
   if(state.phase!=='deployment'||state.deployed[side])return bad('El despliegue ya está cerrado.');
-  if(!['w','b'].includes(side)||state.units.filter(unit=>unit.color===side&&alive(unit)&&unit.square===unit.homeSquare).length!==16)return bad('Las dieciséis piezas deben estar en su posición inicial de ajedrez.');
+  if(!['w','b'].includes(side)||state.units.filter(unit=>unit.color===side&&alive(unit)&&unit.square===unit.homeSquare).length!==16)return bad('Las dieciséis piezas deben estar en su formación inicial 960.');
   state.deployed[side]=true;state.ready[side]=true;state.activePlanner=other(side);
   if(state.deployed.w&&state.deployed.b){state.phase='initiative';state.activePlanner=null;state.ready={w:false,b:false};}
   state.revision++;return good();
@@ -84,7 +90,7 @@ export function startRound(state) {
   state.phase='planning';state.ready={w:false,b:false};state.plans={w:[],b:[]};state.activePlanner=state.firstSide;
   state.resolution=[];state.resolutionIndex=0;
   for(const[square,tile]of Object.entries(state.tiles))if(tile.expires&&tile.expires<=state.round)delete state.tiles[square];
-  for(const unit of state.units){if(unit.guardUntil<state.round)unit.guard=0;if(unit.counterUntil<state.round)unit.counterUntil=0;}
+  for(const unit of state.units){if(unit.type==='k'&&unit.guardUntil<state.round){unit.guard=0;unit.counterUntil=0;}}
   state.revision++;return good({rules:roundRules(state)});
 }
 
@@ -102,20 +108,20 @@ export function isSquareAttacked(state,square,bySide){
 }
 export function getCastleOptions(state,input){
   const king=findUnit(state,input);if(!alive(king)||king.type!=='k'||king.hasMoved)return [];
-  const rank=king.color==='w'?'1':'8',home='e'+rank;
-  if(king.square!==home)return [];let kingSafe=null;
-  const result=[];
-  for(const [target,rookFrom,rookTo,path,crossed]of [['g','h','f',['f','g'],['f','g']],['c','a','d',['b','c','d'],['d','c']]]){
-    const rook=unitAt(state,rookFrom+rank);if(!rook||rook.type!=='r'||rook.color!==king.color||rook.hasMoved)continue;
-    if(path.some(file=>unitAt(state,file+rank)||solid(state,file+rank)))continue;
+  const rank=king.color==='w'?'1':'8',home=king.homeSquare;
+  if(king.square!==home||home[1]!==rank)return [];let kingSafe=null;
+  const span=(a,b)=>{const lo=Math.min(a.charCodeAt(0),b.charCodeAt(0)),hi=Math.max(a.charCodeAt(0),b.charCodeAt(0));return Array.from({length:hi-lo+1},(_,i)=>String.fromCharCode(lo+i)+rank);},result=[];
+  for(const rook of livingUnits(state,king.color).filter(u=>u.type==='r'&&!u.hasMoved&&u.square===u.homeSquare&&u.square[1]===rank)){
+    const right=rook.square>home,target=(right?'g':'c')+rank,rookTo=(right?'f':'d')+rank;
+    const path=[...new Set([...span(home,target),...span(rook.square,rookTo)])];
+    if(path.some(square=>solid(state,square)||state.units.some(u=>alive(u)&&u.square===square&&u.id!==king.id&&u.id!==rook.id)))continue;
     kingSafe??=!isSquareAttacked(state,home,other(king.color));if(!kingSafe)return [];
-    const safe=crossed.every(file=>{
-      const probe={...state,units:state.units.map(u=>u.id===king.id?{...u,square:file+rank}:u.id===rook.id&&file===target?{...u,square:rookTo+rank}:u)};
-      return !isSquareAttacked(probe,file+rank,other(king.color));
-    });
-    if(safe)result.push({target:target+rank,rookId:rook.id,rookFrom:rook.square,rookTo:rookTo+rank});
+    const safe=span(home,target).filter(square=>square!==home&&square!==target).every(square=>!isSquareAttacked({...state,units:state.units.map(u=>u.id===king.id?{...u,square}:u.id===rook.id?{...u,square:null}:u)},square,other(king.color)));
+    const final={...state,units:state.units.map(u=>u.id===king.id?{...u,square:target}:u.id===rook.id?{...u,square:rookTo}:u)};
+    if(safe&&!isSquareAttacked(final,target,other(king.color)))result.push({target,inputTarget:rook.square,rookId:rook.id,rookFrom:rook.square,rookTo});
   }return result;
 }
+
 export function getLegalMoves(state,input) {
   const unit=findUnit(state,input);if(!alive(unit))return [];
   const[x,y]=xy(unit.square);
@@ -156,7 +162,7 @@ export function attackOrderFor(state,input,target){
   const unit=findUnit(state,input);if(!unit||!getAttackSquares(state,unit).includes(target))return null;
   return {unitId:unit.id,kind:'attack',target,direction:directionBetween(unit.square,target)};
 }
-export function validateOrder(state,side,raw) {
+export function validateOrder(state,side,raw,{executing=false}={}) {
   if(!raw||!['move','attack','block','focus','ultimate','pass'].includes(raw.kind))return bad('Acción desconocida.');
   const order={...raw};
   if(order.kind==='pass')return good({order:{kind:'pass'}});
@@ -164,14 +170,16 @@ export function validateOrder(state,side,raw) {
   const unit=findUnit(state,order.unitId);
   if(!alive(unit)||unit.color!==side)return bad('La pieza ya no está disponible.');
   delete order.facing;delete order.castle;
-  if(order.kind==='move'&&(!getLegalMoves(state,unit).includes(order.target)||unitAt(state,order.target)))return bad('Movimiento fuera del alcance o bloqueado.');
-  if(order.kind==='move'&&unit.type==='k'){const castle=getCastleOptions(state,unit).find(c=>c.target===order.target);if(castle)order.castle=castle;}
-  if(order.kind==='attack'){
-    const aimed=attackOrderFor(state,unit,order.target);
-    if(!aimed)return bad('Selecciona una pieza aliada o enemiga al alcance para atacar.');
-    if(order.direction&&order.direction!==aimed.direction)return bad('La dirección no coincide con la pieza elegida.');
-    order.direction=aimed.direction;
+  if(order.kind==='move'){
+    const options=unit.type==='k'?getCastleOptions(state,unit):[];const castle=raw.castle?options.find(c=>c.rookId===raw.castle.rookId):options.find(c=>c.inputTarget===order.target)??options.find(c=>c.target===order.target);
+    if(castle){order.castle=castle;order.target=castle.target;}
+    else if(!getLegalMoves(state,unit).includes(order.target)||unitAt(state,order.target))return bad('Movimiento fuera del alcance o bloqueado.');
   }
+  if(order.kind==='attack'){
+    if(executing){if(![...attackDirections(unit),...(unit.type==='p'?[unit.color==='w'?'N':'S']:[])].includes(order.direction))return bad('Dirección de ataque inválida.');}
+    else{const aimed=attackOrderFor(state,unit,order.target);if(!aimed)return bad('Selecciona una pieza aliada o enemiga al alcance para atacar.');if(order.direction&&order.direction!==aimed.direction)return bad('La dirección no coincide con la pieza elegida.');order.direction=aimed.direction;}
+  }
+  if(order.kind==='block'&&(unit.blockUsed||unit.guard))return bad('Esta pieza ya utilizó su único escudo.');
   if(order.kind==='focus'&&unit.charged)return bad('Esta definitiva ya está cargada.');
   if(order.kind==='ultimate'){
     if(!unit.charged)return bad('Primero debes cargar la definitiva con Focus.');
@@ -195,30 +203,31 @@ function checkWinner(state,event) {
 export function incomingDamage(){return 2;}
 function strike(state,attacker,defender,event){
   if(!alive(defender))return;
-  const damage=2;defender.hp=Math.max(0,defender.hp-damage);
-  event.targets.push({id:defender.id,square:defender.square,damage,hp:defender.hp,dead:defender.hp===0});
-  if(defender.counterUntil>0&&defender.counterUntil===state.round&&attacker&&attacker.id!==defender.id&&attacker.hp>0){
-    attacker.hp=Math.max(0,attacker.hp-2);event.targets.push({id:attacker.id,square:attacker.square,damage:2,hp:attacker.hp,dead:attacker.hp===0,reflected:true});
+  if(defender.guard){
+    defender.guard=0;defender.counterUntil=0;
+    event.targets.push({id:defender.id,square:defender.square,damage:0,blocked:true,hp:defender.hp,dead:false});
+    if(attacker&&attacker.id!==defender.id&&attacker.hp>0){attacker.hp=Math.max(0,attacker.hp-2);event.targets.push({id:attacker.id,square:attacker.square,damage:2,hp:attacker.hp,dead:attacker.hp===0,reflected:true});}return;
   }
+  defender.hp=Math.max(0,defender.hp-2);event.targets.push({id:defender.id,square:defender.square,damage:2,hp:defender.hp,dead:defender.hp===0});
 }
-function applyOrder(state,side,raw) {
-  const check=validateOrder(state,side,raw);
+function applyOrder(state,side,raw,executing=false) {
+  const check=validateOrder(state,side,raw,{executing});
   const event={kind:raw?.kind??'pass',side,unitId:raw?.unitId??null,from:null,to:null,targets:[],round:state.round,message:'',revision:++state.revision};
   if(!check.ok){event.kind='fizzle';event.message=check.error;return event;}
   const order=check.order;if(order.kind==='pass'){event.message='Sin orden: espera.';return event;}
   const unit=findUnit(state,order.unitId);event.from=unit.square;event.to=unit.square;event.mode=order.mode;
   const name=UNIT_NAMES[unit.type];
   if(order.kind==='focus'){unit.charged=true;event.message=`${name}: definitiva cargada.`;}
-  if(order.kind==='block'){unit.guard=1;unit.guardUntil=state.round;unit.counterUntil=state.round;event.message=`${name}: bloqueo y devolución de daño durante esta ronda.`;}
+  if(order.kind==='block'){unit.blockUsed=true;unit.guard=1;unit.guardUntil=unit.type==='k'?state.round+1:null;event.message=`${name}: escudo listo; absorbe y devuelve el próximo golpe.`;}
   if(order.kind==='move'){
     unit.square=order.target;unit.hasMoved=true;event.to=unit.square;event.message=`${name}: ${event.from} → ${event.to}.`;
     if(order.castle){const rook=findUnit(state,order.castle.rookId);rook.square=order.castle.rookTo;rook.hasMoved=true;event.castle={...order.castle};event.message=`Rey: enroque ${event.from} → ${event.to}; torre ${order.castle.rookFrom} → ${order.castle.rookTo}.`;}
     const trap=state.tiles[unit.square];
-    if(trap?.kind==='trap'){delete state.tiles[unit.square];unit.hp=Math.max(0,unit.hp-2);event.targets.push({id:unit.id,square:unit.square,damage:2,hp:unit.hp,dead:unit.hp===0,trap:true});checkWinner(state,event);}
+    if(trap?.kind==='trap'){delete state.tiles[unit.square];strike(state,null,unit,event);checkWinner(state,event);}
   }
   if(order.kind==='attack'){
     event.direction=order.direction;event.target=order.target;
-    const victims=unit.type==='n'?getAttackTargets(state,unit,order.direction).map(square=>unitAt(state,square)).filter(Boolean):[unitAt(state,order.target)];
+    const area=unit.type==='p'&&order.direction===(unit.color==='w'?'N':'S')?getPawnArea(state,unit).filter(s=>s[0]===unit.square[0]):getAttackTargets(state,unit,order.direction);const bodies=area.map(square=>unitAt(state,square)).filter(Boolean);const victims=unit.type==='n'?bodies:bodies.slice(0,1);
     for(const target of victims){if(unit.hp<=0||state.winner)break;strike(state,unit,target,event);checkWinner(state,event);}
     event.message=`${name}: ataque ${order.direction}.`;
   }
@@ -271,7 +280,7 @@ export function resolveNext(state) {
   if(state.phase!=='resolution')return bad('No hay una secuencia pendiente.');
   const next=state.resolution[state.resolutionIndex++];
   if(!next)return bad('La secuencia ya terminó.');
-  const event=applyOrder(state,next.side,next.order);state.lastSide=next.side;event.sequenceIndex=state.resolutionIndex-1;event.sequenceTotal=state.resolution.length;event.actionNumber=++state.actionNumber;state.log.push(clone(event));
+  const event=applyOrder(state,next.side,next.order,true);state.lastSide=next.side;event.sequenceIndex=state.resolutionIndex-1;event.sequenceTotal=state.resolution.length;event.actionNumber=++state.actionNumber;state.log.push(clone(event));
   // Keep recent choreography bounded while preserving every complete event in callers if wanted.
   if(state.log.length>240)state.log.shift();
   const roundEnded=state.resolutionIndex>=state.resolution.length;

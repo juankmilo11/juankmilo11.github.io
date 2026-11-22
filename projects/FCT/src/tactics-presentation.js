@@ -25,5 +25,5 @@ export function describePlannedOrder(order,state){
     return `${name} ${source}: atacar ${directionArrow[order.direction]??''} · ${targets.length?targets.map(victimText).join(', '):order.target} · 2 por impacto`;
   }
   if(order.kind==='ultimate'){const targets=unit?getUltimateTargets(state,unit).map(s=>unitAt(state,s)).filter(Boolean):[];return `${name} ${source}: ${ABILITIES[unit?.type]?.name??'Definitiva'} · área completa · ${targets.length?targets.map(victimText).join(', '):'sin objetivos previstos'} · 2 por impacto`;}
-  return `${name} ${source}: ${order.kind==='focus'?'cargar definitiva':'bloquear y devolver 2 por impacto esta ronda'}`;
+  return `${name} ${source}: ${order.kind==='focus'?'cargar definitiva':'activar escudo de un solo uso'}`;
 }

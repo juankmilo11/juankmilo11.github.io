@@ -1,5 +1,5 @@
 import './tactics.css';
-import { createMatch, autoDeploy, confirmDeployment, rollInitiative, chooseInitiative, roundRules, submitPlan, resolveNext, getLegalMoves, getAttackSquares, attackOrderFor, unitAt, validatePlan, previewPlan, publicView, UNIT_NAMES, ABILITIES } from './tactics-engine.js';
+import { createMatch, autoDeploy, confirmDeployment, rollInitiative, chooseInitiative, roundRules, submitPlan, resolveNext, getLegalMoves, getAttackSquares, attackOrderFor, unitAt, validatePlan, previewPlan, publicView, UNIT_NAMES, ABILITIES, getCastleOptions } from './tactics-engine.js';
 import { planAI } from './tactics-ai.js';
 import { tacticalValues } from './tactics-values.js';
 import { describeBattleEvent, describePlannedOrder } from './tactics-presentation.js';
@@ -21,14 +21,14 @@ const other=side=>side==='w'?'b':'w';
 const isAlive=unit=>unit.hp>0&&unit.square;
 const squares=Array.from({length:64},(_,i)=>String.fromCharCode(97+i%8)+(8-Math.floor(i/8)));
 let match=null, viewer='w', selectedId=null, selectedSquare=null, inspectedId=null, draft=[], intent=null, pendingTarget=null, abilityMode=null;
-let phaseToken=0, privacy=false, planning=false, resolving=false, roundPrepared=0, secondsLeft=0, totalSeconds=15, lastTick=0;
+let phaseToken=0, privacy=false, planning=false, resolving=false, roundPrepared=0, secondsLeft=0, totalSeconds=20, lastTick=0;
 let view='3d', three=null, threePromise=null, lastEvent=null, toastTimer, furthestOrder=0;
 let history=[],reviewIndex=null,aiWorker=null,aiJob=0,aiPending=null;
 let presenting=false,reviewPlaying=false,playbackState=null,playbackEvent=null,playbackExchange=null,currentExchange=null,currentEvent=null,hudExpanded=innerWidth>740;
 let forecastMemo=null,checkMemo=new Map(),checkMatch=null,checkRevision=-1;
 const sound=(name='menu2')=>audio.playSound(name);
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-function sideName(side){return side==='w'?'Tu ejército':'El estratega';}
+function sideName(side){const who=side==='w'?'Tú':'IA';return match?.round?`${side===match.firstSide?'Atacantes':'Defensores'} · ${who}`:who;}
 function look(unit){return appearanceFor(unit.type,unit.color);}
 function toast(message){clearTimeout(toastTimer);$('#board-toast').textContent=message;$('#board-toast').hidden=false;toastTimer=setTimeout(()=>$('#board-toast').hidden=true,3200);}
 function unitFrom(state,id=selectedId){return state?.units.find(unit=>unit.id===id);}
@@ -51,7 +51,7 @@ function targetSquares(state,unit){
   if(!unit?.square||unit.color!==viewer||!planning||resolving||reviewIndex!==null)return [];
   const moves=getLegalMoves(state,unit).filter(target=>!unitAt(state,target)&&checkPlan([...draft,{unitId:unit.id,kind:'move',target}]).ok);
   const attacks=getAttackSquares(state,unit).filter(target=>checkPlan([...draft,attackOrderFor(state,unit,target)]).ok);
-  return [...new Set([...moves,...attacks])];
+  const castles=unit.type==='k'?getCastleOptions(state,unit).map(c=>c.inputTarget).filter(target=>checkPlan([...draft,{unitId:unit.id,kind:'move',target}]).ok):[];return [...new Set([...moves,...attacks,...castles])];
 }
 function renderBoard(){
   const state=visibleState();if(!state)return;
@@ -73,25 +73,25 @@ function renderBoard(){
 }
 
 function renderPhase(){
-  if(!match)return;const panel=$('#phase-panel'),reviewing=reviewIndex!==null,show=match.phase==='planning'&&planning&&!reviewing;
+  if(!match)return;$('#player-role').textContent=match.round?(match.firstSide==='w'?'Tú: Atacantes · juegas primero':'Tú: Defensores · la IA juega primero'):'';const panel=$('#phase-panel'),reviewing=reviewIndex!==null,show=match.phase==='planning'&&planning&&!reviewing;
   document.body.classList.toggle('is-planning',show);document.body.classList.toggle('is-reviewing',reviewing);document.body.classList.toggle('is-resolving',resolving);document.body.classList.toggle('is-presenting',presenting);document.body.classList.toggle('hud-expanded',hudExpanded);
   $('#planning-panel').hidden=false;$('#queue-panel').hidden=!show;$('#review-controls').hidden=!reviewing;$('#review-open').disabled=resolving||presenting||reviewPlaying||history.length<2;
   $('#hud-toggle').setAttribute('aria-expanded',String(hudExpanded));
   $('#round-counter').textContent=`Ronda ${reviewing?((playbackEvent??history[reviewIndex].event)?.round??history[reviewIndex].state.round):currentEvent&&resolving?currentEvent.round:match.round||'—'}`;$('#action-clock').textContent='';
   const event=playbackEvent??(reviewing?history[reviewIndex].event:resolving?currentEvent:null);
-  $('#status-team').innerHTML=event?teamBadge(event.side,true):'';
+  $('#status-team').innerHTML=event?teamBadge(event.side,true):match.round?teamBadge('w',true):'';
   $('#action-detail').textContent=event?outcomeText(event,reviewing?history[reviewIndex].state:match):'';$('#action-detail').hidden=!$('#action-detail').textContent;
   if(reviewing){$('#phase-kicker').textContent='REVISIÓN';$('#battle-status').textContent=reviewPlaying?`${playbackEvent?.reversed?'Retrocediendo':'Reproduciendo'} · ${describeBattleEvent(playbackEvent,forecast())}`:'Partida pausada';panel.innerHTML='';renderReview();renderExchange();return;}
   if(resolving){$('#phase-kicker').textContent='INTERCAMBIO';$('#battle-status').textContent=event?`Acción ${event.sequenceIndex+1}/${event.sequenceTotal} · ${describeBattleEvent(event,match)}`:'Órdenes reveladas';panel.innerHTML='';renderExchange();return;}
   if(match.phase==='initiative'){
     $('#phase-kicker').textContent=presenting?'PRESENTACIÓN':'INICIATIVA';$('#battle-status').textContent=presenting?'Presentando el campo de batalla…':'Dos ejércitos. Una corona.';
-    const dice=match.dice,canChoose=dice?.winner==='w';panel.innerHTML=`<h2>${dice?`${escape(sideName(dice.winner))} gana`:'Lanza los dados'}</h2>${dice?`<div class="dice-pair"><div><span class="dice-face">${dice.w}</span>Tu ejército</div><div><span class="dice-face">${dice.b}</span>El estratega</div></div><p>Dos acciones por bando. Todas las piezas empiezan sin carga.</p>${canChoose?'<div class="choice-pair"><button type="button" data-command="choose-first">Jugar primero</button><button type="button" data-command="choose-second">Jugar segundo</button></div>':'<p>El estratega elige…</p>'}`:`<p>16 piezas por bando. Posición inicial de ajedrez.</p><button type="button" class="primary-button" data-command="roll" ${presenting?'disabled':''}>Lanzar dados</button>`}`;
+    const dice=match.dice,canChoose=dice?.winner==='w';panel.innerHTML=`<h2>${dice?`${escape(sideName(dice.winner))} gana`:'Lanza los dados'}</h2>${dice?`<div class="dice-pair"><div><span class="dice-face">${dice.w}</span>Tu ejército</div><div><span class="dice-face">${dice.b}</span>El estratega</div></div><p>Dos acciones por bando. Todas las piezas empiezan sin carga.</p>${canChoose?'<div class="choice-pair"><button type="button" data-command="choose-first">Jugar primero</button><button type="button" data-command="choose-second">Jugar segundo</button></div>':'<p>El estratega elige…</p>'}`:`<p>16 piezas por bando. Formación inicial Ajedrez960.</p><button type="button" class="primary-button" data-command="roll" ${presenting?'disabled':''}>Lanzar dados</button>`}`;
   }else if(show){$('#phase-kicker').textContent='PREPARA TU SECUENCIA';$('#battle-status').textContent=`Elige tu siguiente orden · ${draft.length}/2`;panel.innerHTML='<div class="timer" id="planning-timer"><p>Tiempo de esta acción</p><strong id="timer-seconds"></strong></div><div class="timer-track"><i id="timer-progress"></i></div><p>Dos acciones por bando. Una pieza no repite el mismo tipo.</p>';updateTimer();}
   else if(match.phase==='finished'){$('#phase-kicker').textContent='RESULTADO';$('#battle-status').textContent=winnerText();panel.innerHTML=`<h2>${escape(winnerText())}</h2><button type="button" data-command="review">Revisar partida</button><button type="button" data-command="restart">Otra partida</button>`;}
   renderExchange();
 }
 function outcomeText(event,state){
-  return (event.targets??[]).map(t=>{const unit=state.units.find(u=>u.id===t.id);return `${UNIT_NAMES[unit?.type]??'Pieza'} ${t.square}: ${t.heal?`+${t.heal}`:`−${t.damage??0}`} · ${t.hp}/6${t.reflected?' (devuelto)':''}${t.dead?' · abatida':''}`;}).join(' · ');
+  return (event.targets??[]).map(t=>{const unit=state.units.find(u=>u.id===t.id);return `${UNIT_NAMES[unit?.type]??'Pieza'} ${t.square}: ${t.blocked?'BLOQUEADO':t.heal?`+${t.heal}`:`−${t.damage??0}`} · ${t.hp}/6${t.reflected?' (devuelto)':''}${t.dead?' · abatida':''}`;}).join(' · ');
 }
 function revealRound(){
   const base=publicView(match,viewer);currentExchange={round:match.round,entries:match.resolution.map((step,index)=>{const before=previewPlan(base,step.side,match.plans[step.side].slice(0,Math.floor(index/2)));return {index,side:step.side,order:structuredClone(step.order),text:describePlannedOrder(step.order,before)};})};
@@ -106,11 +106,11 @@ function renderExchange(){
 }
 function renderControls(){renderInspector();renderFieldActions();if(match)renderQueue();}
 function teamInfo(side){const palette=armyPalettes.find(p=>p.id===appearanceFor('p',side).palette);return {...palette,name:`${sideName(side)} · ${palette.label}`};}
-function teamBadge(side,compact=false){const team=teamInfo(side);return `<span class="team-badge" title="${escape(team.name)}" style="--team-color:${team.swatch}"><i aria-hidden="true"></i>${escape(compact?`${side==='w'?'Tú':'Rival'} · ${team.label}`:team.name)}</span>`;}
+function teamBadge(side,compact=false){const team=teamInfo(side);return `<span class="team-badge" title="${escape(team.name)}" style="--team-color:${team.swatch}"><i aria-hidden="true"></i>${escape(compact?`${sideName(side)} · ${team.label}`:team.name)}</span>`;}
 function renderInspector(){
   const unit=match&&unitFrom(forecast(),inspectedId);$('#unit-name').textContent=unit?UNIT_NAMES[unit.type]:'Consulta';$('#unit-health').textContent=unit?`${unit.hp} / 6 ♥`:'';
   $('#unit-team').innerHTML=unit?teamBadge(unit.color,true):'';
-  $('#unit-details').innerHTML=unit?`<span>Casilla ${unit.square}</span><span>${unit.hp<=0?'Fuera de combate':unit.charged?'Definitiva lista':'Sin carga'}</span><span>${unit.type==='k'?'Proteger al rey':`Valor táctico ${tacticalValues[unit.type]}`}</span>`:'<span>Toca una ficha.</span><span>Consulta ambos</span><span>bandos.</span>';
+  $('#unit-details').innerHTML=unit?`<span>Casilla ${unit.square}</span><span>${unit.hp<=0?'Fuera de combate':unit.guard?'Escudo activo':unit.blockUsed?'Escudo agotado':unit.charged?'Definitiva lista':'Sin carga'}</span><span>${unit.type==='k'?'Proteger al rey':`Valor táctico ${tacticalValues[unit.type]}`}</span>`:'<span>Toca una ficha.</span><span>Consulta ambos</span><span>bandos.</span>';
 }
 function inspectableAt(state,square){return state.units.find(u=>u.square===square&&(isAlive(u)||u.type==='k'&&state.phase==='finished'));}
 function inspectSquare(square){
@@ -133,7 +133,7 @@ function selectCell(square){
 function commitOrder(order){const result=checkPlan([...draft,order]);if(!result.ok){toast(result.error);return;}draft.push(order);clearIntent();selectedId=null;selectCell(null);sound('menu4');advanceOrder();}
 function confirmMove(order){commitOrder(order);}
 
-function orderLabel(order,index){const before=previewPlan(match,viewer,draft.slice(0,index));return describePlannedOrder(order,before);}
+function orderLabel(order,index){const before=previewPlan(match,viewer,draft.slice(0,index));return describePlannedOrder(validatePlan(match,viewer,draft.slice(0,index+1)).orders?.at(-1)??order,before);}
 function renderQueue(){
   const max=roundRules(match).actions;$('#queue-count').textContent=`${draft.length} / ${max}`;
   $('#order-queue').innerHTML=draft.length?draft.map((order,index)=>`<li><span class="queue-number">${index+1}</span><span>${escape(orderLabel(order,index))}</span></li>`).join(''):'<li class="queue-empty">Elige las órdenes directamente sobre el tablero.</li>';
@@ -145,7 +145,7 @@ function handleSquare(square){
   if(!match)return;inspectSquare(square);
   if(!planning||resolving||presenting||reviewIndex!==null){selectCell(square);if(!inspectableAt(forecast(),square)){inspectedId=null;renderInspector();}return;}
   const state=forecast(),unit=unitFrom(state),clicked=unitAt(state,square);
-  if(unit&&square!==unit.square&&targetSquares(state,unit).includes(square)){if(clicked)commitOrder(attackOrderFor(state,unit,square));else confirmMove({unitId:unit.id,kind:'move',target:square});return;}
+  if(unit&&square!==unit.square&&targetSquares(state,unit).includes(square)){if(unit.type==='k'&&getCastleOptions(state,unit).some(c=>c.inputTarget===square))commitOrder({unitId:unit.id,kind:'move',target:square});else if(clicked)commitOrder(attackOrderFor(state,unit,square));else confirmMove({unitId:unit.id,kind:'move',target:square});return;}
   if(clicked?.color===viewer)selectUnit(clicked.id);else{selectedId=null;clearIntent();selectedSquare=square;if(!clicked)inspectedId=null;render();}
 }
 function beginBoardDrag(square){if(!planning||resolving||presenting||reviewIndex!==null)return;const unit=unitAt(forecast(),square);if(!unit||unit.color!==viewer)return;selectedId=unit.id;selectedSquare=unit.square;inspectedId=unit.id;clearIntent();render();}
@@ -223,7 +223,7 @@ async function animate2D(event,after){
     if(event.kind==='move'&&motion.to&&motion.to!==motion.from){const a=board.querySelector(`[data-square="${motion.from}"]`).getBoundingClientRect(),b=board.querySelector(`[data-square="${motion.to}"]`).getBoundingClientRect();token.style.zIndex='7';token.animate([{transform:'translate(0,0)'},{transform:`translate(${b.x-a.x}px,${b.y-a.y}px)`}],{duration,easing:'cubic-bezier(.2,.75,.25,1)',fill:'forwards'});}
     else{token.classList.add(['focus','ultimate'].includes(event.kind)?'is-focusing':'is-striking');token.style.setProperty('--action-duration',duration+'ms');const target=event.targets?.find(t=>!t.reflected)?.square;if(target&&event.from){const dx=target.charCodeAt(0)-event.from.charCodeAt(0),dy=Number(event.from[1])-Number(target[1]),length=Math.hypot(dx,dy)||1;token.style.setProperty('--strike-x',`${dx/length*10}px`);token.style.setProperty('--strike-y',`${dy/length*10}px`);}}
   }
-  for(const target of event.targets??[]){if(event.reversed&&target.heal){const cell=board.querySelector(`[data-square="${target.square}"]`),unit=after.units.find(u=>u.id===target.id);if(cell&&unit&&!cell.querySelector('.tactical-token')){const token=document.createElement('span');token.className='tactical-token';const img=document.createElement('img');img.src=thumbnailUrl(look(unit));img.alt='';token.append(img);cell.append(token);token.animate([{opacity:0,transform:'rotate(70deg)'},{opacity:1,transform:'rotate(0)'}],{duration,fill:'forwards'});}}const cell=board.querySelector(`[data-square="${target.square}"]`);if(!cell)continue;cell.classList.add(target.heal?'is-restored':'is-hit');cell.style.setProperty('--action-duration',duration+'ms');const number=document.createElement('span');number.className='combat-number'+(target.heal?' healing':'');number.style.animationDuration=duration+'ms';number.textContent=target.heal?`+${target.heal}`:`−${target.damage??0}`;cell.append(number);if(target.dead)cell.querySelector('.tactical-token')?.classList.add('is-falling');}
+  for(const target of event.targets??[]){if(event.reversed&&target.heal){const cell=board.querySelector(`[data-square="${target.square}"]`),unit=after.units.find(u=>u.id===target.id);if(cell&&unit&&!cell.querySelector('.tactical-token')){const token=document.createElement('span');token.className='tactical-token';const img=document.createElement('img');img.src=thumbnailUrl(look(unit));img.alt='';token.append(img);cell.append(token);token.animate([{opacity:0,transform:'rotate(70deg)'},{opacity:1,transform:'rotate(0)'}],{duration,fill:'forwards'});}}const cell=board.querySelector(`[data-square="${target.square}"]`);if(!cell)continue;cell.classList.add(target.heal?'is-restored':'is-hit');cell.style.setProperty('--action-duration',duration+'ms');const number=document.createElement('span');number.className='combat-number'+(target.heal?' healing':'');number.style.animationDuration=duration+'ms';number.textContent=target.blocked?'ESCUDO':target.heal?`+${target.heal}`:`−${target.damage??0}`;cell.append(number);if(target.dead)cell.querySelector('.tactical-token')?.classList.add('is-falling');}
   if(event.kind==='block'&&event.from)board.querySelector(`[data-square="${event.from}"]`)?.classList.add('is-blocked');await delay(duration);
 }
 async function playEvent(event,after){

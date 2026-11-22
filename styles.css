@@ -461,3 +461,10 @@ button { cursor: pointer; font: inherit; }
 .ventana-fct .barra-ventana{color:#f0fff2;background-image:linear-gradient(#a8e8b5 0%,#59ad74 12%,#277848 26%,#176b3a 76%,#104c29 100%);border-top-color:#cdf9d2;box-shadow:inset 0 1px #b9f2c4,inset 0 -1px #0b3f22}
 .ventana-fct .barra-ventana h2{text-shadow:1px 1px #0b3f22}
 .ventana-fct .abrir-pestana{background:linear-gradient(135deg,#b9f2c4,#4a9c65 48%,#175b36);box-shadow:inset 1px 1px #ffffff80,0 1px 1px #0b3f22}
+
+/* Window actions inherit the application palette. */
+.ventana-paca{--action-light:#ffb7d3;--action-mid:#d95a95;--action-dark:#a82d67}
+.ventana-lbds{--action-light:#e1f7ff;--action-mid:#94d7f5;--action-dark:#4b9ecc}
+.ventana-admin{--action-light:#ffdda1;--action-mid:#ee9a3f;--action-dark:#b75b11}
+.ventana-fct{--action-light:#b9f2c4;--action-mid:#4a9c65;--action-dark:#175b36}
+.ventana .abrir-pestana,.ventana .cerrar-ventana,.ventana .ampliar-ventana{background:linear-gradient(135deg,var(--action-light,#d4e8ff),var(--action-mid,#8caed3) 48%,var(--action-dark,#45698e));box-shadow:inset 1px 1px #ffffff80,0 1px 1px var(--action-dark,#45698e)}

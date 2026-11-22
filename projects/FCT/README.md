@@ -10,11 +10,11 @@ move/capture audio for both sides (including en passant).
 ## Fantasy Chess Tactics
 
 The main **JUGAR** button opens `tactics.html` directly in 3D. Both sides use
-16 pieces in the standard chess starting position. The dice winner chooses
+16 pieces with a mirrored random Chess960 back rank. The dice winner chooses
 first or second. Execution alternates continuously across round boundaries. All units, including
 both kings, start without a charged ultimate.
 
-Every round allows **two secret actions per side**, with **15 active seconds
+Every round allows **two secret actions per side**, with **20 active seconds
 per action**. The same unit cannot repeat a kind within that round; different
 units may share a kind. Examples: one unit may Move + Attack or Focus + Ultimate;
 two different units may each Move. Expired slots become waits. Completing the
@@ -27,14 +27,14 @@ There is no confirmation popup. Action buttons sit at the lower battlefield
 edge, clear of destinations. A unit deselects after each order and must be
 selected again for another action. Movement commits immediately without any
 facing selection. A cyan border marks the selected square in both views.
-A queued attack whose target square becomes empty, or a movement whose square
-becomes occupied, fizzles without changing the declared action type.
+A queued attack strikes the first current body along its declared direction.
+A movement whose destination becomes occupied fizzles.
 
 All ultimates attack the class's full area with friendly fire. Sliding rays
 stop at the first body; knights hit all eight L squares, kings adjacent squares,
 and pawns both front squares and forward diagonals. Pawns retain one/two-square
-and diagonal movement. All hits deal exactly 2 HP. Blocking reflects 2 per hit
-during that round, without absorption or reflection chains. Castling uses the
+and diagonal movement. All hits deal exactly 2 HP. A one-use shield absorbs the next hit and reflects 2 without reflection chains.
+It lasts until hit; a king shield expires after the following round. Castling uses the
 classical unmoved-piece, empty-path and king-safety conditions, animates king
 and rook together, and consumes each piece's movement for the round.
 
@@ -284,3 +284,10 @@ the latter, regardless of side. Check and checkmate cues remain additional.
 Visual reference: the raised terrain, stonework and vegetation of the
 [Orbonne opening battle](https://shrines.rpgclassics.com/psx/fft/battles/introbattle.shtml)
 in Final Fantasy Tactics for PS1. Landscape meshes and textures here are procedural.
+
+Current tactical rules: mirrored Chess960 back ranks; directional attacks hit
+the first body present when executed. Single-use shields absorb one entire hit
+and reflect 2; non-royal shields persist until hit, royal shields expire after
+the following round. Attacker/Defender roles remain visible in the HUD.
+The mobile selector shortcut switches between “Ver aspectos” and “3D” as its
+scroll position changes. See the latest section of TACTICS.md for full rules.

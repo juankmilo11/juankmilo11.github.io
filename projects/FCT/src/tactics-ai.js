@@ -20,7 +20,7 @@ function candidates(state,side,orders){
     }
     for(const target of getAttackSquares(state,unit)){const victim=unitAt(state,target);if(victim.color===side)continue;const order=attackOrderFor(state,unit,target),hit=damage(unit,victim);add(order,hit*(victim.type==='k'?200:VALUES[victim.type]*2)+(hit>=victim.hp?400:0));}
     const exposed=enemies.some(e=>attacks.get(e.id).has(unit.square));
-    if(exposed&&!unit.guard)add({kind:'block'},12+(unit.type==='k'?20:0));
+    if(exposed&&!unit.guard&&!unit.blockUsed)add({kind:'block'},12+(unit.type==='k'?20:0));
     const potential=areaPriority(state,unit,side);
     if(!unit.charged)add({kind:'focus'},Math.max(0,potential)*.4);
     else if(potential>0)add({kind:'ultimate',mode:'sweep'},potential);
@@ -45,10 +45,10 @@ function scorePosition(state,side){
   for(const ally of allies){
     const hits=[];
     for(const enemy of enemies){const basic=attacks.get(enemy.id).has(ally.square),ultimate=enemy.charged&&ultimates.get(enemy.id).has(ally.square);if(basic||ultimate)hits.push(damage(enemy,ally));}
-    hits.sort((a,b)=>b-a);const danger=(hits[0]??0)+(hits[1]??0)*.45;
+    hits.sort((a,b)=>b-a);const danger=(ally.guard?0:(hits[0]??0))+(hits[1]??0)*.45;
     score-=danger*(ally.type==='k'?12:VALUES[ally.type]*.6);
     if(danger>=ally.hp)score-=ally.type==='k'?160:VALUES[ally.type]*8;
-    if(hits.length&&ally.counterUntil===state.round)score+=Math.min(ally.hp,danger)*2;
+    if(hits.length&&ally.guard)score+=Math.min(ally.hp,danger)*2;
   }
   return score;
 }

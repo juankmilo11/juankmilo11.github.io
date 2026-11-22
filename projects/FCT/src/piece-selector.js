@@ -81,7 +81,9 @@ export function initPieceSelector({ playSound, onApply }) {
   dialog.querySelector('#preview-rotate').addEventListener('click', event => {
     playSound('menu3'); if (preview) event.currentTarget.setAttribute('aria-pressed',String(preview.toggleRotation()));
   });
-  dialog.querySelector('#appearance-preview').addEventListener('click', () => {
-    playSound('menu2'); dialog.querySelector('.selector-preview').scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
-  });
+  const jump=dialog.querySelector('#appearance-preview'),catalog=dialog.querySelector('.selector-options'),model=dialog.querySelector('.selector-preview');
+  let showingModel=false;
+  function updateJump(){const a=model.getBoundingClientRect(),b=catalog.getBoundingClientRect();showingModel=Math.abs(a.top-dialog.querySelector('.selector-content').getBoundingClientRect().top)<Math.abs(b.top-dialog.querySelector('.selector-content').getBoundingClientRect().top);jump.textContent=showingModel?'Ver aspectos':'3D';jump.setAttribute('aria-controls',showingModel?'appearance-characters':'piece-preview');}
+  dialog.addEventListener('scroll',updateJump,true);new ResizeObserver(updateJump).observe(model);
+  jump.addEventListener('click',()=>{playSound('menu2');(showingModel?catalog:model).scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});});
 }

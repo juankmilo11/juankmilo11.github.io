@@ -28,3 +28,5 @@ body:not(.hud-expanded) .command-column .queue-card,body:not(.hud-expanded) .com
 
 .tactical-board{width:min(calc(100vw - 340px),calc(100dvh - var(--toolbar-height) - var(--status-height) - 132px));height:min(calc(100vw - 340px),calc(100dvh - var(--toolbar-height) - var(--status-height) - 132px));left:calc((100vw - 300px)/2);top:calc((var(--toolbar-height) + var(--status-height) + 60px + 100dvh - 72px)/2)}
 @media(max-width:740px){.tactical-board{width:min(calc(100vw - 24px),calc(100dvh - var(--toolbar-height) - var(--status-height) - 210px));height:min(calc(100vw - 24px),calc(100dvh - var(--toolbar-height) - var(--status-height) - 210px));left:50%;top:calc((var(--toolbar-height) + var(--status-height) + 56px + 100dvh - 154px)/2)}}
+
+#player-role{display:block;font:10px/1.4 ui-monospace,monospace;color:#d3e9d7}#player-role:empty{display:none}
