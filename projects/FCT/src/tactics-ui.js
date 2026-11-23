@@ -1,5 +1,5 @@
 import './tactics.css';
-import './imperial-hud.css';
+import './retro-hud.css';
 import { createMatch, autoDeploy, confirmDeployment, beginBattle, roundRules, submitPlan, resolveNext, getLegalMoves, unitAt, validatePlan, previewPlan, publicView, UNIT_NAMES, getCastleOptions, movementPath } from './tactics-engine.js';
 import { planAI } from './tactics-ai.js';
 import { describeBattleEvent } from './tactics-presentation.js';
@@ -263,7 +263,7 @@ function confirmExit(destination='./'){
 }
 $('#exit-game').addEventListener('click',()=>confirmExit());
 $('.tactics-brand').addEventListener('click',e=>{e.preventDefault();confirmExit();});
-$('#result-dialog a').addEventListener('click',e=>{e.preventDefault();$('#result-dialog').close();confirmExit();});
+$('#result-exit').addEventListener('click',()=>location.assign('./'));
 $('#exit-cancel').addEventListener('click',()=>$('#exit-dialog').close());
 $('#exit-confirm').addEventListener('click',()=>{phaseToken++;three?.cancelPlayback();three?.setActive(false);sound('menu4');location.assign($('#exit-dialog').dataset.destination);});
 $('#exit-dialog').addEventListener('close',()=>{lastTick=performance.now();});

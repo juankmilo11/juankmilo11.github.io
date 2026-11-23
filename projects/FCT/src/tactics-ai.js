@@ -6,7 +6,7 @@ const point=square=>[square.charCodeAt(0)-97,Number(square[1])-1];
 const key=orders=>JSON.stringify(orders);
 const TERMINAL=100000;
 // Deterministic node budgets: the Worker never blocks the board while thinking.
-const LIMITS=Object.freeze({beam:7,first:24,later:16,plans:7,replies:7,counters:2});
+const LIMITS=Object.freeze({beam:10,first:32,later:24,plans:10});
 function robustScore(scores){
  const minimum=Math.min(...scores),safety=minimum<=-TERMINAL?-2*TERMINAL:minimum<=-TERMINAL+100?-TERMINAL:0;
  // A speculative king capture in one reply must not outweigh a material loss
@@ -90,13 +90,13 @@ function candidates(state,side,orders){
   result.sort((a,b)=>b.priority-a.priority||key(a.order).localeCompare(key(b.order)));
   return result.map(r=>r.order);
 }
-function generatePlans(state,side,{beam=LIMITS.beam,count=LIMITS.plans}={}){
+function generatePlans(state,side,{beam=LIMITS.beam,count=LIMITS.plans,first=LIMITS.first,later=LIMITS.later}={}){
   const initial=scorePosition(state,side);let frontier=[{orders:[],position:state,score:initial}],finished=[];
   for(let depth=0;depth<roundRules(state,side).actions;depth++){
     const next=[];
     for(const node of frontier){
       if(node.position.winner){finished.push(node);continue;}
-      const proposals=candidates(node.position,side,node.orders).slice(0,depth?LIMITS.later:LIMITS.first);
+      const proposals=candidates(node.position,side,node.orders).slice(0,depth?later:first);
       proposals.push({kind:'pass'});
       for(const order of proposals){
         const plan=[...node.orders,order],valid=validatePlan(state,side,plan);if(!valid.ok)continue;
@@ -139,6 +139,7 @@ function kingPressurePlans(state,side){
   const move={unitId:unit.id,kind:'move',target,...(unit.type==='p'&&['1','8'].includes(target[1])?{promotion:'q'}:{})};
   const probe=previewPlan(state,side,[move]),actor=probe.units.find(u=>u.id===unit.id);
   if(!actor||!getCaptureSquares(probe,actor).includes(king.square))continue;
+  if(slots===2){const follow=validatePlan(state,side,[move,{unitId:unit.id,kind:'move',target:king.square}]);if(follow.ok)result.unshift(follow.orders);}
   const raw=[move];while(raw.length<slots)raw.push({kind:'pass'});const valid=validatePlan(state,side,raw);if(valid.ok)result.push(valid.orders);
  }
  return result.slice(0,14);
@@ -187,7 +188,7 @@ function kingSafetyPlans(state,side,bases){
 export function planAI(state,side='b',options={}){
  if(!['w','b'].includes(side)||state.phase!=='planning'||state.winner)return [];
  const observation=publicView(state,side);observation.ready={w:false,b:false};observation.plans={w:[],b:[]};observation.log=[];observation.resolution=[];observation.resolutionIndex=0;
- const enemy=other(side),slots=roundRules(state,side).actions,pairCache=new Map(),limit=options.pairBudget??1400;
+ const enemy=other(side),slots=roundRules(state,side).actions,pairCache=new Map(),limit=options.pairBudget??2400;
  let evaluations=0;
  const evaluate=(own,reply)=>{
   const id=key(own)+'|'+key(reply);if(pairCache.has(id))return pairCache.get(id);
@@ -240,9 +241,29 @@ export function planAI(state,side='b',options={}){
   ranked=owns.map(rank).sort((a,b)=>b.score-a.score);
  }
  const complete=ranked.filter(r=>replies.every(reply=>evaluate(r.plan,reply)!==null));
- const best=complete[0]??ranked[0];if(!best)return [];
- const pool=complete.filter(r=>r.score>=best.score-6&&r.minimum>=best.minimum-6);
+ // Extend the strongest candidates through the next full exchange. The next
+ // leader has two actions: a quiet-looking move can otherwise lose to a fork
+ // or a two-step king hunt just outside the old one-round horizon.
+ let horizonNodes=0;const horizonCache=new Map(),extended=[];
+ for(const candidate of complete.slice(0,5)){
+  const dangers=replies.map(reply=>({reply,value:evaluate(candidate.plan,reply)})).filter(r=>r.value!==null).sort((a,b)=>a.value-b.value).slice(0,3),values=[];
+  for(const danger of dangers){
+   const next=resolvePair(observation,side,candidate.plan,danger.reply);if(!next)continue;
+   if(next.winner){values.push(scorePosition(next,side));continue;}
+   const boardKey=JSON.stringify([next.units,next.enPassant,next.firstSide]);
+   let value=horizonCache.get(boardKey);
+   if(value===undefined){
+    const ownFuture=generatePlans(next,side,{beam:3,count:3,first:12,later:8}),enemyFuture=generatePlans(next,enemy,{beam:3,count:3,first:12,later:8});let best=-Infinity;
+    for(const own of ownFuture){const scores=[];for(const reply of enemyFuture){if(horizonNodes++>=180)break;const future=resolvePair(next,side,own,reply);if(future)scores.push(scorePosition(future,side,true));}if(scores.length)best=Math.max(best,robustScore(scores));}
+    value=Number.isFinite(best)?best:scorePosition(next,side,true);horizonCache.set(boardKey,value);
+   }
+   values.push(value<=-TERMINAL?-TERMINAL:value>=TERMINAL?TERMINAL:danger.value*.35+value*.65);
+  }
+  if(values.length)extended.push({...candidate,score:robustScore(values),minimum:Math.min(...values)});
+ }
+ const finalRank=(extended.length?extended:complete).sort((a,b)=>b.score-a.score),best=finalRank[0]??ranked[0];if(!best)return [];
+ const pool=finalRank.filter(r=>r.score>=best.score-4&&r.minimum>=best.minimum-4);
  let seed=Number(options.seed??0)>>>0;seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;
- if(options.debug){options.debug.evaluations=evaluations;options.debug.ranked=complete;options.debug.replies=replies;}
+ if(options.debug){options.debug.evaluations=evaluations;options.debug.horizonNodes=horizonNodes;options.debug.ranked=finalRank;options.debug.replies=replies;}
  return pool.length?pool[(seed>>>0)%pool.length].plan:best.plan;
 }

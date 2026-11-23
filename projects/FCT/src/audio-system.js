@@ -8,12 +8,18 @@ export function createAudioSystem() {
   const queue=new ShuffleQueue(tracks);
   const cues=Object.fromEntries(['sound1','menu1','menu2','menu3','menu4','user_piece_move','AI_piece_move','check','checkmate'].map(name=>[name,new Audio(`${import.meta.env.BASE_URL}audio/${name}.wav`)]));
   let fxLevel=.35, fxMuted=false, wantsMusic=true, pending=false, lastAttempt=0, failures=0, generation=0;
+  let saved=null;try{saved=JSON.parse(sessionStorage.getItem('fct:audio-session'));}catch{}
+  const byId=id=>tracks.find(t=>t.id===id);
+  if(saved?.track&&byId(saved.track)){queue.history=[byId(saved.track)];queue.cursor=0;queue.bag=(saved.bag??[]).map(byId).filter(Boolean);wantsMusic=saved.wantsMusic!==false;fxMuted=saved.fxMuted===true;}
+  let restoreTime=saved?.track&&byId(saved.track)&&Number.isFinite(saved.time)?Math.max(0,saved.time):null;
+  function saveSession(){try{sessionStorage.setItem('fct:audio-session',JSON.stringify({track:music.dataset.track,time:music.currentTime,wantsMusic,fxMuted,bag:queue.bag.map(t=>t.id)}));}catch{}}
+  music.addEventListener('loadedmetadata',()=>{if(restoreTime!==null){music.currentTime=Math.min(restoreTime,Number.isFinite(music.duration)?Math.max(0,music.duration-.1):restoreTime);restoreTime=null;attempt();}});
   music.volume=.15; music.loop=false;
   let pageActive=true,hostActive=window.parent===window;
   const active=()=>pageActive&&hostActive&&!document.hidden;
   function suspend(){music.pause();for(const cue of Object.values(cues))cue.pause();sync();}
   document.addEventListener('visibilitychange',()=>{if(active())attempt();else suspend();});
-  window.addEventListener('pagehide',()=>{pageActive=false;suspend();});
+  window.addEventListener('pagehide',()=>{saveSession();pageActive=false;suspend();});
   window.addEventListener('pageshow',()=>{pageActive=true;if(active())attempt();});
   window.addEventListener('blur',()=>{pageActive=false;suspend();});
   window.addEventListener('focus',()=>{pageActive=true;if(active())attempt();});
@@ -28,7 +34,7 @@ export function createAudioSystem() {
     effectsButton.classList.toggle('is-muted',fxMuted||fxLevel===0);
   }
   async function attempt() {
-    if(!wantsMusic||!active()||pending||!music.paused)return;
+    if(restoreTime!==null||!wantsMusic||!active()||pending||!music.paused)return;
     pending=true;lastAttempt=performance.now();
     const request=generation;
     try { await music.play();if(request===generation){if(!wantsMusic||!active())music.pause();failures=0;} }
@@ -54,7 +60,7 @@ export function createAudioSystem() {
   document.addEventListener('pointerdown',unlock,{capture:true});
   document.addEventListener('keydown',unlock,{capture:true});
   document.addEventListener('pointermove',()=>{if(performance.now()-lastAttempt>1600)unlock();},{passive:true});
-  select(queue.next());sync();
+  select(queue.current??queue.next());sync();
   return {
     playSound(name,gain=1) {
       const audio=cues[name];if(!active()||!audio||fxMuted||fxLevel===0)return;

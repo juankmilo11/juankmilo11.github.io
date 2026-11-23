@@ -5,7 +5,7 @@ import { appearanceFor, characterInfo, thumbnailUrl, getLoadout } from './appear
 import { initPieceSelector } from './piece-selector.js';
 import { tileDetail } from './terrain.js';
 import './menu-theme.css';
-import './imperial-hud.css';
+import './retro-hud.css';
 import { createAudioSystem } from './audio-system.js';
 import { pieceValues } from './piece-values.js';
 import { createFloatMotion } from './piece-motion.js';

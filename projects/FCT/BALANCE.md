@@ -38,7 +38,8 @@ por ese material. Son prioridades heurísticas de esta variante; no una tabla
 de balance demostrada ni cambios en el valor de la partida clásica.
 
 Una caché evita repetir simulaciones y el presupuesto normal limita la búsqueda
-a 1400 parejas. La semilla del Worker solo desempata planes con puntuación y
+a 2400 parejas del intercambio actual y 180 simulaciones adicionales de la
+siguiente ronda. La semilla del Worker solo desempata planes con puntuación y
 peor resultado casi iguales. La media se acota para que una captura especulativa
 del rey no compense un mal resultado contra una defensa sensata. No accede a
 decisiones secretas ni altera reglas. El cálculo ocurre fuera del hilo de
@@ -94,3 +95,28 @@ Las pruebas cubren privacidad de órdenes, presupuestos, planes legales, mate
 durante un intercambio, escapes, intercepciones, enroque, promoción y captura
 al paso. La interfaz se comprueba en escritorio y móvil emulado; el balance
 humano y el rendimiento en teléfonos físicos requieren partidas reales.
+
+## Revisión de predicción de esta publicación
+
+Se amplía el haz a 10 secuencias, 32 propuestas iniciales y 24 continuaciones.
+Los planes de presión incluyen acercarse y volver a mover la misma pieza para
+capturar al rey. Los cinco candidatos finales se contrastan con sus tres
+respuestas más peligrosas y se prolongan hasta el siguiente intercambio usando
+un haz de tres planes por bando. Así se evalúa también el cambio de iniciativa.
+Todo se calcula en el Worker, desde el tablero público. No se leen órdenes del
+usuario ni se cambia una decisión después de revelarlas.
+
+Comparación contra el planificador de la publicación anterior, congelado en
+reference-tactics-ai.mjs, con las mismas reglas actuales:
+
+- Semillas 2141 y 3137, ambos bandos: 2/4 para el nuevo, las dos como negras.
+- Validación adicional sin retocar parámetros, semillas 2663 y 4211, como negras:
+  2/2 para el nuevo. Se corresponde con el rol real de la IA del juego.
+- Total 4/6; como rival negro, 4/4. Sin planes inválidos ni límites de ronda.
+  Coste medio aproximado del nuevo: 1,1–1,2 segundos por plan en escritorio,
+  frente a 0,7 segundos de la referencia; no es una medición de teléfono físico.
+
+La muestra es pequeña y no establece fuerza Elo ni superioridad general.
+Reproducir la validación adicional con --previous --seeds=2663,4211 --side=b
+--rounds=20. Las pruebas verifican además el uso real del horizonte adicional
+sin acceso a órdenes privadas.

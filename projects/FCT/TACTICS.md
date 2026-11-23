@@ -103,3 +103,7 @@ node projects/FCT/scripts/check-mate-oracle.mjs
 node scripts/qa-fct-tactics.cjs
 node projects/FCT/scripts/benchmark-tactics.mjs --previous --seeds=2141,3137 --rounds=30
 ```
+
+El HUD comparte un diseño retrofuturista en ambos modos, menús y selector.
+Al cambiar de pantalla se conservan canción, segundo y preferencias de audio.
+El resultado ofrece Jugar otra batalla, Revisar partida y Salir al menú.

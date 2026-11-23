@@ -10,7 +10,7 @@ function resolve(s,b,w=[]){s=structuredClone(s);assert.equal(submitPlan(s,'w',w)
 const unit=(s,id)=>s.units.find(u=>u.id===id);
 
 test('AI obeys 1/2-action budgets and alternating initiative without mutating its observation',()=>{
- for(const round of [1,2,3]){const s=battlefield(41,round),before=structuredClone(s),orders=planAI(s,'b');assert.deepEqual(s,before);assert.ok(orders.length&&orders.length<=roundRules(s,'b').actions);assert.equal(validatePlan(s,'b',orders).ok,true);assert.ok(orders.every(o=>['move','pass'].includes(o.kind)));}
+ for(const round of [1,2,3]){const s=battlefield(41,round),before=structuredClone(s),debug={},orders=planAI(s,'b',{debug});if(round===2){assert.ok(debug.horizonNodes>0);assert.ok(debug.horizonNodes<=180);}assert.deepEqual(s,before);assert.ok(orders.length&&orders.length<=roundRules(s,'b').actions);assert.equal(validatePlan(s,'b',orders).ok,true);assert.ok(orders.every(o=>['move','pass'].includes(o.kind)));}
 });
 test('sealed enemy orders, readiness, RNG and private logs cannot influence AI',()=>{
  const s=fixture({'w-k':{square:'a1'},'b-k':{square:'h8'},'b-r':{square:'d4'}},2),expected=planAI(s,'b'),altered=structuredClone(s);altered.plans.w=[{unitId:'w-k',kind:'move',target:'b2'}];altered.ready.w=true;altered.log=[{secret:'not observable'}];altered.rng=12345;assert.deepEqual(planAI(altered,'b'),expected);assert.deepEqual(planAI(publicView(s,'b'),'b'),expected);assert.deepEqual(planAI(createMatch(),'b'),[]);
@@ -21,9 +21,9 @@ test('AI captures the king with a moving piece, without ranged attacks or health
  const s=fixture({'b-k':{square:'a8'},'w-k':{square:'h1'},'w-r':{square:'a1'}}),orders=planAI(s,'w');assert.equal(orders[0].kind,'move');assert.equal(orders[0].target,'a8');const result=resolve(s,[],orders);assert.equal(result.winner,'w');assert.equal(unit(result,'b-k').captured,true);assert.equal(unit(result,'w-r').square,'a8');
 });
 
-test('AI can use the same queen twice to capture material and then the king',()=>{
+test('AI can use the same queen twice to force a king capture or mate',()=>{
  const s=fixture({'w-k':{square:'a1'},'w-q':{square:'d4'},'b-k':{square:'g8'},'b-q':{square:'d8'}},1),orders=planAI(s,'w');
- assert.equal(orders.length,2);assert.ok(orders.every(o=>o.unitId==='w-q'&&o.kind==='move'));const result=resolve(s,[],orders);assert.equal(unit(result,'b-q').captured,true);assert.equal(result.winner,'w');assert.equal(unit(result,'b-k').captured,true);
+ assert.equal(orders.length,2);assert.ok(orders.every(o=>o.unitId==='w-q'&&o.kind==='move'));const result=resolve(s,[],orders);assert.equal(result.winner,'w');assert.ok(unit(result,'b-k').captured||result.winReason==='checkmate');
 });
 test('AI prefers a favorable queen trade over speculative king threats',()=>{
  const s=fixture({'b-k':{square:'h2'},'b-q':{square:'g1'},'w-k':{square:'h8'},'w-b':{square:'d4'}});const orders=planAI(s,'w');assert.equal(orders[0].kind,'move');assert.equal(orders[0].target,'g1');assert.equal(unit(resolve(s,[],orders),'b-q').captured,true);

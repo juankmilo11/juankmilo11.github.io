@@ -15,9 +15,9 @@ the AI even rounds. The first side gets two secret actions and the second one,
 one; each order has 20 seconds. A piece may move twice when its side has two
 slots. The checkmark above a destination confirms; X cancels its preview.
 Routes and attempt explanations appear only in review. Music pauses while the
-page is hidden, unfocused, or covered by another JK application window. A shared
-oak, stone and bronze theme covers menus, the appearance selector, both game
-modes and review, with text selection and touch callouts disabled.
+page is hidden, unfocused, or covered by another JK application window. A shared retro-console
+theme with raised controls, luminous cyan trims and violet panels covers menus,
+the appearance selector, both game modes and review, with text selection and touch callouts disabled.
 An unconfirmed order expires as a pass when the clock runs out.
 
 Captures work by moving onto the enemy and removing it. King capture or checkmate
@@ -264,3 +264,7 @@ The planner now performs iterative adversarial best responses, explicit protecte
 king-pressure and double-recapture portfolios, and fresh safe tie-breaking in its
 Worker. Frozen previous planning logic is retained solely for reproducible
 benchmarks under the same current rules.
+
+Music restores the same track, playback position, remaining shuffle queue and
+mute preferences across menu/main-mode navigation using session storage.
+The final result offers only another battle, review or exit to the main menu.
