@@ -23,7 +23,7 @@ predictions; execution fails and spends the slot if the required occupancy
 does not materialize. These attempts never capture allies.
 
 Each army can activate one shield in the entire match. It consumes an action,
-lasts to the current round's end, and repels one attempted capture: the attacker
+activates before either side moves, lasts to the current round's end, and repels one attempted capture: the attacker
 bounces back, both survive and the shield breaks. Shields have visible 2D/3D
 effects. Animations last roughly 160–600 ms, with reduced-motion support and
 smooth raised dragging/shadows. Review replays and reverses captures, shields,
@@ -246,3 +246,12 @@ the latter, regardless of side. Check and checkmate cues remain additional.
 Visual reference: the raised terrain, stonework and vegetation of the
 [Orbonne opening battle](https://shrines.rpgclassics.com/psx/fft/battles/introbattle.shtml)
 in Final Fantasy Tactics for PS1. Landscape meshes and textures here are procedural.
+
+The main battlefield now has no status/inspector/queue/exchange panels. View and
+camera controls share the top banner with the timer. Review contains only its
+navigation and slider. Exit opens a confirmation dialog and pauses planning.
+Menu button sizes prioritize JUGAR, then appearances, then classic match.
+The planner now performs iterative adversarial best responses, explicit protected
+king-pressure and double-recapture portfolios, and fresh safe tie-breaking in its
+Worker. Frozen previous planning logic is retained solely for reproducible
+benchmarks under the same current rules.

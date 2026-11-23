@@ -19,7 +19,7 @@ test('AI captures the king with a moving piece, without ranged attacks or health
  const s=fixture({'w-k':{square:'a1'},'b-k':{square:'h8'},'b-r':{square:'a8'}}),orders=planAI(s,'b');assert.equal(orders[0].kind,'move');assert.equal(orders[0].target,'a1');const result=resolve(s,orders);assert.equal(result.winner,'b');assert.equal(unit(result,'w-k').captured,true);assert.equal(unit(result,'b-r').square,'a1');
 });
 test('first-moving AI takes an undefended queen without spending its shield',()=>{
- const s=fixture({'b-k':{square:'h2'},'b-q':{square:'g1'},'w-k':{square:'h8'},'w-b':{square:'d4'}}),orders=planAI(s,'w');assert.equal(orders[0].kind,'move');assert.equal(orders[0].target,'g1');assert.equal(unit(resolve(s,[],orders),'b-q').captured,true);
+ const s=fixture({'b-k':{square:'h2'},'b-q':{square:'g1'},'w-k':{square:'h8'},'w-b':{square:'d4'}});s.shieldUsed.b=true;const orders=planAI(s,'w');assert.equal(orders[0].kind,'move');assert.equal(orders[0].target,'g1');assert.equal(unit(resolve(s,[],orders),'b-q').captured,true);
 });
 test('opponent counterplay rejects a queen grab that abandons the king',()=>{
  const s=fixture({'w-k':{square:'a1'},'w-r':{square:'d4'},'b-q':{square:'d8'},'b-r':{square:'a8'},'b-k':{square:'h8'}}),orders=planAI(s,'w');assert.equal(validatePlan(s,'w',orders).ok,true);assert.notEqual(orders[0].target,'d8');const result=resolve(s,[{unitId:'b-r',kind:'move',target:'a1'}],orders);assert.equal(unit(result,'w-k').captured,false);assert.notEqual(result.winner,'b');
@@ -27,9 +27,10 @@ test('opponent counterplay rejects a queen grab that abandons the king',()=>{
 test('AI never reuses a spent army shield even when an important piece is threatened',()=>{
  const s=fixture({'w-k':{square:'a1'},'w-r':{square:'d1'},'b-k':{square:'h8'},'b-q':{square:'d6'}},3);s.shieldUsed.b=true;const orders=planAI(s,'b');assert.ok(orders.every(o=>o.kind!=='block'));assert.equal(validatePlan(s,'b',orders).ok,true);
 });
-test('AI recognizes capture promotion and chooses a material upgrade',()=>{
- const s=fixture({'w-k':{square:'a1'},'w-r':{square:'h1'},'b-k':{square:'h8'},'b-p1':{square:'g2',hasMoved:true}}),orders=planAI(s,'b'),promote=orders.find(o=>o.unitId==='b-p1');assert.equal(promote.target,'h1');assert.equal(promote.promotion,'q');const next=resolve(s,orders);assert.equal(unit(next,'b-p1').type,'q');assert.equal(unit(next,'w-r').captured,true);
+test('AI secures a promotion even when the opponent can vacate a capture target',()=>{
+ const s=fixture({'w-k':{square:'a1'},'w-n':{square:'h1'},'b-k':{square:'a8'},'b-p1':{square:'g2',hasMoved:true}});s.shieldUsed.w=true;const orders=planAI(s,'b'),promote=orders.find(o=>o.unitId==='b-p1');assert.ok(promote);assert.equal(promote.promotion,'q');const next=resolve(s,orders);assert.equal(unit(next,'b-p1').type,'q');assert.ok(['g1','h1'].includes(unit(next,'b-p1').square));
 });
+
 test('AI recognizes immediate en-passant captures before the opportunity expires',()=>{
  const s=fixture({'w-k':{square:'h1'},'w-p1':{square:'e5',hasMoved:true},'b-k':{square:'a8'},'b-p1':{square:'d5'}});s.enPassant={square:'d6',victimId:'b-p1',availableTo:'w'};const orders=planAI(s,'w');assert.equal(orders[0].unitId,'w-p1');assert.equal(orders[0].target,'d6');
 });
@@ -37,4 +38,13 @@ test('capture-chess values are shared material priors with terminal king priorit
 
 test('black does not end an exchange with its king exposed to the next white action',()=>{
  const s=fixture({'w-k':{square:'a1'},'w-r':{square:'h1'},'w-q':{square:'d1'},'b-k':{square:'h8'},'b-b':{square:'h5'}}),orders=planAI(s,'b'),result=resolve(s,orders,[{unitId:'w-r',kind:'move',target:'h2'}]);assert.equal(unit(result,'b-k').captured,false);const king=unit(result,'b-k');assert.notEqual(king.square,'h8');
+});
+
+test('priority shield protects the king before a first enemy capture and is used only once',()=>{
+ const s=fixture({'w-k':{square:'a1'},'w-r':{square:'h1'},'b-k':{square:'h8'}}),orders=planAI(s,'b');assert.ok(orders.some(o=>o.kind==='block'||o.unitId==='b-k'));const next=resolve(s,orders,[{unitId:'w-r',kind:'move',target:'h8'}]);assert.equal(unit(next,'b-k').captured,false);
+});
+
+
+test('seeded near-equivalent choices stay legal and never read an opponents sealed orders',()=>{
+ const s=battlefield(1514,2);for(const seed of [0,1,123456789]){const orders=planAI(s,'b',{seed}),hidden=structuredClone(s);hidden.plans.w=[{secret:'unavailable'}];assert.deepEqual(planAI(hidden,'b',{seed}),orders);assert.equal(validatePlan(s,'b',orders).ok,true);}
 });

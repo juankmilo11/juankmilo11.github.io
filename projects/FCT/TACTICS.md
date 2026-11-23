@@ -9,8 +9,9 @@ Focus, definitivas ni ataques a distancia.
 
 La primera ronda permite una acción por bando; la segunda, dos; desde la tercera,
 tres. Cada orden dispone de 20 segundos activos. Se preparan en secreto y se
-revelan juntas; la ejecución intercala A1, B1, A2, B2… La alternancia continúa
-entre rondas. Al completar los huecos comienza automáticamente el intercambio.
+revelan juntas; la ejecución intercala A1, B1, A2, B2… Los escudos forman una fase de prioridad anterior a los movimientos. Después
+se alternan las órdenes restantes empezando por el usuario. La prioridad es una
+excepción al orden ordinario. Al completar los huecos comienza automáticamente el intercambio.
 «Esperar» o agotar el reloj consume un hueco sin mover.
 
 Una pieza puede moverse una sola vez en la misma ronda. Puede activar escudo y
@@ -47,8 +48,8 @@ Los patrones y movimientos especiales se basan en las [reglas de FIDE](https://h
 ## Un escudo por bando
 
 Cada ejército tiene un único escudo para toda la partida. Activarlo en cualquier
-pieza consume una acción. Dura desde esa acción hasta el final de esa misma
-ronda; no protege retroactivamente. Si alguien intenta capturar esa ficha,
+pieza consume una acción. Se activa antes de cualquier movimiento de ambos bandos, aunque se haya
+seleccionado como segunda o tercera orden, y dura hasta el final de esa ronda. Si alguien intenta capturar esa ficha,
 el atacante se aproxima y rebota al origen: ambas sobreviven y el escudo se
 rompe. La captura al paso también puede rebotar. No causa daño ni devuelve golpes.
 El recurso queda gastado incluso si nadie intenta capturar o si la ficha cambia
@@ -56,18 +57,18 @@ de casilla. El rey usa la misma regla que las demás piezas.
 
 ## Presentación y revisión
 
-El modo principal ocupa la ventana, con anochecer y presentación giratoria. El
-HUD recuerda el rol del usuario, las acciones disponibles y el recurso de escudo.
-Las órdenes reveladas muestran el bando, el trayecto y la acción actual. Puede
-consultarse cualquier ficha sin interrumpir la animación. La promoción cambia
-su apariencia y conserva su identidad.
+El modo principal ocupa la ventana, con anochecer y presentación giratoria. El banner superior reúne el reloj, el progreso de las acciones y los controles
+2D/3D/cámara. El campo no tiene paneles de pieza, secuencia ni intercambio.
+La promoción cambia la apariencia y conserva la identidad de la ficha. Salir
+pide confirmación; cancelar permite continuar y conserva el tiempo restante.
 
 Los escudos tienen contorno y envolvente visibles en 3D y 2D. Las capturas,
 rebotes, promociones y movimientos se ejecutan en unos 160–600 ms, con movimiento
 reducido y perfil Ligero disponibles. El arrastre sigue el puntero con una
 ligera elevación, sombra cálida y aterrizaje suave.
 
-La revisión guarda cada posición y reproduce o revierte los movimientos,
+La revisión solo muestra navegación y deslizador; no incluye repetición manual
+ni información adicional debajo. Guarda cada posición y reproduce o revierte los movimientos,
 capturas, rebotes, enroques y promociones sin volver a ejecutar reglas sobre
 la partida real. El reloj se pausa mientras se revisa.
 

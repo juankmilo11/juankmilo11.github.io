@@ -30,7 +30,7 @@ export function createMatch({seed=Date.now()}={}){
   layout[choose([0,2,4,6])]='b';layout[choose([1,3,5,7])]='b';layout[choose(empty())]='q';
   layout[choose(empty())]='n';layout[choose(empty())]='n';empty().forEach((file,i)=>layout[file]=['r','k','r'][i]);
   for(const color of ['w','b']){const counts={};layout.forEach((type,file)=>{const list=units.filter(u=>u.color===color&&u.type===type);const u=list[counts[type]??0];counts[type]=(counts[type]??0)+1;u.homeSquare=sq(file,color==='w'?0:7);});}
-  return {version:6,opponent:'ai',rng:rngState.rng,units,tiles:{},phase:'deployment',round:0,firstSide:'w',lastSide:null,actionNumber:0,activePlanner:'w',ready:{w:false,b:false},deployed:{w:false,b:false},plans:{w:[],b:[]},winner:null,log:[],shieldUsed:{w:false,b:false},enPassant:null,resolution:[],resolutionIndex:0,revision:0};
+  return {version:7,opponent:'ai',rng:rngState.rng,units,tiles:{},phase:'deployment',round:0,firstSide:'w',lastSide:null,actionNumber:0,activePlanner:'w',ready:{w:false,b:false},deployed:{w:false,b:false},plans:{w:[],b:[]},winner:null,log:[],shieldUsed:{w:false,b:false},enPassant:null,resolution:[],resolutionIndex:0,revision:0};
 }
 export function autoDeploy(state,side){
   if(!['w','b'].includes(side))return bad('Bando no válido.');
@@ -144,9 +144,10 @@ function applyForecastOrder(state,side,order){
   if(state.winner){state.predictedWinner=state.winner;state.winner=null;state.phase=phase;}
   return event;
 }
+const priorityOrders=orders=>[...orders.filter(o=>o?.kind==='block'),...orders.filter(o=>o?.kind!=='block')];
 export function previewPlan(state,side,orders=[]){
   const projected=clone({...state,log:[],plans:{w:[],b:[]},resolution:[]});projected.forecastErrors=[];projected.forecastEvents=[];
-  for(const raw of orders){
+  for(const raw of priorityOrders(orders)){
     const check=validateOrder(projected,side,raw);
     if(!check.ok){projected.forecastErrors.push(check.error);continue;}
     projected.forecastEvents.push(applyForecastOrder(projected,side,check.order));
@@ -156,7 +157,7 @@ export function validatePlan(state,side,orders=[]){
   if(!['w','b'].includes(side)||!Array.isArray(orders))return bad('Plan no válido.');
   if(orders.length>roundRules(state).actions)return bad(`Dispones de ${roundRules(state).actions} acciones en esta ronda.`);
   const projected=clone({...state,log:[],plans:{w:[],b:[]},resolution:[]}),used=new Set(),normalized=[];
-  for(const raw of orders){
+  for(const raw of priorityOrders(orders)){
     const result=validateOrder(projected,side,raw);if(!result.ok)return result;const order=result.order;
     if(order.kind!=='pass'){
       const key=`${order.unitId}:${order.kind}`;if(used.has(key))return bad('Una misma pieza no puede repetir la misma acción en esta ronda.');used.add(key);
@@ -168,12 +169,12 @@ export function validatePlan(state,side,orders=[]){
 export function submitPlan(state,side,orders=[]){
   if(state.phase!=='planning'||state.ready[side])return bad('Este plan ya está cerrado.');const validation=validatePlan(state,side,orders);if(!validation.ok)return validation;
   state.plans[side]=clone(validation.orders);state.ready[side]=true;state.activePlanner=other(side);
-  if(state.ready.w&&state.ready.b){state.phase='resolution';state.activePlanner=null;state.resolution=[];state.resolutionIndex=0;for(let i=0;i<roundRules(state).actions;i++)for(const color of ['w','b'])state.resolution.push({side:color,order:clone(state.plans[color][i]??{kind:'pass'})});}
+  if(state.ready.w&&state.ready.b){state.phase='resolution';state.activePlanner=null;state.resolution=[];state.resolutionIndex=0;const remaining={w:[],b:[]};for(const color of ['w','b']){const padded=Array.from({length:roundRules(state).actions},(_,i)=>state.plans[color][i]??{kind:'pass'});for(const order of padded)if(order.kind==='block')state.resolution.push({side:color,order:clone(order),priority:true});else remaining[color].push(order);}for(let i=0;i<roundRules(state).actions;i++)for(const color of ['w','b'])if(remaining[color][i])state.resolution.push({side:color,order:clone(remaining[color][i])});}
   state.revision++;return good();
 }
 export function resolveNext(state){
   if(state.phase!=='resolution')return bad('No hay una secuencia pendiente.');const next=state.resolution[state.resolutionIndex++];if(!next)return bad('La secuencia ya terminó.');
-  const event=applyOrder(state,next.side,next.order);state.lastSide=next.side;event.sequenceIndex=state.resolutionIndex-1;event.sequenceTotal=state.resolution.length;event.actionNumber=++state.actionNumber;state.log.push(clone(event));if(state.log.length>240)state.log.shift();
+  const event=applyOrder(state,next.side,next.order);state.lastSide=next.side;event.priority=Boolean(next.priority);event.sequenceIndex=state.resolutionIndex-1;event.sequenceTotal=state.resolution.length;event.actionNumber=++state.actionNumber;state.log.push(clone(event));if(state.log.length>240)state.log.shift();
   const roundEnded=state.resolutionIndex>=state.resolution.length;if(roundEnded&&!state.winner)startRound(state);
   return good({event,done:Boolean(state.winner||roundEnded),roundEnded,winner:state.winner});
 }

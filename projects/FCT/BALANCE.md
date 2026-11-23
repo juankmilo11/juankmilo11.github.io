@@ -1,141 +1,89 @@
-# FCT principal: decisiones de balance e IA
+# FCT principal · IA y prioridad de escudos
 
-## Reglas y consecuencias
+## Reglas de esta revisión
 
-El objetivo es capturar al rey; no hay puntos de vida ni disparos. Las órdenes
-se preparan sin conocer las del rival y se resuelven usuario/IA intercaladamente.
-Las rondas ofrecen 1, 2 y después 3 acciones por bando, con 20 segundos por orden.
-Una misma ficha no repite movimiento en una ronda. Un escudo cuesta una acción,
-se puede activar una sola vez por ejército, rebota una captura y caduca al cerrar
-la ronda. Ajedrez960 usa una formación inicial compartida para ambos bandos.
+El usuario sigue jugando primero, con 1/2/3 acciones por ronda. Todos los escudos
+seleccionados se activan antes que los movimientos; después se alternan las
+órdenes restantes empezando por el usuario. Activar sigue consumiendo un hueco,
+el recurso único del bando y caduca al cerrar la ronda. Si ambos declaran escudo,
+se activan primero usuario e IA, sin capturas entre ambas activaciones.
 
-Son decisiones de diseño, no conclusiones estadísticas de equilibrio:
+La interfaz deja el tablero despejado: reloj y controles de vista en el banner,
+sin piezas en foco, secuencia ni intercambio. Salir solicita confirmación. La
+revisión mantiene solo navegación/deslizador. Estas decisiones no conceden a la
+IA información privada ni reglas diferentes.
 
-- El crecimiento 1/2/3 evita una secuencia extensa en el primer contacto.
-- El límite por ficha exige coordinar varias piezas y evita que una sola reina
-  recorra tres veces el tablero antes de que el rival pueda preparar otra ronda.
-- El escudo protege del primer intento de captura, pero cuesta una de las acciones
-  limitadas y consume un recurso de toda la partida. No devuelve daño ni captura.
-- Una casilla aliada puede ser un destino previsto; si sigue ocupada al ejecutarse,
-  se pierde la acción. Lo mismo ocurre con una diagonal de peón que sigue vacía.
-- El usuario siempre empieza. Esto elimina la tirada y facilita el aprendizaje,
-  pero concede una ventaja de iniciativa que no se debe confundir con equilibrio.
-  La IA compensa mediante búsqueda, no con información oculta ni ventajas de reglas.
+## Cambios en la búsqueda
 
-## Investigación utilizada
+La versión anterior generaba un pequeño haz por material propio y elegía la
+secuencia por su peor respuesta aproximada. Sus límites podían omitir jugadas
+que solo funcionan al intercalarse con el rival, especialmente casillas aliadas
+que serían recapturadas y atacantes protegidos por escudo.
 
-Los trabajos originales sobre juegos de movimientos simultáneos tratan cada
-combinación de decisiones como un juego matricial. Una búsqueda secuencial común
-puede producir un valor distinto del juego simultáneo; la elección de respuestas
-puras y las aproximaciones de búsqueda intercambian optimalidad por velocidad.
-Esto se describe en [Alpha-Beta Pruning for Games with Simultaneous Moves,
-AAAI 2012](https://cdn.aaai.org/ojs/8148/8148-13-11675-1-2-20201228.pdf) y en
-[Fast Heuristic Search for RTS Game Combat Scenarios, AAAI
-2013](https://cdn.aaai.org/ojs/12527/12527-52-16049-1-2-20201228.pdf).
+El modelo nuevo conserva ese arranque y añade:
 
-La inferencia aplicada a FCT es comparar planes completos contra respuestas
-contrarias plausibles usando el motor real, en lugar de evaluar únicamente cómo
-quedaría el ejército si el rival esperara. FCT no implementa esos artículos de
-forma literal ni resuelve un equilibrio mixto de Nash.
+- Simulación de parejas de planes con el mismo motor de prioridad y capturas.
+- Permutaciones de órdenes para valorar cuándo capturar o escapar.
+- Mejores respuestas iterativas por casilla de la secuencia: cada candidata se
+  evalúa contra planes contrarios reales, no solo contra una previsión en solitario.
+- Planes explícitos de presión al rey con atacante protegido, y dos capturas
+  sucesivas por actores distintos para romper un escudo y recapturar.
+- Previsiones de capturas en casillas aliadas amenazadas y captura al paso futura.
+- Prioridad categórica a evitar una derrota inmediata, para que una media material
+  favorable no compense dejar capturar al rey en alguna respuesta considerada.
+- Valor de reserva del escudo de 120 centipeones, evitando gastarlo rutinariamente
+  por un peón y conservando la posibilidad de proteger al rey o una pieza mayor.
+- Caché de simulaciones y un máximo determinista de 1800 parejas por planificación.
+  El cálculo sigue en un Worker y no bloquea el tablero.
 
-## Modelo implementado
+El Worker aporta una semilla aleatoria nueva solo para variar entre planes con
+puntuación y peor respuesta casi iguales. No aleatoriza sacrificios graves ni
+abandona una captura ganadora para crear variedad. En pruebas puede pasarse una
+semilla fija; el mismo estado público y semilla producen la misma secuencia.
 
-La IA genera secuencias con un haz limitado de siete ramas, con hasta 24
-candidatos en la primera profundidad y 16 en las siguientes. Conserva diversidad
-entre primeras órdenes para no llenar el haz con variaciones de una sola captura.
-Para cada uno de hasta siete planes propios evalúa hasta siete planes contrarios,
-una espera y hasta dos refutaciones adicionales construidas a partir de su propia
-hipótesis. Cada pareja pasa por `submitPlan` y `resolveNext`: respeta el orden real,
-los rebotes, las capturas fallidas, la promoción y la captura al paso.
+Esto es búsqueda aproximada sobre un subconjunto de planes, no un solucionador
+completo de ajedrez ni un equilibrio de Nash. No se asigna una fuerza Elo.
 
-La puntuación combina 90 % del peor resultado de esas respuestas con 10 % de la
-media. Al terminar un intercambio tiene en cuenta quién actúa a continuación:
-un rey negro ya capturable puede caer en la primera orden blanca antes de que
-la IA responda. Ese caso recibe prioridad casi terminal, no una penalización de
-material que una captura de reina pudiera compensar. Es una política conservadora aproximada: no garantiza óptimo ni considera
-todas las órdenes posibles. Las refutaciones se generan desde hipótesis públicas;
-no se consulta ninguna orden sellada real. Si una hipótesis captura al rey rival,
-se siguen considerando escapes desde la posición anterior a esa captura. También se generan intentos diagonales condicionales
-de captura al paso cuando un peón rival puede habilitarlos con un doble avance
-desde su fila inicial; la búsqueda no supone conocer esa orden rival.
+## Fuentes e inferencias
 
-Los valores iniciales compartidos por IA/HUD son peón 1, caballo 3,2, alfil 3,3,
-torre 5 y reina 9. Son prioridades materiales, no resultados de una calibración
-empírica para FCT. El rey tiene prioridad terminal, por encima de toda la suma de
-material. La evaluación añade exposición del rey, amenazas, defensores, movilidad,
-control central, avance de peones, promoción y disponibilidad del escudo. El
-recurso de escudo tiene un pequeño valor de reserva, de modo que no se gasta
-solamente por estar disponible.
+La investigación de juegos simultáneos describe el uso de respuestas adversarias
+iterativas y juegos restringidos: [Using Double-Oracle Method and Serialized
+Alpha-Beta Search for Pruning in Simultaneous Move Games, IJCAI
+2013](https://www.ijcai.org/Proceedings/13/Papers/018.pdf). La inferencia aplicada
+es ampliar el conjunto con respuestas concretas que refutan un plan candidato;
+FCT no implementa literalmente ese algoritmo ni sus garantías.
 
-La búsqueda usa presupuestos deterministas de nodos y trabaja en un Worker.
-No depende de una fecha límite variable para escoger jugadas; por eso la misma
-observación pública produce el mismo plan. El tablero sigue respondiendo mientras
-la IA calcula. No se ha atribuido un nivel Elo ni se ha integrado Stockfish: las
-órdenes predictivas y el rey capturable requieren reglas distintas del clásico.
+También se contrastó una mezcla aproximada mediante juego ficticio en la matriz
+restringida, motivada por la investigación sobre selección en juegos simultáneos
+[NeurIPS 2013](https://proceedings.neurips.cc/paper/2013/file/1579779b98ce9edb98dd85606f2c119d-Paper.pdf).
+No se mantuvo esa variante: en esta muestra obtuvo menos victorias que la
+selección conservadora. El azar final solo desempata planes casi equivalentes.
 
-## Validación y límites
+## Comparaciones reproducibles
 
-Las pruebas cubren presupuestos 1/2/3, movimientos distintos por ficha,
-inmutabilidad de la partida, independencia de órdenes selladas/logs/RNG,
-captura del rey, captura de material cuando la iniciativa permite realizarla,
-rechazo de una captura de reina que abandona el rey, agotamiento del escudo,
-promoción con captura y captura al paso antes de que expire.
+`node projects/FCT/scripts/benchmark-tactics.mjs --previous --rounds=35`
 
-La regresión del motor de cuatro partidas contra sí mismo (semillas 1103,
-1240, 1377 y 1514; límite de 60 rondas), anterior a la corrección del horizonte de
-iniciativa, terminó en rondas 10, 7, 6 y 9, sin planes inválidos ni límites.
-Ganó el primer bando en las cuatro. Media de 8 rondas y unos 467 ms por plan en
-el entorno de desarrollo. Esto señala una ventaja de iniciativa que merece
-seguimiento, no una prueba estadística general.
+La referencia está congelada en `scripts/reference-tactics-ai.mjs`: es el
+planificador de la versión anterior, ejecutado con el mismo motor actual y la
+misma prioridad de escudos. No es un humano ni Stockfish. Cuatro semillas
+(1103,1240,1377,1514), con bandos intercambiados: ocho partidas.
 
-Para contrastar la búsqueda de respuestas con una referencia reproducible:
+La configuración conservada ganó 5/8 (4/4 primero, 1/4 segundo); la referencia
+3/8. No hubo planes inválidos, empates ni límite de rondas. Tiempo medio de la
+nueva: unos 753 ms por plan; referencia: 411 ms en el equipo de desarrollo,
+compartiendo CPU con otras comprobaciones. Son medidas orientativas de escritorio,
+no de teléfonos físicos. La variante de mezcla y la de presión sin reserva ni
+recaptura obtuvieron 4/8 y se descartaron.
 
-```sh
-node projects/FCT/scripts/benchmark-tactics.mjs --rounds=40
-```
+La muestra sirve para detectar regresiones, no demuestra superioridad general.
+La iniciativa sigue siendo una ventaja importante; no se alteran reglas para
+ocultarla. La validación adicional, sin retocar la configuración, usó semillas 2141, 2663,
+3137 y 4211 con bandos intercambiados (`--seeds=2141,2663,3137,4211`). Ganó 6/8:
+4/4 primero y 2/4 segundo; referencia 2/8. Sin empates, límites ni planes inválidos.
+Coste medio: 881 ms frente a 474 ms. Sumando ambas muestras: 11/16 para la nueva,
+8/8 primero y 3/8 segundo. La muestra sigue siendo pequeña y no establece Elo.
 
-El script compara la IA nueva con una política sencilla que selecciona sus
-propias órdenes por material, exposición del rey y desarrollo, sin simular planes
-contrarios. No es la IA antigua ni Stockfish ni un jugador humano. Usa las cuatro
-semillas anteriores y cambia de bando a la IA nueva: ocho partidas en total.
-Ambas políticas usan las mismas reglas, valores y observaciones públicas. Los
-planes se validan antes de ejecutarse.
-
-| Resultado del contraste | Medición |
-| --- | --- |
-| Victorias de la búsqueda con respuestas | 5 de 8 |
-| Jugando primero | 4 de 4 |
-| Jugando segundo | 1 de 4 |
-| Victorias de la referencia sencilla | 3 de 8 |
-| Empates / límites / planes inválidos | 0 / 0 / 0 |
-| Tiempo medio por plan, IA nueva | 458 ms |
-| Tiempo medio por plan, referencia sencilla | 21 ms |
-
-Estos ocho encuentros, realizados con la corrección de horizonte, prueban que
-la búsqueda puede superar a esa referencia incluso jugando segunda, pero no
-establecen fuerza Elo ni balance humano. El primer bando ganó siete de ocho
-partidas: el cambio de IA no elimina la ventaja de actuar primero. Los tiempos
-son del entorno de desarrollo, compartiendo CPU con otras verificaciones, no de
-teléfonos físicos. Las órdenes frustradas son esperables en un sistema predictivo
-y no indican por sí solas un error de validación.
-
-Se probaron y descartaron dos variantes sobre esas mismas ocho partidas:
-
-| Variante | Victorias totales | Victorias jugando segunda | Tiempo medio por plan |
-| --- | --- | --- | --- |
-| Configuración conservada: haz/planes/respuestas 7, candidatos 24/16, 2 refutaciones | 5/8 | 1/4 | 458 ms |
-| Haz/planes/respuestas 10, candidatos 32/24, 3 refutaciones | 4/8 | 0/4 | 769 ms |
-| Configuración pequeña con bonificación acotada a posiciones intermedias para favorecer capturas tempranas | 4/8 | 0/4 | 430 ms |
-
-Se conserva la primera configuración: ampliar la búsqueda y adelantar capturas
-por una bonificación heurística no mejoraron este contraste. Ajustar parámetros
-para las mismas cuatro semillas también puede sobreajustar; por eso estos ensayos
-no se presentan como una calibración general ni se continúa afinando hasta forzar
-un resultado deseado. La corrección de seguridad del rey según la próxima acción
-sí permanece: se deriva del orden de ejecución real y tiene una prueba táctica.
-
-Conviene contrastar el modo con jugadores humanos antes de modificar la ventaja
-de iniciativa o el recurso de escudo. Métricas útiles: victorias por bando y por
-formación 960, rondas hasta captura del rey, utilización del escudo, porcentaje de
-órdenes frustradas, resultados de promociones y tiempo de planificación en equipos
-físicos modestos. No se altera en secreto ninguna regla para favorecer a la IA.
+Las pruebas automáticas cubren escudos prioritarios, seguridad del rey,
+promoción segura, captura al paso, recurso único, intentos ocupados, presupuestos,
+órdenes privadas y reproducibilidad con semilla. La interfaz se verifica en
+escritorio y móvil emulado. El balance humano requiere partidas reales.

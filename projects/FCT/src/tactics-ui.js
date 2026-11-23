@@ -1,9 +1,8 @@
 import './tactics.css';
 import { createMatch, autoDeploy, confirmDeployment, beginBattle, roundRules, submitPlan, resolveNext, getLegalMoves, unitAt, validatePlan, previewPlan, publicView, UNIT_NAMES, getCastleOptions } from './tactics-engine.js';
 import { planAI } from './tactics-ai.js';
-import { tacticalValues } from './tactics-values.js';
-import { describeBattleEvent, describePlannedOrder } from './tactics-presentation.js';
-import { appearanceFor, thumbnailUrl, setLoadout, armyPalettes } from './appearance.js';
+import { describeBattleEvent } from './tactics-presentation.js';
+import { appearanceFor, thumbnailUrl, setLoadout } from './appearance.js';
 import { actionDuration, reverseBattleEvent } from './tactics-animation.js';
 import { createAudioSystem } from './audio-system.js';
 
@@ -23,7 +22,7 @@ let match=null, viewer='w', selectedId=null, selectedSquare=null, inspectedId=nu
 let phaseToken=0, privacy=false, planning=false, resolving=false, roundPrepared=0, secondsLeft=0, totalSeconds=20, lastTick=0;
 let view='3d', three=null, threePromise=null, lastEvent=null, toastTimer, furthestOrder=0;
 let history=[],reviewIndex=null,aiWorker=null,aiJob=0,aiPending=null;
-let presenting=false,reviewPlaying=false,playbackState=null,playbackEvent=null,playbackExchange=null,currentExchange=null,currentEvent=null,hudExpanded=innerWidth>740;
+let presenting=false,reviewPlaying=false,playbackState=null,playbackEvent=null,playbackExchange=null,currentExchange=null,currentEvent=null;
 let forecastMemo=null,checkMemo=new Map(),checkMatch=null,checkRevision=-1;
 const sound=(name='menu2')=>audio.playSound(name);
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -72,50 +71,18 @@ function renderBoard(){
 }
 
 function renderPhase(){
-  if(!match)return;$('#player-role').textContent='Tú: Atacantes · juegas primero';$('#wait-action').disabled=!planning||resolving||presenting||reviewIndex!==null;const panel=$('#phase-panel'),reviewing=reviewIndex!==null,show=match.phase==='planning'&&planning&&!reviewing;
-  document.body.classList.toggle('is-planning',show);document.body.classList.toggle('is-reviewing',reviewing);document.body.classList.toggle('is-resolving',resolving);document.body.classList.toggle('is-presenting',presenting);document.body.classList.toggle('hud-expanded',hudExpanded);
-  $('#planning-panel').hidden=false;$('#queue-panel').hidden=!show;$('#review-controls').hidden=!reviewing;$('#review-open').disabled=resolving||presenting||reviewPlaying||history.length<2;
-  $('#rules-open').disabled=resolving||reviewPlaying;
-  $('#hud-toggle').setAttribute('aria-expanded',String(hudExpanded));
-  $('#round-counter').textContent=`Ronda ${reviewing?((playbackEvent??history[reviewIndex].event)?.round??history[reviewIndex].state.round):currentEvent&&resolving?currentEvent.round:match.round||'—'}`;$('#action-clock').textContent='';
-  const event=playbackEvent??(reviewing?history[reviewIndex].event:resolving?currentEvent:null);
-  $('#status-team').innerHTML=event?teamBadge(event.side,true):match.round?teamBadge('w',true):'';
-  $('#action-detail').textContent=event?outcomeText(event,reviewing?history[reviewIndex].state:match):'';$('#action-detail').hidden=!$('#action-detail').textContent;
-  if(reviewing){$('#phase-kicker').textContent='REVISIÓN';$('#battle-status').textContent=reviewPlaying?`${playbackEvent?.reversed?'Retrocediendo':'Reproduciendo'} · ${describeBattleEvent(playbackEvent,forecast())}`:'Partida pausada';panel.innerHTML='';renderReview();renderExchange();return;}
-  if(resolving){$('#phase-kicker').textContent='INTERCAMBIO';$('#battle-status').textContent=event?`Acción ${event.sequenceIndex+1}/${event.sequenceTotal} · ${describeBattleEvent(event,match)}`:'Órdenes reveladas';panel.innerHTML='';renderExchange();return;}
-  if(presenting||match.phase==='ready'){$('#phase-kicker').textContent='PRESENTACIÓN';$('#battle-status').textContent='Preparando el campo de batalla…';panel.innerHTML='';}
-  else if(show){const slots=roundRules(match).actions;$('#phase-kicker').textContent='PREPARA TU SECUENCIA';$('#battle-status').textContent=`Elige tu siguiente orden · ${draft.length}/${slots}`;panel.innerHTML=`<div class="timer" id="planning-timer"><p>Tiempo de esta acción</p><strong id="timer-seconds"></strong></div><div class="timer-track"><i id="timer-progress"></i></div><p>${slots} ${slots===1?'acción':'acciones'} por bando · Escudo ${forecast().shieldUsed?.w?'usado':'disponible'}</p>`;updateTimer();}
-  else if(match.phase==='finished'){$('#phase-kicker').textContent='RESULTADO';$('#battle-status').textContent=winnerText();panel.innerHTML=`<h2>${escape(winnerText())}</h2><button type="button" data-command="review">Revisar partida</button><button type="button" data-command="restart">Otra partida</button>`;}
-  renderExchange();
+  if(!match)return;const reviewing=reviewIndex!==null,round=reviewing?(history[reviewIndex].event?.round??history[reviewIndex].state.round):resolving?currentEvent?.round??match.round:match.round;
+  document.body.classList.toggle('is-planning',planning&&!reviewing);document.body.classList.toggle('is-reviewing',reviewing);document.body.classList.toggle('is-resolving',resolving);document.body.classList.toggle('is-presenting',presenting);
+  $('#player-role').textContent=presenting?'Presentando el campo…':reviewing?'Revisión':resolving?'En combate':planning?'Tú juegas primero':match.phase==='finished'?'Partida terminada':'IA pensando…';
+  $('#toolbar-round').textContent=round?`Ronda ${round}`:'';$('#toolbar-clock').textContent='';
+  $('#wait-action').disabled=!planning||resolving||presenting||reviewing;$('#review-open').disabled=resolving||presenting||reviewPlaying||history.length<2;$('#rules-open').disabled=resolving||reviewPlaying;
+  $('#review-controls').hidden=!reviewing;if(reviewing)renderReview();else if(planning)updateTimer();
 }
-function outcomeText(event,state){
-  return (event.targets??[]).map(t=>{const unit=state.units.find(u=>u.id===t.id);return `${UNIT_NAMES[unit?.type]??'Pieza'} ${t.square}: ${t.blocked?'escudo roto · captura rechazada':t.restored?'restaurada':'capturada'}`;}).join(' · ');
-}
-function revealRound(){
-  const base=publicView(match,viewer);currentExchange={round:match.round,entries:match.resolution.map((step,index)=>{const before=previewPlan(base,step.side,match.plans[step.side].slice(0,Math.floor(index/2)));return {index,side:step.side,order:structuredClone(step.order),text:describePlannedOrder(step.order,before)};})};
-}
-function renderExchange(){
-  const reviewing=reviewIndex!==null,exchange=reviewing?(playbackExchange??history[reviewIndex].exchange):currentExchange,event=playbackEvent??(reviewing?history[reviewIndex].event:currentEvent),show=Boolean(exchange&&(resolving||reviewing||match.phase==='finished'));
-  $('#exchange-panel').hidden=!show;$('#turn-strip').hidden=!show||reviewing;if(!show)return;
-  const active=event?.sequenceIndex??-1,finalEvent=history.at(-1)?.event;$('#exchange-title').textContent=`Intercambio · ronda ${exchange.round}`;$('#exchange-position').textContent=active<0?'Órdenes reveladas':`${active+1}/${exchange.entries.length}`;
-  $('#turn-strip').style.gridTemplateColumns=`repeat(${exchange.entries.length},minmax(0,1fr))`;
-  $('#exchange-orders').innerHTML=exchange.entries.map(step=>`<li class="${step.index===active?'is-current':step.index<active?'is-done':''}" data-exchange-index="${step.index}" ${step.index===active?'aria-current="step"':''}><b>${step.index+1}</b><div>${teamBadge(step.side,true)}<p>${escape(step.text)}</p>${match.phase==='finished'&&exchange.round===finalEvent?.round&&step.index>finalEvent.sequenceIndex?'<small>No ejecutada · fin de partida</small>':''}</div></li>`).join('');
-  $('#turn-strip').innerHTML=exchange.entries.map(step=>`<button type="button" data-show-exchange title="${escape(step.text)}" class="${step.index===active?'is-current':''}"><b>${step.index+1}</b>${teamBadge(step.side,true)}<span>${escape(step.text)}</span></button>`).join('');
-  $('#exchange-result').textContent=event?outcomeText(event,reviewing?history[reviewIndex].state:match):'';
-}
-function renderControls(){renderInspector();renderFieldActions();if(match)renderQueue();}
-function teamInfo(side){const palette=armyPalettes.find(p=>p.id===appearanceFor('p',side).palette);return {...palette,name:`${sideName(side)} · ${palette.label}`};}
-function teamBadge(side,compact=false){const team=teamInfo(side);return `<span class="team-badge" title="${escape(team.name)}" style="--team-color:${team.swatch}"><i aria-hidden="true"></i>${escape(compact?`${sideName(side)} · ${team.label}`:team.name)}</span>`;}
-function renderInspector(){
-  const unit=match&&unitFrom(forecast(),inspectedId);$('#unit-name').textContent=unit?UNIT_NAMES[unit.type]:'Consulta';$('#unit-state').textContent=unit?(unit.captured?'Capturada':unit.guard?'◇ Escudo':'En juego'):'';
-  $('#unit-team').innerHTML=unit?teamBadge(unit.color,true):'';
-  $('#unit-details').innerHTML=unit?`<span>Casilla ${unit.square}</span><span>${unit.captured?'Fuera de combate':unit.guard?'Escudo hasta fin de ronda':forecast().shieldUsed?.[unit.color]?'Escudo del bando usado':'Escudo del bando disponible'}</span><span>${unit.type==='k'?'Proteger al rey':`Valor táctico ${tacticalValues[unit.type]}`}</span>`:'<span>Toca una ficha.</span><span>Consulta ambos</span><span>bandos.</span>';
-}
+function revealRound(){} // All resolved events remain in history; the battlefield has no exchange panels.
+function renderControls(){renderFieldActions();}
+function renderInspector(){}
 function inspectableAt(state,square){return unitAt(state,square)??state.units.find(u=>u.square===square&&u.type==='k'&&state.phase==='finished');}
-function inspectSquare(square){
-  if(!match||!square)return;const state=forecast(),unit=inspectableAt(state,square);
-  if(unit&&unit.id!==inspectedId){inspectedId=unit.id;renderInspector();}
-}
+function inspectSquare(square){const unit=match&&square&&inspectableAt(forecast(),square);if(unit)inspectedId=unit.id;}
 function renderFieldActions(){
   const menu=$('#unit-actions'),unit=match&&unitFrom(forecast());menu.hidden=true;document.body.classList.remove('has-field-actions');
   if(!planning||resolving||presenting||reviewIndex!==null||!unit||unit.color!==viewer||view==='3d'&&!three)return;
@@ -124,7 +91,7 @@ function renderFieldActions(){
   menu.hidden=false;positionFieldActions();
 }
 function positionFieldActions(){
-  const menu=$('#unit-actions');if(menu.hidden)return;const box=$('.tactical-board-wrap').getBoundingClientRect(),hud=$('.command-column').getBoundingClientRect(),mobile=innerWidth<=740,clearance=mobile&&hud.height?Math.max(12,box.bottom-hud.top+12):20;
+  const menu=$('#unit-actions');if(menu.hidden)return;const box=$('.tactical-board-wrap').getBoundingClientRect(),clearance=20;
   menu.style.left=view==='2d'?`${board.getBoundingClientRect().x+board.getBoundingClientRect().width/2}px`:'50%';menu.style.top=`${box.height-menu.offsetHeight-clearance}px`;
 }
 function selectCell(square){
@@ -132,12 +99,6 @@ function selectCell(square){
 }
 function commitOrder(order){const result=checkPlan([...draft,order]);if(!result.ok){toast(result.error);return;}draft.push(order);clearIntent();selectedId=null;selectCell(null);sound('menu4');advanceOrder();}
 function confirmMove(order){const unit=unitFrom(forecast(),order.unitId);if(unit?.type==='p'&&order.target[1]===(unit.color==='w'?'8':'1')){pendingTarget=order;renderFieldActions();return;}commitOrder(order);}
-
-function orderLabel(order,index){const before=previewPlan(match,viewer,draft.slice(0,index));return describePlannedOrder(validatePlan(match,viewer,draft.slice(0,index+1)).orders?.at(-1)??order,before);}
-function renderQueue(){
-  const max=roundRules(match).actions;$('#queue-count').textContent=`${draft.length} / ${max}`;
-  $('#order-queue').innerHTML=draft.length?draft.map((order,index)=>`<li><span class="queue-number">${index+1}</span><span>${escape(orderLabel(order,index))}</span></li>`).join(''):'<li class="queue-empty">Elige las órdenes directamente sobre el tablero.</li>';
-}
 
 function render(){renderPhase();renderBoard();renderControls();}
 function selectUnit(id){if(!planning||resolving||presenting||reviewIndex!==null)return;const unit=unitFrom(forecast(),id);if(!unit||unit.color!==viewer||unit.captured)return;selectedId=id;selectedSquare=unit.square;inspectedId=id;clearIntent();sound();render();}
@@ -194,8 +155,8 @@ function recordPosition(event){
 function enterReview(){if(resolving||reviewPlaying||history.length<2)return;$('#result-dialog').close();clearIntent();selectedId=null;selectedSquare=null;reviewIndex=history.length-1;render();}
 function renderReview(){
   const entry=history[reviewIndex];$('#review-range').max=String(history.length-1);$('#review-range').value=String(reviewIndex);$('#review-position').textContent=`Acción ${reviewIndex} / ${history.length-1}`;
-  const event=playbackEvent??entry.event;$('#review-description').textContent=`${event?.reversed?'Restaurando · ':''}${describeBattleEvent(event,entry.state)}`;$('#review-side').innerHTML=event?teamBadge(event.side):'';$('#review-return').textContent=match.phase==='finished'?'Resultado':'Volver';
-  $('#review-range').disabled=reviewPlaying;$('#review-return').disabled=reviewPlaying;$('#review-replay').disabled=reviewPlaying||reviewIndex===0;
+  $('#review-return').textContent=match.phase==='finished'?'Resultado':'Volver';
+  $('#review-range').disabled=reviewPlaying;$('#review-return').disabled=reviewPlaying;
   for(const button of document.querySelectorAll('[data-review]'))button.disabled=reviewPlaying||(['first','prev'].includes(button.dataset.review)?reviewIndex===0:reviewIndex===history.length-1);
 }
 async function seekReview(target,replay=false){
@@ -206,7 +167,7 @@ async function seekReview(target,replay=false){
 }
 function leaveReview(){if(reviewPlaying)return;reviewIndex=null;selectedId=null;selectedSquare=null;lastTick=performance.now();render();if(match.phase==='finished')$('#result-dialog').showModal();}
 function beginPlanning(){planning=true;draft=[];furthestOrder=0;selectedId=null;selectedSquare=null;clearIntent();totalSeconds=roundRules(match).seconds;secondsLeft=totalSeconds;lastTick=performance.now();render();}
-function updateTimer(){const seconds=$('#timer-seconds'),progress=$('#timer-progress'),value=`${Math.max(0,Math.ceil(secondsLeft))}s`;if(seconds&&seconds.textContent!==value)seconds.textContent=value;if(progress)progress.style.width=`${Math.max(0,secondsLeft/totalSeconds*100)}%`;$('#planning-timer')?.classList.toggle('is-urgent',secondsLeft<=3);if(planning&&reviewIndex===null)$('#action-clock').textContent=value;}
+function updateTimer(){if(planning&&reviewIndex===null)$('#toolbar-clock').textContent=`${Math.max(0,Math.ceil(secondsLeft))}s · ${draft.length}/${roundRules(match).actions}`;}
 async function sealPlan(){
   if(!planning||match.phase!=='planning')return;const token=phaseToken,result=submitPlan(match,'w',draft);if(!result.ok){toast(result.error);return;}
   planning=false;clearIntent();selectedId=null;render();const orders=await aiPending;if(token!==phaseToken)return;
@@ -233,6 +194,7 @@ async function playEvent(event,after){
 async function runResolution(){
   const token=phaseToken;resolving=true;planning=false;viewer='w';render();
   while(match.phase==='resolution'&&token===phaseToken){
+    while($('#exit-dialog').open&&token===phaseToken)await delay(50);if(token!==phaseToken)return;
     const before=publicView(match,viewer),result=resolveNext(match);if(!result.ok){toast(result.error);break;}const event=result.event;lastEvent=event;currentEvent=event;recordPosition(event);playbackState=before;renderPhase();
     await delay(reduced?30:100);if(token!==phaseToken)return;await playEvent(event,publicView(match,viewer));if(token!==phaseToken)return;playbackState=null;renderBoard();renderInspector();await delay(reduced?60:120);
   }
@@ -270,21 +232,29 @@ board.addEventListener('pointerup',e=>{if(!drag2d)return;const start=drag2d;clea
 board.addEventListener('pointerover',e=>{if(!drag2d)inspectSquare(e.target.closest('[data-square]')?.dataset.square);});
 board.addEventListener('focusin',e=>inspectSquare(e.target.closest('[data-square]')?.dataset.square));
 board.addEventListener('pointercancel',()=>{clearDragGhost();drag2d=null;});document.addEventListener('pointerup',()=>{if(drag2d){clearDragGhost();drag2d=null;}});
-$('#phase-panel').addEventListener('click',event=>{const command=event.target.closest('[data-command]')?.dataset.command;if(command==='restart')restart();else if(command==='review')enterReview();});
 document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>setView(button.dataset.view)));
 $('#camera-reset').addEventListener('click',()=>{three?.resetCamera();sound('menu3');});
 $('#graphics-mode').addEventListener('click',()=>{liteGraphics=!liteGraphics;three?.setQuality(liteGraphics);$('#graphics-mode').setAttribute('aria-pressed',String(liteGraphics));$('#graphics-mode').textContent=liteGraphics?'Ligero':'Auto';$('#graphics-mode').title=liteGraphics?'Volver a gráficos automáticos':'Activar gráficos ligeros';});
 $('#rules-open').addEventListener('click',openRules);$('#rules-close').addEventListener('click',()=>rulesDialog.close());$('#rules-done').addEventListener('click',()=>rulesDialog.close());rulesDialog.addEventListener('close',()=>{lastTick=performance.now();three?.setActive(view==='3d');});
 $('#new-match').addEventListener('click',restart);$('#result-again').addEventListener('click',restart);
 $('#result-review').addEventListener('click',enterReview);$('#review-open').addEventListener('click',enterReview);$('#review-return').addEventListener('click',leaveReview);
-$('#review-range').addEventListener('change',e=>seekReview(Number(e.target.value)));$('#review-replay').addEventListener('click',()=>seekReview(reviewIndex,true));
+$('#review-range').addEventListener('change',e=>seekReview(Number(e.target.value)));
 $('#review-controls').addEventListener('click',e=>{const command=e.target.closest('[data-review]')?.dataset.review;if(!command)return;const target=command==='first'?0:command==='last'?history.length-1:reviewIndex+(command==='next'?1:-1);void seekReview(target);});
 $('.tactical-board-wrap').addEventListener('click',e=>{if(e.target===$('.tactical-board-wrap'))handleSquare(null);});
-$('#hud-toggle').addEventListener('click',()=>{hudExpanded=!hudExpanded;renderPhase();positionFieldActions();});
-$('#turn-strip').addEventListener('click',()=>{hudExpanded=true;renderPhase();});
+
 document.addEventListener('visibilitychange',()=>lastTick=performance.now());window.addEventListener('resize',()=>{three?.resize();positionFieldActions();measureHud();});
-setInterval(()=>{const now=performance.now(),elapsed=(now-lastTick)/1000;lastTick=now;if(!planning||document.hidden||rulesDialog.open||resolving||presenting||reviewIndex!==null||reviewPlaying)return;secondsLeft=Math.max(0,secondsLeft-elapsed);updateTimer();if(secondsLeft<=0)expireOrder();},100);
-function measureHud(){document.documentElement.style.setProperty('--toolbar-height',$('.tactics-header').offsetHeight+'px');document.documentElement.style.setProperty('--status-height',$('.battle-status').offsetHeight+'px');positionFieldActions();}
-new ResizeObserver(measureHud).observe($('.tactics-header'));new ResizeObserver(measureHud).observe($('.battle-status'));
+setInterval(()=>{const now=performance.now(),elapsed=(now-lastTick)/1000;lastTick=now;if(!planning||document.hidden||rulesDialog.open||$('#exit-dialog').open||resolving||presenting||reviewIndex!==null||reviewPlaying)return;secondsLeft=Math.max(0,secondsLeft-elapsed);updateTimer();if(secondsLeft<=0)expireOrder();},100);
+function measureHud(){document.documentElement.style.setProperty('--toolbar-height',$('.tactics-header').offsetHeight+'px');positionFieldActions();}
+new ResizeObserver(measureHud).observe($('.tactics-header'));
 $('#wait-action').addEventListener('click',()=>{if(planning&&!resolving&&reviewIndex===null)commitOrder({kind:'pass'});});
 newMatch();
+
+function confirmExit(destination='./'){
+  const dialog=$('#exit-dialog');dialog.dataset.destination=destination;if(!dialog.open)dialog.showModal();sound('menu1');
+}
+$('#exit-game').addEventListener('click',()=>confirmExit());
+$('.tactics-brand').addEventListener('click',e=>{e.preventDefault();confirmExit();});
+$('#result-dialog a').addEventListener('click',e=>{e.preventDefault();$('#result-dialog').close();confirmExit();});
+$('#exit-cancel').addEventListener('click',()=>$('#exit-dialog').close());
+$('#exit-confirm').addEventListener('click',()=>{phaseToken++;three?.cancelPlayback();three?.setActive(false);sound('menu4');location.assign($('#exit-dialog').dataset.destination);});
+$('#exit-dialog').addEventListener('close',()=>{lastTick=performance.now();});
