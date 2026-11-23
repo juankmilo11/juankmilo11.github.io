@@ -1,27 +1,30 @@
 # Fantasy Chess Tactics · modo principal
 
 Tablero 8×8, con las 16 piezas de cada bando en la posición inicial del ajedrez
-normal. El usuario siempre juega primero. La partida termina inmediatamente al
-capturar al rey rival o producir una posición de jaque mate, incluso en mitad
+normal. La iniciativa cambia cada dos rondas. La partida termina inmediatamente
+al capturar al rey rival o producir una posición de jaque mate, incluso en mitad
 de un intercambio. Las órdenes restantes no se ejecutan. No hay escudos, vida,
 ataques a distancia, definitivas ni dados.
 
 ## Preparar y confirmar
 
-La primera ronda permite una acción por bando; la segunda, dos; desde la tercera,
-tres. Cada orden tiene 20 segundos activos. Ambos bandos preparan en secreto y
-después ejecutan A1, B1, A2, B2… El usuario inicia cada ronda y la IA la cierra.
+La primera ronda permite una acción por bando; desde la segunda son dos. Cada
+orden tiene 20 segundos activos. Ambos preparan en secreto y alternan sus
+acciones dentro de la ronda. El usuario empieza las rondas 1 y 2; la IA, 3 y 4;
+el usuario, 5 y 6, y así sucesivamente. Al cambiar la iniciativa puede coincidir
+el último bando de una ronda con el primero de la siguiente.
 Esperar, agotar el reloj o un intento fallido también consume su hueco.
 
 Seleccionar o arrastrar una pieza muestra sus destinos posibles. Elegir una
-casilla dibuja el recorrido y permite **Confirmar movimiento** o **Cambiar** en
-el tablero. Soltar la pieza no confirma por sí solo. La promoción se elige antes
-de confirmar. Si vence el reloj sin confirmación, esa orden se convierte en
+casilla dibuja una flecha plana sobre el suelo y muestra un **chulo** para
+confirmar y una **X** para cambiar, justo encima de la casilla destino. Soltar
+la pieza no confirma por sí solo. La promoción se elige antes de confirmar. Si vence el reloj sin confirmación, esa orden se convierte en
 espera; no se ejecuta un movimiento pendiente.
 
-Una pieza puede moverse una sola vez en la ronda. El enroque consume los
-movimientos de rey y torre. Los destinos normales comparten color; el enroque
-disponible usa violeta y la casilla seleccionada conserva su propio contorno.
+Una pieza puede realizar ambos movimientos de la ronda. El segundo se declara
+desde su posición prevista tras el primero; se revalida desde su posición real
+al ejecutarse. Después de enrocar también se puede volver a mover rey o torre.
+Los destinos normales comparten color; el enroque disponible usa violeta y la casilla seleccionada conserva su propio contorno.
 
 ## Predicción y obstáculos
 
@@ -70,7 +73,7 @@ adaptadas aquí a órdenes secretas intercaladas y captura del rey.
 
 JUGAR usa el mismo sonido que Partida clásica y abre directamente el campo 3D,
 sin mostrar antes el tablero 2D. El modo principal conserva el anochecer y la
-presentación giratoria. El banner reúne reloj, progreso y controles de vista.
+presentación de media vuelta, reducida de 4,6 a 2,3 segundos. El banner reúne reloj, progreso y controles de vista.
 Confirmación, promoción e intentos se muestran sobre el propio tablero.
 
 Las piezas se elevan ligeramente al arrastrarlas, siguen el puntero y aterrizan

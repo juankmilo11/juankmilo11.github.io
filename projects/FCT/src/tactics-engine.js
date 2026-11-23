@@ -15,7 +15,8 @@ export const livingUnits=(state,side)=>state.units.filter(unit=>alive(unit)&&(!s
 const findUnit=(state,unit)=>typeof unit==='string'?state.units.find(item=>item.id===unit):unit;
 const solid=(state,square)=>['void','obstacle'].includes(state.tiles?.[square]?.kind);
 const attackDirections=unit=>unit.type==='b'?DIAGONALS:unit.type==='r'?ORTHOGONALS:ALL;
-export function roundRules(state=1){const value=Number(typeof state==='number'?state:state?.round),round=Number.isFinite(value)?Math.floor(value):1,actions=Math.max(1,Math.min(3,round||1));return {seconds:20,actions,maxMoves:actions,maxOther:0};}
+export function roundRules(state=1){const value=Number(typeof state==='number'?state:state?.round),round=Number.isFinite(value)?Math.floor(value):1,actions=round>=2?2:1;return {seconds:20,actions,maxMoves:actions,maxOther:0};}
+export function firstSideForRound(round){return Math.floor((Math.max(1,Number(round)||1)-1)/2)%2?'b':'w';}
 export function createMatch({seed=Date.now()}={}){
   let normalized=typeof seed==='number'?seed: [...String(seed)].reduce((n,c)=>Math.imul(n,31)+c.charCodeAt(0),7);
   const units=[];
@@ -23,7 +24,7 @@ export function createMatch({seed=Date.now()}={}){
     const counts={};
     TYPES.forEach((type,index)=>{const count=counts[type]=(counts[type]??0)+1;units.push({id:`${color}-${type}${type==='p'||count>1?count:''}`,color,type,homeSquare:sq(index%8,(color==='w'?(index<8?2:1):(index<8?7:8))-1),square:null,captured:false,hasMoved:false});});
   }
-  return {version:8,opponent:'ai',rng:(normalized>>>0)||1,units,tiles:{},phase:'deployment',round:0,firstSide:'w',lastSide:null,actionNumber:0,activePlanner:'w',ready:{w:false,b:false},deployed:{w:false,b:false},plans:{w:[],b:[]},winner:null,log:[],enPassant:null,resolution:[],resolutionIndex:0,revision:0};
+  return {version:9,opponent:'ai',rng:(normalized>>>0)||1,units,tiles:{},phase:'deployment',round:0,firstSide:'w',lastSide:null,actionNumber:0,activePlanner:'w',ready:{w:false,b:false},deployed:{w:false,b:false},plans:{w:[],b:[]},winner:null,log:[],enPassant:null,resolution:[],resolutionIndex:0,revision:0};
 }
 export function autoDeploy(state,side){
   if(!['w','b'].includes(side))return bad('Bando no válido.');
@@ -41,7 +42,7 @@ export function beginBattle(state){if(state.phase!=='ready')return bad('La batal
 export function startRound(state){
   if(state.winner)return bad('La partida ha terminado.');
   if(!(state.phase==='ready'||state.phase==='resolution'&&state.resolutionIndex>=state.resolution.length))return bad('La siguiente ronda todavía no puede empezar.');
-  state.firstSide='w';state.round++;state.phase='planning';state.ready={w:false,b:false};state.plans={w:[],b:[]};state.activePlanner='w';state.resolution=[];state.resolutionIndex=0;
+  state.round++;state.firstSide=firstSideForRound(state.round);state.phase='planning';state.ready={w:false,b:false};state.plans={w:[],b:[]};state.activePlanner='w';state.resolution=[];state.resolutionIndex=0;
   state.revision++;return good({rules:roundRules(state)});
 }
 function ray(state,unit,direction,max=7,ignoreBodies=false){
@@ -185,20 +186,16 @@ export function previewPlan(state,side,orders=[]){
 export function validatePlan(state,side,orders=[]){
   if(!['w','b'].includes(side)||!Array.isArray(orders))return bad('Plan no válido.');
   if(orders.length>roundRules(state).actions)return bad(`Dispones de ${roundRules(state).actions} acciones en esta ronda.`);
-  const projected=clone({...state,log:[],plans:{w:[],b:[]},resolution:[]}),used=new Set(),normalized=[];
+  const projected=clone({...state,log:[],plans:{w:[],b:[]},resolution:[]}),normalized=[];
   for(const raw of orders){
     const result=validateOrder(projected,side,raw);if(!result.ok)return result;const order=result.order;
-    if(order.kind!=='pass'){
-      const key=`${order.unitId}:${order.kind}`;if(used.has(key))return bad('Una misma pieza no puede repetir la misma acción en esta ronda.');used.add(key);
-      if(order.castle){const key=`${order.castle.rookId}:move`;if(used.has(key))return bad('La torre ya utilizó su movimiento en esta ronda.');used.add(key);}
-    }
     normalized.push(order);applyForecastOrder(projected,side,order);
   }return good({orders:normalized,forecast:projected});
 }
 export function submitPlan(state,side,orders=[]){
   if(state.phase!=='planning'||state.ready[side])return bad('Este plan ya está cerrado.');const validation=validatePlan(state,side,orders);if(!validation.ok)return validation;
   state.plans[side]=clone(validation.orders);state.ready[side]=true;state.activePlanner=other(side);
-  if(state.ready.w&&state.ready.b){state.phase='resolution';state.activePlanner=null;state.resolution=[];state.resolutionIndex=0;for(let i=0;i<roundRules(state).actions;i++)for(const color of ['w','b'])state.resolution.push({side:color,order:clone(state.plans[color][i]??{kind:'pass'})});}
+  if(state.ready.w&&state.ready.b){state.phase='resolution';state.activePlanner=null;state.resolution=[];state.resolutionIndex=0;for(let i=0;i<roundRules(state).actions;i++)for(const color of [state.firstSide,other(state.firstSide)])state.resolution.push({side:color,order:clone(state.plans[color][i]??{kind:'pass'})});}
   state.revision++;return good();
 }
 export function resolveNext(state){

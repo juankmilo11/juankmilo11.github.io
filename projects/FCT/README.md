@@ -10,10 +10,12 @@ move/capture audio for both sides (including en passant).
 ## Fantasy Chess Tactics
 
 The main **JUGAR** button plays a sound and fades into a fullscreen 3D battle.
-Both sides use the standard chess formation. The human always executes first.
-Rounds contain 1, 2, then 3 secret actions per side, with 20 seconds per action.
-Orders interleave continuously. A unit moves at most once per round. Choosing a
-destination previews its route; **Confirmar movimiento** commits the order.
+Both sides use the standard chess formation. The human starts rounds 1–2, the
+AI rounds 3–4, the human rounds 5–6, and so on. Round 1 has one secret action
+per side; all subsequent rounds have two, with 20 seconds per action. Orders
+interleave within each round and the same piece may move twice. Choosing a
+destination previews a flat route on the floor; a checkmark directly above the
+destination commits the order, while the adjacent X cancels its preview.
 An unconfirmed order expires as a pass when the clock runs out.
 
 Captures work by moving onto the enemy and removing it. King capture or checkmate
@@ -29,7 +31,7 @@ slot, including failures, and never capture allies.
 
 The board draws attempted routes and actual endpoints, explains stopped or
 cancelled moves, and marks available castling destinations in violet. Initial
-loading shows 3D directly. Move/capture animations last roughly 420–600 ms, with
+loading shows 3D directly, with a 2.3-second half-turn introduction. Move/capture animations last roughly 420–600 ms, with
 reduced-motion support and smooth raised dragging/shadows; failures remain
 visible briefly. Review replays and reverses captures, mate, promotion and
 castling without changing the live match.

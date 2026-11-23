@@ -2,8 +2,10 @@
 
 ## Reglas evaluadas
 
-Formación normal de ajedrez, sin escudos. El usuario inicia todas las rondas y
-dispone, como la IA, de 1/2/3 acciones; 20 segundos para confirmar cada orden.
+Formación normal de ajedrez, sin escudos. Una acción por bando en la ronda 1 y
+dos desde la ronda 2, pudiendo mover la misma pieza dos veces. La iniciativa
+cambia cada dos rondas: usuario 1–2, IA 3–4, usuario 5–6, etc. Se conservan los
+20 segundos para confirmar cada orden.
 Las secuencias se preparan en secreto. La resolución intercala los bandos y
 termina inmediatamente por captura del rey o mate. Un obstáculo puede acortar
 un desplazamiento o producir una captura anterior al destino declarado.
@@ -18,7 +20,8 @@ del rival y sus registros privados no participan en la elección.
 El planificador combina:
 
 - Un haz inicial de secuencias, con diversidad de primeras jugadas.
-- Permutaciones para explorar el orden de capturas y desplazamientos.
+- Permutaciones para explorar el orden de capturas y desplazamientos, incluidas
+  dos jugadas consecutivas de la misma pieza entre las acciones rivales.
 - Respuestas adversarias iterativas que sustituyen una orden de la secuencia y
   se prueban contra planes contrarios completos.
 - Planes explícitos de presión al rey, recapturas en casillas actualmente
@@ -63,7 +66,7 @@ La selección final sigue siendo conservadora. La aleatoriedad solo varía entre
 planes casi equivalentes; no se promete impredecibilidad completa, fuerza Elo
 ni equilibrio perfecto en este juego de órdenes secretas.
 
-## Comparación reproducible
+## Comparación y mediciones históricas
 
 ```sh
 node projects/FCT/scripts/benchmark-tactics.mjs --previous --seeds=2141,3137 --rounds=30
@@ -75,24 +78,17 @@ intercepción y mate. Nunca se importa en producción. Las semillas varían los
 desempates de planes, no la formación inicial, que siempre es clásica. Cada
 semilla intercambia los dos bandos para separar fuerza e iniciativa.
 
-La primera medición de esta revisión obtuvo 2/4 victorias: ganó ambos juegos
-como primer bando y perdió ambos como segundo. Coste medio aproximado: 2771 ms
-por plan frente a 2884 ms de la referencia, compartiendo CPU con otras pruebas.
-La traza detectó que el haz ofensivo podía excluir retiradas seguras del rey;
-se añadieron esas alternativas y una prueba de regresión específica.
+Las mediciones de la publicación anterior correspondían a 1/2/3 acciones y al
+usuario empezando siempre. No se presentan como resultados de estas reglas:
+la iniciativa por parejas y la posibilidad de mover dos veces una pieza cambian
+las respuestas válidas y la estrategia. La IA genera ahora esas continuaciones
+y evalúa la seguridad del rey según quién empieza realmente la siguiente ronda.
 
-La repetición final con retiradas del rey, desarrollo/cobertura y evaluación
-conservadora mantuvo 2/4 victorias: 2/2 primero, 0/2 segundo. Las derrotas como
-segundo llegaron en las rondas 19 y 20, frente a la ronda 6 inicial. No hubo planes
-inválidos, empates ni límites de ronda. Coste medio orientativo: 3430 ms por
-plan frente a 3038 ms de la referencia. Estas cifras no prueban que la nueva
-sea más fuerte en general: corrigen fallos tácticos concretos y muestran que
-la iniciativa sigue condicionando mucho esta variante. No se cambia una regla
-solicitada ni se consulta el plan humano para compensarlo.
-
-Estos ensayos detectan fallos y comparan configuraciones. Una muestra pequeña
-contra otro planificador no demuestra superioridad ante personas. La ventaja
-de mover primero sigue siendo relevante y no se oculta cambiando las reglas.
+En aquella muestra pequeña, la versión previa ganó 2/4, ambas como primer bando;
+las derrotas como segundo llegaron en las rondas 19 y 20, frente a la ronda 6
+antes de corregir las retiradas del rey. No establecía superioridad general ni
+Elo. El coste medio orientativo fue de 3430 ms por plan en escritorio. Las
+mediciones actuales requieren volver a ejecutar el comando con estas reglas.
 
 Las pruebas cubren privacidad de órdenes, presupuestos, planes legales, mate
 durante un intercambio, escapes, intercepciones, enroque, promoción y captura

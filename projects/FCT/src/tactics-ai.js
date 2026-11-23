@@ -56,10 +56,9 @@ function scorePosition(state,side,afterExchange=false){
   return score;
 }
 function candidates(state,side,orders){
-  const used=new Set(orders.filter(o=>o.kind==='move').map(o=>o.unitId));for(const o of orders)if(o.castle)used.add(o.castle.rookId);
   const map=attacks(state),result=[];
   for(const unit of livingUnits(state,side)){
-    if(!used.has(unit.id)){
+    {
       const castles=unit.type==='k'?getCastleOptions(state,unit):[];
       const targets=new Set([...getLegalMoves(state,unit),...castles.map(c=>c.inputTarget)]);
       for(const target of targets){
@@ -171,7 +170,7 @@ function kingSafetyPlans(state,side,bases){
   for(const slot of new Set([0,slots-1])){
    let best=null;
    for(const base of [...bases,[]]){
-    const raw=Array.from({length:slots},(_,i)=>i===slot?{unitId:king.id,kind:'move',target}:base[i]?.unitId===king.id?{kind:'pass'}:base[i]??{kind:'pass'});
+    const raw=Array.from({length:slots},(_,i)=>i===slot?{unitId:king.id,kind:'move',target}:base[i]??{kind:'pass'});
     const valid=validatePlan(state,side,raw);if(!valid.ok)continue;
     const actor=livingUnits(valid.forecast,side).find(u=>u.id===king.id);
     if(!actor||attacks(valid.forecast)[other(side)].has(actor.square))continue;

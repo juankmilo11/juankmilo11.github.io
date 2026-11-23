@@ -544,7 +544,7 @@ async function startCombat() {
   window.requestAnimationFrame(() => {
     battleCurtain.classList.remove('is-covering');
     battleCurtain.classList.add('is-revealing');
-    window.setTimeout(() => battleCurtain.classList.remove('is-revealing'), 2800);
+    window.setTimeout(() => battleCurtain.classList.remove('is-revealing'), 1400);
   });
 }
 

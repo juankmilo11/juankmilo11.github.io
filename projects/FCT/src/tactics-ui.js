@@ -73,7 +73,7 @@ function renderBoard(){
 function renderPhase(){
   if(!match)return;const reviewing=reviewIndex!==null,round=reviewing?(history[reviewIndex].event?.round??history[reviewIndex].state.round):resolving?currentEvent?.round??match.round:match.round;
   document.body.classList.toggle('is-planning',planning&&!reviewing);document.body.classList.toggle('is-reviewing',reviewing);document.body.classList.toggle('is-resolving',resolving);document.body.classList.toggle('is-presenting',presenting);
-  $('#player-role').textContent=presenting?'Presentando el campo…':reviewing?'Revisión':resolving?'En combate':planning?'Tú juegas primero':match.phase==='finished'?'Partida terminada':'IA pensando…';
+  $('#player-role').textContent=presenting?'Presentando el campo…':reviewing?'Revisión':resolving?'En combate':planning?(match.firstSide==='w'?'Tú juegas primero':'IA juega primero'):match.phase==='finished'?'Partida terminada':'IA pensando…';
   $('#toolbar-round').textContent=round?`Ronda ${round}`:'';$('#toolbar-clock').textContent='';
   $('#wait-action').disabled=!planning||resolving||presenting||reviewing;$('#review-open').disabled=resolving||presenting||reviewPlaying||history.length<2;$('#rules-open').disabled=resolving||reviewPlaying;
   $('#review-controls').hidden=!reviewing;if(reviewing)renderReview();else if(planning)updateTimer();
@@ -89,12 +89,15 @@ function renderFieldActions(){
   if(!pendingTarget)return;
   const normalized=validatePlan(match,viewer,[...draft,pendingTarget]).orders?.at(-1)??pendingTarget;
   const promotion=unit.type==='p'&&pendingTarget.target[1]===(viewer==='w'?'8':'1');
-  menu.innerHTML=`<span class="intent-caption">${normalized.castle?'Enroque · ':''}${UNIT_NAMES[unit.type]} ${unit.square} → ${normalized.target}</span>${promotion?['q','r','b','n'].map(type=>`<button type="button" data-promote="${type}" aria-pressed="${(pendingTarget.promotion??'q')===type}">${UNIT_NAMES[type]}</button>`).join(''):''}<button type="button" class="confirm-move" data-confirm-move>Confirmar movimiento</button><button type="button" data-cancel-move>Cambiar</button>`;
+  menu.dataset.target=normalized.target;
+  menu.innerHTML=`${promotion?`<div class="promotion-choices">${['q','r','b','n'].map(type=>`<button type="button" data-promote="${type}" aria-pressed="${(pendingTarget.promotion??'q')===type}">${UNIT_NAMES[type]}</button>`).join('')}</div>`:''}<div class="move-confirmation"><button type="button" class="confirm-move" data-confirm-move aria-label="Confirmar movimiento" title="Confirmar movimiento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button><button type="button" data-cancel-move aria-label="Cambiar movimiento" title="Cambiar movimiento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>`;
   menu.hidden=false;positionFieldActions();
 }
 function positionFieldActions(){
-  const menu=$('#unit-actions');if(menu.hidden){renderIntentOverlay();return;}const box=$('.tactical-board-wrap').getBoundingClientRect(),clearance=20;
-  menu.style.left=view==='2d'?`${board.getBoundingClientRect().x+board.getBoundingClientRect().width/2}px`:'50%';menu.style.top=`${box.height-menu.offsetHeight-clearance}px`;renderIntentOverlay();
+  const menu=$('#unit-actions');if(menu.hidden){renderIntentOverlay();return;}const box=$('.tactical-board-wrap').getBoundingClientRect(),square=menu.dataset.target;
+  let anchor;if(view==='3d')anchor=three?.squareAnchor(square);else{const r=board.querySelector(`[data-square="${square}"]`)?.getBoundingClientRect();if(r)anchor={x:r.x-box.x+r.width/2,y:r.y-box.y};}
+  if(anchor){const half=menu.offsetWidth/2,left=Math.max(half+8,Math.min(box.width-half-8,anchor.x)),top=Math.max($('.tactics-header').getBoundingClientRect().bottom-box.y+8,Math.min(box.height-menu.offsetHeight-8,anchor.y-menu.offsetHeight-8));menu.style.left=`${left}px`;menu.style.top=`${top}px`;}
+  renderIntentOverlay();
 }
 function selectCell(square){
   selectedSquare=/^[a-h][1-8]$/.test(square??'')?square:null;for(const cell of board.children){const selected=cell.dataset.square===selectedSquare;cell.classList.toggle('is-selected',selected);cell.setAttribute('aria-selected',String(selected));}three?.setSelection(selectedSquare);
@@ -269,9 +272,11 @@ function renderIntentOverlay(){
  const box=$('.tactical-board-wrap').getBoundingClientRect();if(!box.width||!box.height)return;
  const point=square=>{if(!/^[a-h][1-8]$/.test(square??''))return null;if(view==='3d')return three?.projectSquare(square);const cell=board.querySelector(`[data-square="${square}"]`);if(!cell)return null;const r=cell.getBoundingClientRect();return {x:r.x-box.x+r.width/2,y:r.y-box.y+r.height/2};};
  let events=[],label='';
- if(pendingTarget){const unit=unitFrom(forecast(),pendingTarget.unitId),check=validatePlan(match,viewer,[...draft,pendingTarget]),order=check.orders?.at(-1)??pendingTarget;events=[{side:viewer,from:unit?.square,intendedTo:order.target,to:order.target,pending:true}];label='Revisa el recorrido y confirma el movimiento';}
+ if(pendingTarget){const unit=unitFrom(forecast(),pendingTarget.unitId),check=validatePlan(match,viewer,[...draft,pendingTarget]),order=check.orders?.at(-1)??pendingTarget;events=[{side:viewer,from:unit?.square,intendedTo:order.target,to:order.target,pending:true}];}
  else if(resolving||reviewIndex!==null){const event=playbackEvent??(reviewIndex!==null?history[reviewIndex].event:currentEvent);if(event){events=[event];label=`${event.side==='w'?'Tú':'IA'} · ${describeBattleEvent(event,forecast())}`;}}
  else if(planning){events=draft.filter(o=>o.kind==='move').map(o=>({side:viewer,from:o.from,intendedTo:o.target,to:o.target,queued:true}));}
+ caption.textContent=label;caption.hidden=!label;three?.setIntents(view==='3d'?events:[]);svg.toggleAttribute('hidden',view==='3d');
+ if(view==='3d'){svg.innerHTML='';return;}
  svg.setAttribute('viewBox',`0 0 ${box.width} ${box.height}`);
  svg.innerHTML='<defs><marker id="intent-arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="context-stroke"/></marker></defs>'+events.map((e,i)=>{
   const a=point(e.from),b=point(e.intendedTo??e.to);if(!a||!b)return '';const color=e.pending?'#a5f1d1':e.side==='w'?'#71deff':'#ffc199',opacity=e.queued?.35:.9,failed=e.kind==='fizzle';

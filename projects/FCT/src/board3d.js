@@ -540,12 +540,12 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
     const endY = cameraProfile.height;
     const startY = endY + 2.4;
     const start = performance.now();
-    const duration = 4600;
+    const duration = 2300;
     const step = (now) => {
       if (token !== introToken) return;
       const t = Math.min(1, (now - start) / duration);
       const eased = t * t * (3 - 2 * t);
-      const angle = endAngle + (1 - eased) * Math.PI * 2;
+      const angle = endAngle + (1 - eased) * Math.PI;
       const radius = startRadius + (endRadius - startRadius) * eased;
       const y = startY + (endY - startY) * eased;
       camera.position.set(target.x + Math.sin(angle) * radius, y, target.z + Math.cos(angle) * radius);
