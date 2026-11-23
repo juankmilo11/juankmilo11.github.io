@@ -21,9 +21,15 @@ const promotionDialog = document.querySelector('#promotion-dialog');
 const exitConfirmation = document.querySelector('#exit-confirmation');
 const aiWorker = new Worker(new URL('./ai-worker.js', import.meta.url), { type: 'module' });
 const audioSystem = createAudioSystem();
-document.querySelector('.tactics-mode-link')?.addEventListener('click',()=>{
+document.querySelector('.tactics-mode-link')?.addEventListener('click',event=>{
+  if(event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||event.button!==0)return;
+  event.preventDefault();if(document.body.classList.contains('is-opening-tactics'))return;
   try { sessionStorage.setItem('fct:tactics:loadout',JSON.stringify(getLoadout())); } catch { /* Cosmetic defaults remain available. */ }
+  audioSystem.playSound('menu4');document.body.classList.add('is-opening-tactics');
+  const curtain=document.querySelector('#battle-curtain');curtain?.classList.add('is-covering');
+  const destination=event.currentTarget.href;setTimeout(()=>location.assign(destination),matchMedia('(prefers-reduced-motion: reduce)').matches?120:360);
 });
+window.addEventListener('pageshow',()=>{document.body.classList.remove('is-opening-tactics');document.querySelector('#battle-curtain')?.classList.remove('is-covering','is-revealing');});
 function playUiSound(name,gain=1) { audioSystem.playSound(name,gain); }
 window.playFctSound = playUiSound;
 

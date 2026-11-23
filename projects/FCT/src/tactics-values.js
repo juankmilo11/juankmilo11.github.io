@@ -1,3 +1,3 @@
-// Combat values: equal HP, stationary attacks and a two-action budget. These are
-// deliberately separate from the classic chess material score.
-export const tacticalValues=Object.freeze({p:2,n:4,b:4,r:5,q:8,k:120});
+// Capture-chess material priors. King value is an objective priority, not tradeable material.
+// Mobility, initiative, shields and king exposure are evaluated separately.
+export const tacticalValues=Object.freeze({p:1,n:3.2,b:3.3,r:5,q:9,k:1000});

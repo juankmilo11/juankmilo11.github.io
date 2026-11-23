@@ -1,159 +1,88 @@
-# Fantasy Chess Tactics · reglas actuales
+# Fantasy Chess Tactics · modo principal
 
-## Preparación
+El objetivo es capturar al rey rival. El tablero es 8×8, con 16 piezas por bando
+y primera fila simétrica sorteada como Ajedrez960. El usuario es Atacantes y
+siempre ejecuta primero; la IA es Defensores. No hay dados, puntos de vida,
+Focus, definitivas ni ataques a distancia.
 
-El tablero es 8×8 y cada ejército tiene 16 piezas: 8 peones, 2 torres, 2
-caballos, 2 alfiles, reina y rey. Se colocan en las posiciones iniciales del
-Ajedrez960: primera fila aleatoria compartida por ambos bandos, con alfiles en
-colores opuestos y rey entre ambas torres. Peones en su fila habitual. Se juega contra IA.
+## Secuencias y predicción
 
-El ganador de la tirada elige jugar primero o segundo. Todas las piezas,
-incluidos ambos reyes, comienzan sin definitiva cargada. La alternancia es continua también entre rondas: A1, B1, A2, B2;
-la siguiente vuelve a comenzar por A. Nunca actúa dos veces seguidas un bando.
+La primera ronda permite una acción por bando; la segunda, dos; desde la tercera,
+tres. Cada orden dispone de 20 segundos activos. Se preparan en secreto y se
+revelan juntas; la ejecución intercala A1, B1, A2, B2… La alternancia continúa
+entre rondas. Al completar los huecos comienza automáticamente el intercambio.
+«Esperar» o agotar el reloj consume un hueco sin mover.
 
-## Rondas y órdenes
+Una pieza puede moverse una sola vez en la misma ronda. Puede activar escudo y
+moverse, consumiendo dos acciones. El enroque cuenta como movimiento de rey y
+torre. Esta restricción conserva el reparto de acciones entre el ejército.
 
-Todas las rondas permiten dos acciones por bando, con 20 segundos activos para
-cada acción. Se preparan en secreto y se ejecutan A1, B1, A2, B2. Al completar
-la secuencia, el combate y la siguiente ronda comienzan automáticamente.
-Si el tiempo se agota, ese hueco se convierte en espera.
+Seleccionar o arrastrar muestra destinos con el mismo color. Elegir la casilla
+confirma la orden. Se permiten intentos sobre una casilla aliada y diagonales
+vacías de peón: se está prediciendo lo que habrá allí, no capturando aliados.
+Si sigue ocupada por un aliado al ejecutarse, o el peón no encuentra rival ni
+captura al paso, se cancela y el hueco se pierde. El camino intermedio debe estar
+libre. El motor vuelve a comprobar cada orden en su momento real de ejecución.
+Los movimientos previstos siguen siendo predicciones: el rival puede cambiar
+el resultado, incluso si una previsión mostraba una captura del rey.
 
-Una misma pieza no puede repetir el mismo tipo de acción en la misma ronda.
-Puede Mover + Atacar, Bloquear + Atacar o Focus + Definitiva; dos piezas distintas
-sí pueden realizar el mismo tipo. La validación se comparte entre el tablero,
-el motor y la IA. Las esperas no se vinculan a una pieza.
+## Capturas y movimientos especiales
 
-Seleccionar o empezar a arrastrar una pieza muestra sus casillas disponibles,
-todas del mismo color, con la casilla seleccionada en otro. Elegir una casilla
-vacía guarda un movimiento; elegir una pieza aliada o enemiga al alcance guarda
-un ataque. La confirmación es inmediata. La ficha se deselecciona después de
-actuar y hay que volver a elegirla para otra acción. Un borde celeste distingue
-la casilla seleccionada en ambas vistas, incluso al consultar una casilla vacía.
-No hay elección de orientación al terminar un movimiento.
+Las piezas capturan desplazándose a la casilla enemiga y retirando a su ocupante.
+No existe fuego aliado. Gana inmediatamente el bando que captura al rey; no se
+exige evitar jaque ni resolverlo, porque el objetivo es capturarlo.
 
-## Movimiento y ataque
+Los peones avanzan una casilla; pueden avanzar dos solo desde su fila inicial,
+sin movimientos previos y con camino libre. Capturan una diagonal delantera.
+Al llegar al fondo el jugador elige reina, torre, alfil o caballo en el propio
+tablero. Agotar el reloj mientras se elige confirma promoción a reina.
 
-Se conservan las geometrías del ajedrez, con estas reglas del peón: siempre
-puede avanzar una o dos casillas si el camino está libre, o desplazarse a una
-casilla diagonal delantera aunque esté vacía. El caballo salta; las demás
-piezas no atraviesan cuerpos. No hay obligación general de evitar jaque,
-promoción ni captura al paso. El enroque sí conserva las condiciones clásicas:
-rey y torre sin movimientos previos, camino libre y rey sin amenaza al inicio,
-en la casilla de paso ni en el destino. Las amenazas se comprueban con la
-geometría clásica de ataque, incluidos peones y reyes. Mueve ambas piezas y
-consume el movimiento de ambas durante esa ronda; cuesta una orden.
+La captura al paso se permite únicamente en la acción inmediatamente posterior
+al avance doble rival, incluso si cruza el límite de ronda. Una espera, escudo
+o cualquier otra orden consume esa oportunidad. El enroque conserva las reglas
+960: ambas piezas sin mover, camino libre, rey sin amenaza al inicio, al pasar
+y al llegar; termina en c/g y d/f. Para declararlo, selecciona rey y torre.
+Los patrones y movimientos especiales se basan en las [reglas de FIDE](https://handbook.fide.com/chapter/e012023), adaptados aquí a órdenes intercaladas y captura del rey.
 
-Atacar no mueve al atacante. Se elige una dirección y el primer cuerpo de esa
-línea recibe el daño, aliado o enemigo. El caballo golpea los dos destinos en L
-de un cuadrante. Declarar un ataque exige elegir un cuerpo. Una orden de movimiento cuyo destino
-se ocupe antes de ejecutarse, falla y consume su hueco. El ataque mantiene su dirección y golpea al primer
-cuerpo presente al ejecutarse, aunque ya no sea el objetivo original.
+## Un escudo por bando
 
-## Vida y bloqueo
+Cada ejército tiene un único escudo para toda la partida. Activarlo en cualquier
+pieza consume una acción. Dura desde esa acción hasta el final de esa misma
+ronda; no protege retroactivamente. Si alguien intenta capturar esa ficha,
+el atacante se aproxima y rebota al origen: ambas sobreviven y el escudo se
+rompe. La captura al paso también puede rebotar. No causa daño ni devuelve golpes.
+El recurso queda gastado incluso si nadie intenta capturar o si la ficha cambia
+de casilla. El rey usa la misma regla que las demás piezas.
 
-Todas las piezas tienen 6 de vida. Todos los impactos hacen exactamente 2 de
-daño, independientemente de la dirección. No existe elección de orientación.
+## Presentación y revisión
 
-Bloquear absorbe por completo el próximo impacto y devuelve 2 al atacante sin
-cadenas. Cada pieza puede activarlo una sola vez. El escudo persiste hasta recibir
-un impacto; el del rey caduca al terminar la ronda siguiente.
+El modo principal ocupa la ventana, con anochecer y presentación giratoria. El
+HUD recuerda el rol del usuario, las acciones disponibles y el recurso de escudo.
+Las órdenes reveladas muestran el bando, el trayecto y la acción actual. Puede
+consultarse cualquier ficha sin interrumpir la animación. La promoción cambia
+su apariencia y conserva su identidad.
 
-## Definitivas
+Los escudos tienen contorno y envolvente visibles en 3D y 2D. Las capturas,
+rebotes, promociones y movimientos se ejecutan en unos 160–600 ms, con movimiento
+reducido y perfil Ligero disponibles. El arrastre sigue el puntero con una
+ligera elevación, sombra cálida y aterrizaje suave.
 
-Focus carga; Definitiva consume la carga. Todas atacan sin desplazamiento y
-con fuego aliado. Ninguna cura, crea obstáculos o destruye casillas.
+La revisión guarda cada posición y reproduce o revierte los movimientos,
+capturas, rebotes, enroques y promociones sin volver a ejecutar reglas sobre
+la partida real. El reloj se pausa mientras se revisa.
 
-| Pieza | Área completa de su definitiva |
-| --- | --- |
-| Peón | Una y dos casillas al frente y ambas diagonales delanteras; alcanza los cuatro cuerpos posibles. |
-| Caballo | Las ocho casillas en L. |
-| Alfil | Primer cuerpo de cada una de sus cuatro diagonales. |
-| Torre | Primer cuerpo de cada una de sus cuatro líneas rectas. |
-| Reina | Primer cuerpo de cada una de las ocho direcciones. |
-| Rey | Las ocho casillas adyacentes. |
+## IA, balance y comprobación
 
-Los rayos no atraviesan cuerpos. Un obstáculo frontal impide al peón alcanzar
-la segunda casilla frontal. Gana quien elimina al rey enemigo; se detiene la
-secuencia en cuanto el motor determina el resultado.
+La IA usa un Worker y solo la información pública anterior al intercambio.
+Compara planes propios con respuestas adversarias usando el mismo motor real,
+incluidas capturas, escudos y cancelaciones. La búsqueda tiene límites de nodos
+para mantener el tablero receptivo. Los detalles, fuentes y límites del balance
+se documentan en [BALANCE.md](BALANCE.md).
 
-## Consulta y revisión
+Se prueban reglas puras, planes legales, jugadas tácticas, movimientos especiales,
+revisión y renderizado en escritorio/móvil emulado. Las simulaciones comprueban
+consistencia; no demuestran un equilibrio perfecto ni sustituyen partidas humanas.
 
-Pieza en foco muestra datos de ambos bandos durante preparación, planificación,
-combate y revisión. Se consulta al pasar el cursor o tocar una ficha sin otra
-preparada para actuar. Con una ficha propia seleccionada, tocar un cuerpo al
-alcance declara un ataque y también permite consultar sus datos.
-
-El campo de batalla ocupa toda la ventana con HUD flotante. El mapa táctico usa
-un anochecer azul y violeta, distinto del clásico. La presentación hace la misma
-rotación de cámara del modo clásico; se omite si se solicita movimiento reducido.
-Durante el intercambio se revelan las cuatro órdenes: bando por nombre/color,
-pieza y origen, destino o dirección, objetivo, carga/bloqueo y enroque. Se destaca
-la acción en curso y se detalla el daño. En móvil hay una tira de turnos; al
-tocarla o pulsar HUD se abre el detalle completo.
-
-La revisión sustituye al antiguo panel de crónica, debajo del inspector, y se
-muestra solo al revisar. Guarda una posición por acción resuelta. Sus botones
-y deslizador permiten recorrerla sin alterar la partida. El reloj se pausa.
-Cada acción identifica al bando por nombre y color, con flechas de dirección.
-Avanzar y «Repetir acción» usan los mismos desplazamientos, impactos, cifras,
-bloqueos y cargas del combate. Retroceder revierte movimientos, incluidos ambos
-trayectos de un enroque, y muestra la restauración de vida. No vuelve a ejecutar
-reglas sobre la partida. Las acciones duran 0,65–1,35 s, además de pausas breves
-entre ellas; movimiento reducido acorta el efecto y elimina los gestos intensos.
-
-## Valores y modelo de IA
-
-| Clase | Valor de combate |
-| --- | --- |
-| Peón | 2 |
-| Caballo | 4 |
-| Alfil | 4 |
-| Torre | 5 |
-| Reina | 8 |
-| Rey | Objetivo de victoria; prioridad terminal |
-
-La IA y el inspector comparten estos valores. La evaluación añade vida,
-amenazas, carga y devolución de daño; todos los golpes se valoran a 2. La búsqueda compara las dos
-acciones de cada secuencia y conserva ramas de preparación para poder valorar
-Focus + Definitiva o Movimiento + Ataque. Evita el fuego aliado perjudicial y
-considera el daño reflejado. No consulta las órdenes contrarias.
-
-La búsqueda está limitada a cuatro ramas de preparación y a 96/48 candidatos
-por profundidad. Se ejecuta en un Worker. El HUD reutiliza casillas y previsiones;
-el escenario agrupa geometría estática. El perfil Ligero reduce resolución,
-sombras y animación, y el tablero táctico no se redibuja en reposo. Vistas
-ocultas detienen su bucle; las apariencias se descargan conforme se usan.
-
-## Validación
-
-Las pruebas cubren despliegue estándar, carga inicial, dos acciones desde la
-primera ronda, restricción por pieza, objetivos ocupados obligatorios, arrastre,
-deselección, colores, consulta del rival, alternancia continua, daño fijo,
-enroques comparados con chess.js, revisión animada y finales de partida.
-
-Reproducir la regresión: `node projects/FCT/scripts/simulate-tactics.mjs --games=2 --rounds=60`.
-Las dos simulaciones con formación 960 y escudos de un uso terminaron sin planes
-inválidos ni límite de rondas (11 y 20 rondas). Usaron movimiento, ataque, bloqueo,
-focus y definitiva. Es una comprobación funcional pequeña, no una validación del
-balance humano. Las pruebas del navegador cubren escritorio y móvil emulado;
-quedan pendientes mediciones en equipos físicos modestos.
-
-## Revisión actual de reglas
-
-La primera fila se sortea como Ajedrez960, idéntica para ambos bandos: alfiles
-en colores opuestos y rey entre torres. Los peones conservan su fila. El enroque
-adapta los trayectos a esta formación y termina con rey en c/g y torre en d/f.
-Se puede declarar seleccionando el rey y su torre.
-
-Cada acción dispone de 20 segundos. Atacantes es el bando que actúa primero;
-Defensores actúa segundo. El HUD recuerda el rol de Tú/IA durante la partida.
-Los ataques conservan su dirección y alcanzan al primer cuerpo que haya en ella
-al ejecutarse, incluso aliado y aunque el objetivo original se haya desplazado.
-El caballo mantiene su ataque al cuadrante de dos destinos en L.
-
-El escudo absorbe por completo un impacto y devuelve 2 al atacante, sin cadenas.
-Cada pieza puede activarlo una única vez por partida. Persiste hasta recibir
-un impacto; en el rey caduca al finalizar la ronda siguiente a su activación.
-Esta revisión sustituye las reglas anteriores de bloqueo, objetivos y formación.
-
-Formación y enroque 960 basados en las [reglas de FIDE](https://handbook.fide.com/chapter/e012023).
+Reproducir: `npm test` desde projects/FCT; desde la raíz,
+`node scripts/qa-fct-tactics.cjs` y
+`node projects/FCT/scripts/simulate-tactics.mjs --games=4 --rounds=60`.

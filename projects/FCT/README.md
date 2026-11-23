@@ -9,74 +9,36 @@ move/capture audio for both sides (including en passant).
 
 ## Fantasy Chess Tactics
 
-The main **JUGAR** button opens `tactics.html` directly in 3D. Both sides use
-16 pieces with a mirrored random Chess960 back rank. The dice winner chooses
-first or second. Execution alternates continuously across round boundaries. All units, including
-both kings, start without a charged ultimate.
+The main **JUGAR** button plays a sound and fades into a fullscreen 3D battle.
+Both sides use a mirrored Chess960 army. The human always executes first.
+Rounds contain 1, 2, then 3 secret actions per side, with 20 seconds per action.
+Orders interleave continuously. A unit moves at most once per round; a shield
+and movement by the same unit are allowed.
 
-Every round allows **two secret actions per side**, with **20 active seconds
-per action**. The same unit cannot repeat a kind within that round; different
-units may share a kind. Examples: one unit may Move + Attack or Focus + Ultimate;
-two different units may each Move. Expired slots become waits. Completing the
-sequence starts combat and the next round automatically.
+Captures work by moving onto the enemy and removing it. Capturing the king wins;
+there is no HP, ranged attack, Focus, ultimate or dice. Ordinary pawn movement,
+all four promotions, immediate en passant and Chess960 castling are supported.
+Occupied allied destinations and empty pawn diagonals can be declared as
+predictions; execution fails and spends the slot if the required occupancy
+does not materialize. These attempts never capture allies.
 
-Selecting or dragging a unit reveals one uniform destination color and a
-contrasting selected square. Clicking/dropping on an empty legal square queues
-a movement; on a reachable allied/enemy unit it queues a stationary attack.
-There is no confirmation popup. Action buttons sit at the lower battlefield
-edge, clear of destinations. A unit deselects after each order and must be
-selected again for another action. Movement commits immediately without any
-facing selection. A cyan border marks the selected square in both views.
-A queued attack strikes the first current body along its declared direction.
-A movement whose destination becomes occupied fizzles.
+Each army can activate one shield in the entire match. It consumes an action,
+lasts to the current round's end, and repels one attempted capture: the attacker
+bounces back, both survive and the shield breaks. Shields have visible 2D/3D
+effects. Animations last roughly 160–600 ms, with reduced-motion support and
+smooth raised dragging/shadows. Review replays and reverses captures, shields,
+promotion and castling without changing the live match.
 
-All ultimates attack the class's full area with friendly fire. Sliding rays
-stop at the first body; knights hit all eight L squares, kings adjacent squares,
-and pawns both front squares and forward diagonals. Pawns retain one/two-square
-and diagonal movement. All hits deal exactly 2 HP. A one-use shield absorbs the next hit and reflects 2 without reflection chains.
-It lasts until hit; a king shield expires after the following round. Castling uses the
-classical unmoved-piece, empty-path and king-safety conditions, animates king
-and rook together, and consumes each piece's movement for the round.
+The AI compares complete action sequences against plausible enemy responses
+using actual interleaved engine resolution. It runs in a bounded Worker search,
+uses only public information, and considers king safety, material, promotions,
+en passant, occupied-square predictions and the scarce shield. See
+[BALANCE.md](BALANCE.md) for research, measurements and limitations, and
+[TACTICS.md](TACTICS.md) for the current Spanish rules.
 
-The inspector works for either army during preparation, planning, combat and
-review: hover a figure or click it without an acting unit selected to inspect
-it. It shows HP, charge, team color and combat value. Review controls
-occupy the sidebar below the inspector only while reviewing. The colored team
-badge identifies the actor; event descriptions use direction arrows. Compact
-snapshots retain every resolved action. Forward/repeat review shares the live
-action animations; backward review restores health and reverses both castling
-paths. Review never mutates the live game.
-
-The AI uses a bounded two-action beam search, including movement/attack and
-focus/ultimate combinations, incoming threats, reflection and friendly-fire
-costs. Setup branches remain in the beam instead of being discarded before
-their second order pays off. Tactical values in `src/tactics-values.js` are
-pawn 2, knight/bishop 4, rook 5, queen 8; the king has terminal priority.
-The inspector and AI use that same table. Planning reads only the public round
-position and respects the per-unit action restriction.
-
-The tactical battlefield fills the viewport, with a dusk sky and the classic
-camera-orbit introduction. Revealed exchanges list all four orders, their side,
-origin/destination, target and effects; the active step is highlighted. A mobile
-turn strip expands the full HUD on demand. Action animations last 0.65–1.35s
-with short gaps for readability; reduced motion remains supported.
-
-FCT's homepage window, bubble and Yin Yang accent are green. Every application
-window also offers a new-tab action. The cream/dark-outline HUD is inspired by
-Nintendo handheld battle screens without using copied game artwork.
-
-Rendering uses automatic hardware budgets and a manual **Ligero** option.
-Low-power tactical boards disable shadows/idle motion and render on changes,
-with animations capped at 30 fps. Hidden/inactive tactical views stop their
-render loop. Static scenery is merged by material; geometry stays cached.
-Appearances are separate assets, so only those used by a match are downloaded.
-AI planning runs in a Worker; forecasts are cached and the DOM squares reused.
-Physical low-end devices still require device testing.
-
-See [the Spanish rules](TACTICS.md). `node scripts/qa-fct-tactics.cjs` from the
-root checks direct actions, reselection, highlighted dragging, both-army
-inspection, sidebar review and render budgets at desktop/mobile sizes. Its
-fixture hooks never ship in production.
+The homepage window/bubble/Yin Yang are green. All application windows offer
+a new-tab button in their own color. Browser QA is isolated: its test hooks
+never ship in the production FCT directory.
 
 ## Character appearances
 
@@ -284,10 +246,3 @@ the latter, regardless of side. Check and checkmate cues remain additional.
 Visual reference: the raised terrain, stonework and vegetation of the
 [Orbonne opening battle](https://shrines.rpgclassics.com/psx/fft/battles/introbattle.shtml)
 in Final Fantasy Tactics for PS1. Landscape meshes and textures here are procedural.
-
-Current tactical rules: mirrored Chess960 back ranks; directional attacks hit
-the first body present when executed. Single-use shields absorb one entire hit
-and reflect 2; non-royal shields persist until hit, royal shields expire after
-the following round. Attacker/Defender roles remain visible in the HUD.
-The mobile selector shortcut switches between “Ver aspectos” and “3D” as its
-scroll position changes. See the latest section of TACTICS.md for full rules.

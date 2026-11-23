@@ -1,136 +1,139 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createMatch,autoDeploy,confirmDeployment,rollInitiative,chooseInitiative,roundRules,publicView,getLegalMoves,getAttackTargets,getAttackSquares,getUltimateTargets,attackOrderFor,validateOrder,validatePlan,previewPlan,submitPlan,resolveNext,incomingDamage,getCastleOptions} from '../src/tactics-engine.js';
 import {Chess} from 'chess.js';
-import {reverseBattleEvent} from '../src/tactics-animation.js';
-import {describeBattleEvent,describePlannedOrder} from '../src/tactics-presentation.js';
+import {UNIT_NAMES,createMatch,autoDeploy,confirmDeployment,beginBattle,startRound,roundRules,livingUnits,unitAt,getLegalMoves,getCaptureSquares,isSquareAttacked,getCastleOptions,validateOrder,validatePlan,previewPlan,submitPlan,resolveNext,publicView} from '../src/tactics-engine.js';
 const unit=(s,id)=>s.units.find(u=>u.id===id);
-function fixture(placements={},round=1){const s=createMatch({seed:123});Object.assign(s,{phase:'planning',round,deployed:{w:true,b:true}});const positions={'w-k':'a1','b-k':'h8',...placements};s.units=s.units.filter(u=>Object.hasOwn(positions,u.id));for(const u of s.units){u.square=positions[u.id];u.homeSquare=u.square;}return s;}
-function deployed(seed=1){const s=createMatch({seed});for(const side of ['w','b']){autoDeploy(s,side);confirmDeployment(s,side);}return s;}
-function duel(s,w=[],b=[]){for(const [side,orders]of [['w',w],['b',b]]){const r=submitPlan(s,side,orders);assert.equal(r.ok,true,r.error);}const events=[];while(s.phase==='resolution')events.push(resolveNext(s).event);return events;}
-const attack=(s,id,target)=>attackOrderFor(s,id,target);
+function deployed(seed=1){const s=createMatch({seed});for(const side of ['w','b']){assert.equal(autoDeploy(s,side).ok,true);assert.equal(confirmDeployment(s,side).ok,true);}return s;}
+function fixture(placements={},round=3){const s=deployed();beginBattle(s);s.round=round;const positions={'w-k':'a1','b-k':'h8',...placements};s.units=s.units.filter(u=>Object.hasOwn(positions,u.id));for(const u of s.units){u.square=positions[u.id];u.homeSquare=u.square;}return s;}
+function duel(s,w=[],b=[]){for(const [side,plan]of [['w',w],['b',b]]){const check=submitPlan(s,side,plan);assert.equal(check.ok,true,check.error);}const events=[];while(s.phase==='resolution')events.push(resolveNext(s).event);return events;}
+const move=(id,target,extra={})=>({unitId:id,kind:'move',target,...extra});
+const block=id=>({unitId:id,kind:'block'});
 
-test('seeded Chess960 layouts are mirrored, legal and varied',()=>{
- const layouts=new Set();for(let seed=1;seed<=960;seed++){const a=deployed(seed),white=a.units.filter(u=>u.color==='w'&&u.type!=='p').sort((a,b)=>a.square.localeCompare(b.square)),black=a.units.filter(u=>u.color==='b'&&u.type!=='p').sort((a,b)=>a.square.localeCompare(b.square));const types=white.map(u=>u.type);assert.deepEqual(types,black.map(u=>u.type));const bishops=white.filter(u=>u.type==='b').map(u=>u.square.charCodeAt(0)%2);assert.notEqual(...bishops);assert.ok(types.indexOf('r')<types.indexOf('k')&&types.indexOf('k')<types.lastIndexOf('r'));assert.equal(new Set(a.units.map(u=>u.square)).size,32);assert.ok(a.units.every(u=>u.hp===6&&!u.charged));layouts.add(types.join(''));}assert.ok(layouts.size>400);assert.deepEqual(deployed(43),deployed(43));
+test('mirrored seeded Chess960 preserves all pieces and contains no hit points or charges',()=>{
+ const layouts=new Set();for(let seed=1;seed<=960;seed++){const s=deployed(seed),armies=['w','b'].map(c=>livingUnits(s,c).filter(u=>u.type!=='p').sort((a,b)=>a.square.localeCompare(b.square))),types=armies[0].map(u=>u.type);assert.deepEqual(types,armies[1].map(u=>u.type));const bishops=armies[0].filter(u=>u.type==='b').map(u=>u.square.charCodeAt(0)%2);assert.notEqual(...bishops);assert.ok(types.indexOf('r')<types.indexOf('k')&&types.indexOf('k')<types.lastIndexOf('r'));assert.equal(new Set(s.units.map(u=>u.square)).size,32);assert.ok(s.units.every(u=>!u.captured&&!Object.hasOwn(u,'hp')&&!Object.hasOwn(u,'maxHp')&&!Object.hasOwn(u,'charged')));layouts.add(types.join(''));}assert.ok(layouts.size>400);assert.deepEqual(deployed(43),deployed(43));
+});
+test('human starts immediately after readiness, without dice or initiative choices',()=>{
+ const s=deployed();assert.equal(s.phase,'ready');assert.equal(Object.hasOwn(s,'dice'),false);assert.equal(beginBattle(s).ok,true);assert.equal(s.phase,'planning');assert.equal(s.firstSide,'w');assert.equal(s.round,1);assert.equal(beginBattle(s).ok,false);
+});
+test('round budgets grow 1, 2, 3 then stay at 3 with twenty seconds per action',()=>{
+ for(const [round,actions]of [[0,1],[1,1],[2,2],[3,3],[40,3]])assert.equal(roundRules(round).actions,actions);assert.equal(roundRules({round:2}).seconds,20);
+ const s=fixture({},1);assert.equal(validatePlan(s,'w',[{kind:'pass'},{kind:'pass'}]).ok,false);
+});
+test('no ranged attack, focus or ultimate order is accepted',()=>{
+ const s=fixture({'w-r':'d4'});for(const kind of ['attack','focus','ultimate'])assert.equal(validateOrder(s,'w',{unitId:'w-r',kind,target:'d5'}).ok,false);
+});
+test('all captures displace the attacker and remove the victim without damage arithmetic',()=>{
+ const cases=[['r','d4','d7'],['b','d4','g7'],['n','d4','e6'],['q','d4','g4'],['k','d4','e5'],['p','d4','e5']];
+ for(const [type,from,to]of cases){const id='w-'+type+(type==='p'?'1':''),s=fixture({[id]:from,'b-p1':to}),r=previewPlan(s,'w',[move(id,to)]);assert.equal(unit(r,id).square,to);assert.equal(unit(r,'b-p1').captured,true);assert.equal(unitAt(r,to).id,id);assert.equal(r.forecastEvents[0].capture.id,'b-p1');assert.equal(r.forecastEvents[0].targets[0].captured,true);assert.equal(unit(s,'b-p1').captured,false);}
+});
+test('a captured king ends immediately while kings may otherwise enter attacked squares',()=>{
+ const s=fixture({'w-r':'d4','b-k':'d8'}),events=duel(s,[move('w-r','d8')]);assert.equal(s.winner,'w');assert.equal(s.phase,'finished');assert.equal(events.length,1);assert.equal(resolveNext(s).ok,false);
+ const exposed=fixture({'w-k':'e4','b-r':'f8'});assert.equal(previewPlan(exposed,'w',[move('w-k','f4')]).forecastEvents[0].kind,'move');
+});
+test('pawn has ordinary first double step, later single step and capture-only diagonals',()=>{
+ const s=fixture({'w-p1':'d2','b-p1':'e3'});assert.ok(getLegalMoves(s,'w-p1').includes('d4'));const r=previewPlan(s,'w',[move('w-p1','d4')]);assert.equal(unit(r,'w-p1').hasMoved,true);assert.ok(!getLegalMoves(r,'w-p1').includes('d6'));assert.equal(unit(previewPlan(s,'w',[move('w-p1','e3')]),'b-p1').captured,true);
+ const empty=previewPlan(s,'w',[move('w-p1','c3')]);assert.equal(empty.forecastEvents[0].kind,'fizzle');assert.equal(unit(empty,'w-p1').square,'d2');assert.deepEqual(empty.forecastErrors,[]);
+ const front=fixture({'w-p1':'d2','b-p1':'d3'});assert.equal(previewPlan(front,'w',[move('w-p1','d3')]).forecastEvents[0].kind,'fizzle');assert.ok(!getLegalMoves(front,'w-p1').includes('d4'));
+ const offHome=fixture({'w-p1':'d4'});assert.ok(!getLegalMoves(offHome,'w-p1').includes('d6'));
+});
+test('black pawns use the reversed ordinary geometry',()=>{
+ const s=fixture({'b-p1':'e7','w-p1':'d6'});assert.ok(getLegalMoves(s,'b-p1').includes('e5'));assert.equal(unit(previewPlan(s,'b',[move('b-p1','d6')]),'w-p1').captured,true);assert.ok(!getLegalMoves(s,'b-p1').includes('d8'));
+});
+test('predictions may target allied occupied squares but blocked destinations consume the order',()=>{
+ const s=fixture({'w-r':'d4','w-p1':'d5'}),plan=[move('w-r','d5')];assert.equal(validatePlan(s,'w',plan).ok,true);assert.deepEqual(previewPlan(s,'w',plan).forecastErrors,[]);const events=duel(s,plan);assert.equal(events[0].kind,'fizzle');assert.equal(unit(s,'w-r').square,'d4');assert.equal(unit(s,'w-p1').captured,false);
+});
+test('an allied occupied prediction recaptures an enemy that replaces the ally',()=>{
+ const s=fixture({'w-r':'d4','w-p1':'d5','b-r':'f5'});const events=duel(s,[{kind:'pass'},move('w-r','d5')],[move('b-r','d5')]);assert.equal(events[1].capture.id,'w-p1');assert.equal(events[2].capture.id,'b-r');assert.equal(unit(s,'w-r').square,'d5');
+});
+test('an empty diagonal pawn prediction can capture an arriving enemy',()=>{
+ const s=fixture({'w-p1':'d4','b-r':'f5'}),events=duel(s,[{kind:'pass'},move('w-p1','e5')],[move('b-r','e5')]);assert.equal(events[2].capture.id,'b-r');assert.equal(unit(s,'w-p1').square,'e5');
+});
+test('pieces cannot pass through an intermediate body, even when predicting',()=>{
+ const s=fixture({'w-r':'d4','w-p1':'d5','b-r':'d7'});assert.equal(validateOrder(s,'w',move('w-r','d7')).ok,false);assert.ok(getLegalMoves(s,'w-r').includes('d5'));
+});
+test('each side gets one shield for the entire match, on any chosen piece',()=>{
+ const s=fixture({'w-r':'d4','w-b':'b2','b-r':'d7'}),r=previewPlan(s,'w',[block('w-r')]);assert.equal(r.shieldUsed.w,true);assert.equal(r.shieldUsed.b,false);assert.equal(unit(r,'w-r').guard,1);assert.equal(validateOrder(r,'w',block('w-b')).ok,false);assert.equal(validateOrder(r,'b',block('b-r')).ok,true);duel(r);assert.equal(unit(r,'w-r').guard,0);assert.equal(validateOrder(r,'w',block('w-b')).ok,false);
+});
+test('shielded captures bounce to origin and consume the defender shield, without losing either piece',()=>{
+ const s=fixture({'w-r':'d4','b-r':'d7'});unit(s,'b-r').guard=1;s.shieldUsed.b=true;const r=previewPlan(s,'w',[move('w-r','d7')]),event=r.forecastEvents[0];assert.equal(event.bounced,true);assert.equal(event.from,'d4');assert.equal(event.to,'d4');assert.equal(event.attemptedTo,'d7');assert.equal(unit(r,'b-r').guard,0);assert.equal(unit(r,'w-r').square,'d4');assert.equal(unit(r,'w-r').hasMoved,false);assert.equal(unit(r,'b-r').captured,false);assert.equal(event.targets[0].blocked,true);
+});
+test('an activated shield protects subsequent actions in the same round but expires before the next',()=>{
+ const s=fixture({'w-r':'d4','b-r':'d7'}),events=duel(s,[block('w-r')],[move('b-r','d4')]);assert.equal(events[1].bounced,true);assert.equal(unit(s,'w-r').captured,false);assert.equal(s.shieldUsed.w,true);assert.equal(unit(s,'w-r').guard,0);
+ const noHit=fixture({'w-r':'d4'});duel(noHit,[block('w-r')]);assert.equal(unit(noHit,'w-r').guard,0);
+});
+test('king shield follows the same side-wide resource and round duration',()=>{
+ const s=fixture({'w-k':'d4','b-r':'d7'}),events=duel(s,[block('w-k')],[move('b-r','d4')]);assert.equal(events[1].bounced,true);assert.equal(s.winner,null);assert.equal(unit(s,'w-k').guard,0);assert.equal(validateOrder(s,'w',block('w-k')).ok,false);
+});
+test('a piece cannot repeat a movement within a sequence; shield plus move is allowed',()=>{
+ const s=fixture({'w-r':'d4','w-r2':'b2'});assert.equal(validatePlan(s,'w',[move('w-r','d5'),move('w-r','d6')]).ok,false);assert.equal(validatePlan(s,'w',[move('w-r','d5'),move('w-r2','b3')]).ok,true);assert.equal(validatePlan(s,'w',[block('w-r'),move('w-r','d5')]).ok,true);
+});
+test('promotion supports all four choices and defaults to queen',()=>{
+ for(const promotion of ['q','r','b','n',undefined]){const s=fixture({'w-p1':'d7'}),r=previewPlan(s,'w',[move('w-p1','d8',promotion?{promotion}:{})]);assert.equal(unit(r,'w-p1').type,promotion??'q');assert.deepEqual(r.forecastEvents[0].promotion,{from:'p',to:promotion??'q'});}
+ const black=fixture({'b-p1':'d2'});assert.equal(unit(previewPlan(black,'b',[move('b-p1','d1',{promotion:'n'})]),'b-p1').type,'n');assert.equal(validateOrder(black,'b',move('b-p1','d1',{promotion:'k'})).ok,false);
+});
+test('capture promotion removes the victim and retains the promoted piece identity',()=>{
+ const s=fixture({'w-p1':'d7','b-r':'e8'}),r=previewPlan(s,'w',[move('w-p1','e8',{promotion:'r'})]);assert.equal(unit(r,'b-r').captured,true);assert.equal(unit(r,'w-p1').type,'r');assert.equal(unit(r,'w-p1').square,'e8');
+});
+test('en passant remains available across a round boundary for the immediately following action',()=>{
+ const s=fixture({'w-p1':'e5','b-p1':'d7'},1);duel(s,[],[move('b-p1','d5')]);assert.deepEqual(s.enPassant,{square:'d6',victimId:'b-p1',availableTo:'w'});const events=duel(s,[move('w-p1','d6')]);assert.equal(events[0].capture.enPassant,true);assert.equal(events[0].capture.square,'d5');assert.equal(unit(s,'b-p1').captured,true);assert.equal(unit(s,'w-p1').square,'d6');
+});
+test('en passant expires after any next action, including pass or shield',()=>{
+ for(const action of [{kind:'pass'},block('w-k')]){const s=fixture({'w-p1':'e5','b-p1':'d7'},1);duel(s,[],[move('b-p1','d5')]);const events=duel(s,[action,move('w-p1','d6')]);assert.equal(events[2].kind,'fizzle');assert.equal(unit(s,'b-p1').captured,false);}
+});
+test('a shield also repels en passant and consumes its opportunity',()=>{
+ const s=fixture({'w-p1':'e5','b-p1':'d5'});unit(s,'b-p1').guard=1;s.enPassant={square:'d6',victimId:'b-p1',availableTo:'w'};const r=previewPlan(s,'w',[move('w-p1','d6')]);assert.equal(r.forecastEvents[0].bounced,true);assert.equal(unit(r,'w-p1').square,'e5');assert.equal(unit(r,'b-p1').guard,0);assert.equal(r.enPassant,null);
+});
+test('captured pieces cannot act; a target that vacates becomes an ordinary move for non-pawns',()=>{
+ const s=fixture({'w-r':'d4','b-r':'d6'}),events=duel(s,[{kind:'pass'},move('w-r','d6')],[move('b-r','e6')]);assert.equal(events[2].kind,'move');assert.equal(unit(s,'w-r').square,'d6');assert.equal(unit(s,'b-r').captured,false);
+ unit(s,'w-r').captured=true;assert.equal(validateOrder(s,'w',move('w-r','d7')).ok,false);assert.equal(unitAt(s,'d6'),undefined);
+});
+test('continuous alternation survives growing rounds, missing orders and fizzles',()=>{
+ const s=fixture({'w-r':'d4','w-p1':'d5'},1),events=[];for(let round=1;round<=5;round++)events.push(...duel(s,[move('w-r','d5')]));assert.equal(events.length,24);assert.equal(events[0].side,'w');for(let i=1;i<events.length;i++)assert.notEqual(events[i].side,events[i-1].side);assert.equal(s.round,6);
+});
+test('plans stay hidden and forecasting never reads sealed opponent plans',()=>{
+ const s=fixture({'w-r':'d4','b-r':'d6'}),copy=structuredClone(s),plan=[move('w-r','d5')],a=previewPlan(s,'w',plan);assert.deepEqual(s,copy);const secret=structuredClone(s);secret.plans.b=[move('b-r','f6')];assert.deepEqual(previewPlan(secret,'w',plan),a);submitPlan(s,'w',plan);assert.deepEqual(publicView(s,'b').plans.w,[]);assert.equal(Object.hasOwn(publicView(s,'b'),'rng'),false);
+});
+test('castling matches standard chess in ordinary layouts for either side',()=>{
+ for(const color of ['w','b']){const rank=color==='w'?'1':'8',s=fixture({[`${color}-k`]:'e'+rank,[`${color}-r`]:'a'+rank,[`${color}-r2`]:'h'+rank,[color==='w'?'b-k':'w-k']:color==='w'?'e8':'e1'}),chess=new Chess(color==='w'?'4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1':'r3k2r/8/8/8/8/8/8/4K3 b kq - 0 1'),expected=chess.moves({square:'e'+rank,verbose:true}).filter(m=>m.isKingsideCastle()||m.isQueensideCastle()).map(m=>m.to).sort();assert.deepEqual(getCastleOptions(s,`${color}-k`).map(c=>c.target).sort(),expected);for(const c of getCastleOptions(s,`${color}-k`)){const r=previewPlan(s,color,[move(`${color}-k`,c.inputTarget)]);assert.equal(unit(r,`${color}-k`).square,c.target);assert.equal(unit(r,c.rookId).square,c.rookTo);assert.equal(unit(r,c.rookId).hasMoved,true);}}
+});
+test('960 castle handles a stationary king, stationary rook and swapped king/rook',()=>{
+ for(const [king,rook,target,rookTo]of [['g1','h1','g1','f1'],['e1','f1','g1','f1'],['f1','g1','g1','f1']]){const s=fixture({'w-k':king,'w-r2':rook,'b-k':'a8'}),r=previewPlan(s,'w',[move('w-k',rook)]);assert.equal(r.forecastEvents[0].kind,'move');assert.equal(unit(r,'w-k').square,target);assert.equal(unit(r,'w-r2').square,rookTo);assert.equal(unit(r,'w-r2').captured,false);}
+});
+test('castling rejects moved pieces, blocked paths, and attacked start/transit/destination',()=>{
+ const base=()=>fixture({'w-k':'e1','w-r':'a1','w-r2':'h1','b-k':'h8'});let s=base();unit(s,'w-k').hasMoved=true;assert.deepEqual(getCastleOptions(s,'w-k'),[]);s=base();unit(s,'w-r2').hasMoved=true;assert.ok(!getCastleOptions(s,'w-k').some(c=>c.target==='g1'));
+ for(const square of ['f1','g1','b1','c1','d1']){s=base();s.units.push({id:'body',type:'p',color:'w',captured:false,square});assert.ok(!getCastleOptions(s,'w-k').some(c=>c.target===('fg'.includes(square[0])?'g1':'c1')));}
+ for(const [type,square]of [['r','e6'],['b','b5'],['b','c5'],['p','e2']]){s=base();s.units.push({id:'threat',type,color:'b',captured:false,square});assert.ok(!getCastleOptions(s,'w-k').some(c=>c.target==='g1'));}
+});
+test('castling is revalidated after an enemy action and never silently downgrades to a normal move',()=>{
+ const s=fixture({'w-k':'e1','w-r2':'h1','b-r':'h3','b-k':'e8'}),events=duel(s,[{kind:'pass'},move('w-k','h1')],[move('b-r','f3')]);assert.equal(events[2].kind,'fizzle');assert.equal(unit(s,'w-k').square,'e1');assert.equal(unit(s,'w-r2').square,'h1');
+});
+test('castling consumes both pieces movements for the round',()=>{
+ const s=fixture({'w-k':'e1','w-r2':'h1'});assert.equal(validatePlan(s,'w',[move('w-k','h1'),move('w-r2','f2')]).ok,false);assert.equal(validatePlan(s,'w',[move('w-k','h1'),block('w-r2')]).ok,true);
+});
+test('pawn threats for castling are diagonal, not forward, and kings attack neighboring squares',()=>{
+ const s=fixture({'w-k':'e1','w-r2':'h1','b-p1':'e2','b-k':'h8'});assert.equal(isSquareAttacked(s,'f1','b'),true);assert.equal(isSquareAttacked(s,'e1','b'),false);assert.deepEqual(getCaptureSquares(s,'b-p1').sort(),['d1','f1']);
 });
 
-test('initiative grants no charge advantage whichever side the dice winner chooses',()=>{
- for(const first of [true,false]){const s=deployed(43),copy=deployed(43);assert.deepEqual(rollInitiative(s),rollInitiative(copy));const winner=s.dice.winner;assert.equal(chooseInitiative(s,winner==='w'?'b':'w').ok,false);assert.equal(chooseInitiative(s,winner,{first}).ok,true);assert.equal(s.firstSide,first?winner:winner==='w'?'b':'w');assert.ok(s.units.every(u=>!u.charged));}
+test('action budgets remain integer and bounded for malformed or fractional round values',()=>{
+ for(const value of [NaN,Infinity,undefined,null,-4,0,1.8]){const budget=roundRules(value);assert.equal(budget.actions,1);assert.ok(Number.isInteger(budget.actions));}assert.equal(roundRules(2.9).actions,2);assert.equal(roundRules(500).actions,3);
 });
-test('every round has two actions and twenty seconds per action',()=>{for(const round of [1,2,3,40])assert.deepEqual(roundRules(round),{seconds:20,actions:2,maxMoves:2,maxOther:2});});
-test('the same piece cannot repeat a kind; different pieces may share a kind',()=>{
- const s=fixture({'w-r':'d4','w-r2':'f4','b-r':'d6'});
- assert.equal(validatePlan(s,'w',[{unitId:'w-r',kind:'move',target:'e4'},{unitId:'w-r',kind:'move',target:'e5'}]).ok,false);
- const blocked=validatePlan(s,'w',[{unitId:'w-r',kind:'block'},{unitId:'w-r',kind:'block'}]);assert.equal(blocked.ok,false);assert.match(blocked.error,/repetir|escudo/);
- assert.equal(validatePlan(s,'w',[attack(s,'w-r','d6'),attack(s,'w-r','d6')]).ok,false);
- assert.equal(validatePlan(s,'w',[{unitId:'w-r',kind:'move',target:'e4'},{unitId:'w-r2',kind:'move',target:'f5'}]).ok,true);
- assert.equal(validatePlan(s,'w',[{unitId:'w-r',kind:'move',target:'e4'},{unitId:'w-r',kind:'focus'}]).ok,true);
- assert.equal(validatePlan(s,'w',[{kind:'pass'},{kind:'pass'}]).ok,true);
- assert.equal(validatePlan(s,'w',[{kind:'pass'},{kind:'pass'},{kind:'pass'}]).ok,false);
+test('castle metadata cannot redirect an unrelated declared square',()=>{
+ const s=fixture({'w-k':'e1','w-r2':'h1'}),castle=getCastleOptions(s,'w-k').find(c=>c.target==='g1');assert.equal(validateOrder(s,'w',move('w-k','e7',{castle})).ok,false);
 });
-test('basic attacks require an occupied legal target and moves require an empty square',()=>{
- const s=fixture({'w-r':'d4','w-p1':'d5','b-r':'d6'});
- for(const order of [{kind:'attack',direction:'N'},{kind:'attack',target:'e4'},{kind:'attack',target:'d6'},{kind:'move',target:'d5'}])assert.equal(validateOrder(s,'w',{unitId:'w-r',...order}).ok,false);
- assert.equal(validateOrder(s,'w',attack(s,'w-r','d5')).ok,true);assert.equal(validateOrder(s,'w',{unitId:'w-r',kind:'attack',target:'d5',direction:'S'}).ok,false);
- assert.ok(getAttackSquares(s,'w-r').includes('d5'));assert.ok(!getAttackSquares(s,'w-r').includes('d6'));
-});
-test('stationary ray attacks damage the selected ally and do not pass through it',()=>{
- const s=fixture({'w-r':'d4','w-p1':'d5','b-p1':'d6'}),before=structuredClone(s),result=previewPlan(s,'w',[attack(s,'w-r','d5')]);
- assert.equal(unit(result,'w-r').square,'d4');assert.equal(unit(result,'w-p1').hp,4);assert.equal(unit(result,'b-p1').hp,6);assert.deepEqual(s,before);
-});
-test('knight selection identifies a quadrant: both L targets are struck, including allies',()=>{
- const s=fixture({'w-n':'d4','b-p1':'b5','w-p1':'c6','b-p2':'f5'});assert.deepEqual(getAttackTargets(s,'w-n','NW').sort(),['b5','c6']);
- const hit=previewPlan(s,'w',[attack(s,'w-n','b5')]);assert.ok(unit(hit,'b-p1').hp<6&&unit(hit,'w-p1').hp<6);assert.equal(unit(hit,'b-p2').hp,6);
- unit(s,'w-n').charged=true;assert.ok(unit(previewPlan(s,'w',[{unitId:'w-n',kind:'ultimate'}]),'b-p2').hp<6);
-});
-test('pawns keep repeated double steps and empty diagonals while respecting blocked paths',()=>{
- const s=fixture({'w-p1':'d4','b-p1':'d5'});unit(s,'w-p1').hasMoved=true;
- assert.ok(getLegalMoves(s,'w-p1').includes('c5'));assert.ok(!getLegalMoves(s,'w-p1').includes('d6'));
- assert.ok(attack(s,'w-p1','d5'));unit(s,'b-p1').square='d6';assert.ok(attack(s,'w-p1','d6'));
- unit(s,'b-p1').square='h6';assert.ok(getLegalMoves(s,'w-p1').includes('d6'));s.tiles.d5={kind:'obstacle'};assert.ok(!getLegalMoves(s,'w-p1').includes('d6'));
-});
-test('all damage is two, independent of direction, obsolete bonuses or facing',()=>{
- const s=fixture({'w-r':'d4','b-r':'d7','b-q':'g4'});Object.assign(unit(s,'w-r'),{facing:'S',armor:20});Object.assign(unit(s,'b-q'),{boost:10});assert.equal(incomingDamage(unit(s,'b-r'),unit(s,'w-r')),2);assert.equal(incomingDamage(unit(s,'b-q'),unit(s,'w-r')),2);
- const hit=previewPlan(s,'b',[attack(s,'b-q','d4')]);assert.equal(unit(hit,'w-r').hp,4);
- let next=s;for(let i=0;i<3;i++)next=previewPlan(next,'b',[attack(next,'b-r','d4')]);assert.equal(unit(next,'w-r').hp,0);
- const order=validateOrder(s,'w',{unitId:'w-r',kind:'move',target:'c4',facing:'W'}).order;assert.equal(Object.hasOwn(order,'facing'),false);
+test('the one side-wide shield remains spent after many growing rounds',()=>{
+ const s=fixture({'w-r':'d4'},1);duel(s,[block('w-r')]);for(let i=0;i<5;i++)duel(s);assert.equal(s.shieldUsed.w,true);assert.equal(unit(s,'w-r').guard,0);assert.equal(validateOrder(s,'w',block('w-k')).ok,false);
 });
 
-test('one-use shield persists, absorbs completely and reflects without chains',()=>{
- const s=fixture({'w-r':'d4','b-r':'d7'}),defended=previewPlan(s,'w',[{unitId:'w-r',kind:'block'}]);duel(defended);duel(defended);assert.equal(unit(defended,'w-r').guard,1);
- const hit=previewPlan(defended,'b',[attack(defended,'b-r','d4')]);assert.equal(unit(hit,'w-r').hp,6);assert.equal(unit(hit,'b-r').hp,4);assert.equal(unit(hit,'w-r').guard,0);assert.equal(validateOrder(hit,'w',{unitId:'w-r',kind:'block'}).ok,false);
- const both=previewPlan(defended,'b',[{unitId:'b-r',kind:'block'},attack(defended,'b-r','d4')]);assert.equal(unit(both,'b-r').hp,4);assert.equal(unit(both,'b-r').guard,1);
-});
-test('king shield expires after current and next round and cannot recharge',()=>{
- const s=previewPlan(fixture(), 'w',[{unitId:'w-k',kind:'block'}]);duel(s);assert.equal(unit(s,'w-k').guard,1);duel(s);assert.equal(unit(s,'w-k').guard,0);assert.equal(validateOrder(s,'w',{unitId:'w-k',kind:'block'}).ok,false);
+test('all planning slots remain available after an uncertain forecasted king capture',()=>{
+ const s=fixture({'w-r':'d4','w-p1':'b2','w-b':'f1','b-k':'d8','b-r':'h7'}),orders=[move('w-r','d8'),move('w-p1','b3'),move('w-b','g2')],check=validatePlan(s,'w',orders);assert.equal(check.ok,true,check.error);assert.equal(check.orders.length,3);assert.equal(check.forecast.winner,null);assert.equal(check.forecast.predictedWinner,'w');assert.equal(unit(check.forecast,'b-k').captured,true);assert.equal(unit(check.forecast,'w-p1').square,'b3');
+ const forecast=previewPlan(s,'w',orders);assert.equal(forecast.forecastEvents.length,3);assert.equal(forecast.winner,null);assert.equal(forecast.phase,'planning');assert.equal(forecast.predictedWinner,'w');const events=duel(s,orders);assert.equal(events.length,1);assert.equal(s.winner,'w');assert.equal(unit(s,'w-p1').square,'b2');
 });
 
-test('all six ultimates use their entire class area, consume charge and preserve position',()=>{
- const cases={p:{'w-p1':'d4','b-p1':'c5','b-p2':'d5','b-p3':'e5','b-r':'d6'},n:{'w-n':'d4','b-p1':'b5','b-p2':'c6','b-p3':'f5'},b:{'w-b':'d4','b-p1':'e5','b-p2':'c5','w-p1':'c3','b-r':'f6'},r:{'w-r':'d4','b-p1':'e4','b-p2':'d5','w-p1':'d3','b-r':'d6'},q:{'w-q':'d4','b-p1':'e4','b-p2':'e5','w-p1':'d3','b-r':'f6'},k:{'w-k':'d4','b-p1':'e4','b-p2':'e5','w-p1':'d3','b-r':'d6'}};
- for(const [type,positions]of Object.entries(cases)){const s=fixture(positions),id=`w-${type}${type==='p'?'1':''}`;unit(s,id).charged=true;assert.ok(getUltimateTargets(s,id).length);const result=previewPlan(s,'w',[{unitId:id,kind:'ultimate'}]);assert.equal(unit(result,id).charged,false);assert.equal(unit(result,id).square,'d4');for(const victim of ['b-p1','b-p2'])assert.ok(unit(result,victim).hp<6);if(type==='p')assert.ok(unit(result,'b-r').hp<6);else if(['b','r','q','k'].includes(type))assert.equal(unit(result,'b-r').hp,6,'ray/body or king range blocks a second victim');if(type!=='p'&&type!=='n')assert.ok(unit(result,'w-p1').hp<6,'friendly fire');}
-});
-test('Focus then ultimate is a legal two-kind combination from the first round',()=>{
- const s=fixture({'w-r':'d4','b-r':'d6'}),result=validatePlan(s,'w',[{unitId:'w-r',kind:'focus'},{unitId:'w-r',kind:'ultimate'}]);assert.equal(result.ok,true);assert.ok(unit(result.forecast,'b-r').hp<6);assert.equal(unit(result.forecast,'w-r').charged,false);
-});
-test('two actions interleave A1 B1 A2 B2, stay secret and preserve alternation across round boundaries',()=>{
- const s=fixture({'w-r':'c3','b-r':'f6'}),w=[{unitId:'w-r',kind:'move',target:'c4'},{unitId:'w-r',kind:'focus'}],b=[{unitId:'b-r',kind:'focus'},{unitId:'b-r',kind:'move',target:'f5'}];
- assert.equal(submitPlan(s,'w',w).ok,true);assert.deepEqual(publicView(s,'b').plans.w,[]);assert.equal(submitPlan(s,'b',b).ok,true);
- const events=[];while(s.phase==='resolution')events.push(resolveNext(s).event);assert.deepEqual(events.map(e=>e.side),['w','b','w','b']);assert.deepEqual(events.map(e=>e.kind),['move','focus','focus','move']);assert.equal(s.round,2);assert.equal(s.firstSide,'w');
-});
-test('a directional attack continues when the originally selected target moves',()=>{
- const s=fixture({'w-r':'d4','b-r':'d6'});s.firstSide='b';const events=duel(s,[attack(s,'w-r','d6')],[{unitId:'b-r',kind:'move',target:'e6'}]);assert.equal(events[1].kind,'attack');assert.equal(unit(s,'w-r').square,'d4');assert.equal(unit(s,'b-r').hp,6);
-});
-test('a committed empty-square move that becomes occupied fizzles without a hidden attack',()=>{
- const s=fixture({'w-r':'d4','b-r':'f4'});s.firstSide='b';const events=duel(s,[{unitId:'w-r',kind:'move',target:'e4'}],[{unitId:'b-r',kind:'move',target:'e4'}]);assert.equal(events[1].kind,'fizzle');assert.equal(unit(s,'w-r').square,'d4');assert.equal(unit(s,'b-r').hp,6);
-});
-test('king death ends immediately; a shield can reflect a killing blow',()=>{
- const s=fixture({'w-r':'d4','b-k':'d8'});unit(s,'b-k').hp=2;assert.equal(submitPlan(s,'w',[attack(s,'w-r','d8')]).ok,true);assert.equal(submitPlan(s,'b',[]).ok,true);assert.equal(resolveNext(s).winner,'w');assert.equal(resolveNext(s).ok,false);
- const both=fixture({'w-k':'d4','b-k':'d5'});unit(both,'w-k').hp=unit(both,'b-k').hp=1;const defended=previewPlan(both,'b',[{unitId:'b-k',kind:'block'}]);assert.equal(previewPlan(defended,'w',[attack(defended,'w-k','d5')]).winner,'b');
-});
-test('forecasts do not mutate the source or depend on the sealed enemy plan',()=>{
- const s=fixture({'w-r':'d4','b-r':'d6'}),before=structuredClone(s),orders=[{unitId:'w-r',kind:'move',target:'e4'},{unitId:'w-r',kind:'focus'}],a=previewPlan(s,'w',orders);assert.deepEqual(s,before);const secret=structuredClone(s);secret.plans.b=[{unitId:'b-r',kind:'move',target:'e6'}];assert.deepEqual(previewPlan(secret,'w',orders),a);
-});
-test('review action captions use arrows rather than cardinal-letter directions',()=>{
- const s=fixture({'w-r':'d4','b-r':'f4'});assert.equal(describeBattleEvent({kind:'attack',unitId:'w-r',direction:'E',target:'f4',targets:[]},s),'Torre: ataque → f4');assert.equal(describeBattleEvent({kind:'move',unitId:'w-r',from:'d4',to:'e4'},s),'Torre: d4 → e4');
-});
-
-test('continuous alternation holds over multiple rounds, including waits, for either starter',()=>{
- for(const first of ['w','b']){const s=fixture();s.firstSide=first;const all=[];for(let round=0;round<4;round++)all.push(...duel(s).map(e=>e.side));assert.equal(all.length,16);assert.equal(all[0],first);for(let i=1;i<all.length;i++)assert.notEqual(all[i],all[i-1]);}
-});
-test('castling matches classical king moves on both sides and relocates both pieces',()=>{
- for(const color of ['w','b']){
-  const rank=color==='w'?'1':'8',s=fixture({[`${color}-k`]:'e'+rank,[`${color}-r`]:'a'+rank,[`${color}-r2`]:'h'+rank,[color==='w'?'b-k':'w-k']:color==='w'?'e8':'e1'}),fen=color==='w'?'4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1':'r3k2r/8/8/8/8/8/8/4K3 b kq - 0 1',chess=new Chess(fen);
-  const expected=chess.moves({square:'e'+rank,verbose:true}).filter(m=>m.isKingsideCastle()||m.isQueensideCastle()).map(m=>m.to).sort();assert.deepEqual(getCastleOptions(s,`${color}-k`).map(c=>c.target).sort(),expected);
-  for(const target of ['g','c']){const result=validatePlan(s,color,[{unitId:`${color}-k`,kind:'move',target:target+rank}]);assert.equal(result.ok,true);assert.equal(unit(result.forecast,`${color}-k`).square,target+rank);assert.equal(unit(result.forecast,`${color}-${target==='g'?'r2':'r'}`).square,(target==='g'?'f':'d')+rank);assert.ok(unit(result.forecast,`${color}-k`).hasMoved);}
+test('960 neighboring c/g king moves are ordinary moves unless the rook is selected',()=>{
+ for(const [king,rook,neighbor]of [['f1','h1','g1'],['b1','a1','c1']]){
+  const s=fixture({'w-k':king,'w-r2':rook,'b-k':'e8'}),ordinary=previewPlan(s,'w',[move('w-k',neighbor)]);assert.equal(ordinary.forecastEvents[0].castle,undefined);assert.equal(unit(ordinary,'w-k').square,neighbor);assert.equal(unit(ordinary,'w-r2').square,rook);
+  const explicit=validatePlan(s,'w',[move('w-k',rook)]);assert.equal(explicit.ok,true,explicit.error);assert.ok(explicit.orders[0].castle);assert.equal(unit(explicit.forecast,'w-k').square,neighbor);assert.equal(unit(explicit.forecast,'w-r2').square,neighbor==='g1'?'f1':'d1');
+  const normalized=previewPlan(s,'w',explicit.orders);assert.equal(unit(normalized,'w-k').square,neighbor);assert.equal(unit(normalized,'w-r2').square,neighbor==='g1'?'f1':'d1');
  }
-});
-test('castling rejects moved pieces, occupied paths, and threats at start, transit and destination',()=>{
- const base=()=>fixture({'w-k':'e1','w-r':'a1','w-r2':'h1','b-k':'h8'});
- let s=base();unit(s,'w-k').hasMoved=true;assert.deepEqual(getCastleOptions(s,'w-k'),[]);
- s=base();unit(s,'w-r2').hasMoved=true;assert.ok(!getCastleOptions(s,'w-k').some(c=>c.target==='g1'));
- for(const square of ['f1','g1','b1','c1','d1']){s=base();s.units.push({id:'block',type:'p',color:'w',hp:6,square});assert.ok(!getCastleOptions(s,'w-k').some(c=>c.target===('fg'.includes(square[0])?'g1':'c1')));}
- for(const [type,square,target]of [['r','e6','g1'],['b','b5','g1'],['b','c5','g1'],['p','e2','g1']]){s=base();s.units.push({id:'threat',type,color:'b',hp:6,square});assert.ok(!getCastleOptions(s,'w-k').some(c=>c.target===target),`${type} ${square}`);}
-});
-test('the rook involved in castling consumes its movement for that round',()=>{
- const s=fixture({'w-k':'e1','w-r2':'h1'});assert.equal(validatePlan(s,'w',[{unitId:'w-k',kind:'move',target:'g1'},{unitId:'w-r2',kind:'move',target:'f2'}]).ok,false);assert.equal(validatePlan(s,'w',[{unitId:'w-k',kind:'move',target:'g1'},{unitId:'w-r2',kind:'focus'}]).ok,true);
-});
-test('a castle is revalidated after the preceding enemy order',()=>{
- const s=fixture({'w-k':'e1','w-r2':'h1','b-r':'h3','b-k':'e8'});s.firstSide='b';assert.ok(getCastleOptions(s,'w-k').some(c=>c.target==='g1'));const events=duel(s,[{unitId:'w-k',kind:'move',target:'g1'}],[{unitId:'b-r',kind:'move',target:'f3'}]);assert.equal(events[1].kind,'fizzle');assert.equal(unit(s,'w-k').square,'e1');assert.equal(unit(s,'w-r2').square,'h1');
-});
-test('reverse replay restores damage and both castle paths without executing rules',()=>{
- const before=fixture({'w-r':'d4','b-r':'d6'}),event={kind:'attack',unitId:'w-r',from:'d4',to:'d4',targets:[{id:'b-r',square:'d6',damage:2,hp:4,dead:false}]},copy=structuredClone(before),reversed=reverseBattleEvent(event,before);assert.equal(reversed.targets[0].heal,2);assert.equal(reversed.targets[0].hp,6);assert.deepEqual(before,copy);
- const castle=reverseBattleEvent({kind:'move',from:'e1',to:'g1',castle:{rookId:'w-r2',rookFrom:'h1',rookTo:'f1'},targets:[]},before);assert.equal(castle.from,'g1');assert.equal(castle.to,'e1');assert.equal(castle.castle.rookFrom,'f1');assert.equal(castle.castle.rookTo,'h1');
-});
-
-test('revealed orders identify both victims in a knight quadrant and friendly fire',()=>{
- const s=fixture({'w-n':'d4','w-p1':'e6','b-r':'f5'}),text=describePlannedOrder(attack(s,'w-n','f5'),s);assert.match(text,/Caballo d4/);assert.match(text,/↗/);assert.match(text,/Peón e6 \(aliada\)/);assert.match(text,/Torre f5 \(rival\)/);assert.match(text,/2 por impacto/);
- const castle=describePlannedOrder({unitId:'w-k',kind:'move',target:'g1',castle:{rookFrom:'h1',rookTo:'f1'}},fixture({'w-k':'e1'}));assert.match(castle,/e1 → g1/);assert.match(castle,/h1 → f1/);
-});
-
-test('resolution hits the first new body on a declared ray, including allies',()=>{
- const s=fixture({'w-r':'d4','b-r':'d6','b-q':'f5'});s.firstSide='b';const events=duel(s,[attack(s,'w-r','d6')],[{unitId:'b-q',kind:'move',target:'d5'}]);assert.equal(events[1].targets[0].id,'b-q');assert.equal(unit(s,'b-q').hp,4);assert.equal(unit(s,'b-r').hp,6);
- const beyond=fixture({'w-r':'d4','b-r':'d6','w-q':'d8'});beyond.firstSide='b';const moved=duel(beyond,[attack(beyond,'w-r','d6')],[{unitId:'b-r',kind:'move',target:'e6'}]);assert.equal(moved[1].targets[0].id,'w-q');assert.equal(unit(beyond,'w-q').hp,4);
-});
-test('960 castling supports a stationary king, stationary rook and exchanged squares',()=>{
- for(const [king,rook,target,rookTo]of [['g1','h1','g1','f1'],['e1','f1','g1','f1'],['f1','g1','g1','f1']]){const s=fixture({'w-k':king,'w-r2':rook,'b-k':'a8'}),r=validatePlan(s,'w',[{unitId:'w-k',kind:'move',target:rook}]);assert.equal(r.ok,true,r.error);assert.equal(unit(r.forecast,'w-k').square,target);assert.equal(unit(r.forecast,'w-r2').square,rookTo);}
+ const standard=fixture({'w-k':'e1','w-r':'a1','w-r2':'h1','b-k':'e8'});for(const target of ['c1','g1'])assert.ok(previewPlan(standard,'w',[move('w-k',target)]).forecastEvents[0].castle);
 });
