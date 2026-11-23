@@ -257,6 +257,12 @@ function crearVentana(enlace) {
   const ventana = plantillaVentana.content.firstElementChild.cloneNode(true);
   const encabezado = ventana.querySelector(".barra-ventana");
   const iframe = ventana.querySelector("iframe");
+  const ruta = enlace.getAttribute("href");
+  const urlVentana = new URL(ruta, document.baseURI);
+  // Refresh the entry document on each new window. Its assets keep their own cache keys.
+  if (urlVentana.origin === location.origin) {
+    urlVentana.searchParams.set('_bubble', Date.now().toString());
+  }
 
   ventana.querySelector("h2").textContent =
     enlace.dataset.windowTitle || enlace.textContent.trim().replace(/\s+/g, " ");
@@ -264,24 +270,24 @@ function crearVentana(enlace) {
   ventana.setAttribute('aria-label', nombreVentana);
   iframe.title = nombreVentana;
   const abrirPestana = ventana.querySelector('.abrir-pestana');
-  abrirPestana.href = enlace.getAttribute('href');
+  abrirPestana.href = urlVentana.href;
   abrirPestana.setAttribute('aria-label', `Abrir ${nombreVentana} en una pestaña nueva`);
   abrirPestana.addEventListener('click', () => {
     // Prefer the route currently open in the app; cross-origin frames use their entry URL.
     try { const actual = iframe.contentWindow.location.href; if (/^https?:\/\//.test(actual)) abrirPestana.href = actual; } catch { /* Cross-origin app. */ }
   });
   enlacesOrigen.set(ventana, enlace);
-  if (enlace.getAttribute('href') === 'pages/sura/index.html') {
+  if (ruta === 'pages/sura/index.html') {
     ventana.classList.add('ventana-lbds');
   }
-  if (enlace.getAttribute('href') === 'pages/paula/index.html') {
+  if (ruta === 'pages/paula/index.html') {
     ventana.classList.add('ventana-paca');
     idiomaVentanaPaca(ventana, 'en');
   }
-  if (enlace.getAttribute('href') === 'pages/admin/index.html') ventana.classList.add('ventana-admin');
-  if (enlace.getAttribute('href') === '/FCT/') ventana.classList.add('ventana-fct');
-  iframe.src = enlace.getAttribute("href");
+  if (ruta === 'pages/admin/index.html') ventana.classList.add('ventana-admin');
+  if (ruta === '/FCT/') ventana.classList.add('ventana-fct');
   iframe.addEventListener('load',actualizarActividadFct);
+  iframe.src = urlVentana.href;
   document.body.append(ventana);
   ventanasAbiertas.add(ventana);
   enfocarVentana(ventana);

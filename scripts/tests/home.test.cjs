@@ -161,6 +161,7 @@ function browser({ imageDelay = 0, imageFailure = false, reducedMotion = false }
   Object.assign(window, { innerWidth: 1280, innerHeight: 900, matchMedia: () => ({ matches: reducedMotion, addEventListener() {} }) });
   const location = { origin: 'http://localhost:8000', reload() { throw new Error('Yin Yang must not reload the page'); } };
   window.location = location;
+  document.baseURI = location.origin + '/';
   class Image extends Target {
     constructor() { super(); this.complete = false; this.naturalWidth = 640; images.push(this); }
     set src(value) {
@@ -543,9 +544,20 @@ test('JK opens the password gate and only its own iframe can change the window s
 
 test('all bubbles including FCT open embedded windows with a new-tab action', async()=>{
   const page=browser();await page.advance(5000);
-  for(const link of page.links){link.dispatch('click');const win=page.windows().at(-1),button=win.querySelector('.abrir-pestana');assert.ok(button);assert.equal(button.href,link.getAttribute('href'));}
+  for (const link of page.links) {
+    link.dispatch('click');
+    const win = page.windows().at(-1);
+    const frameURL = new URL(win.querySelector('iframe').src);
+    assert.equal(frameURL.pathname, new URL(link.getAttribute('href'), 'http://localhost:8000').pathname);
+    assert.equal(frameURL.searchParams.get('_bubble'), '5000');
+    assert.equal(win.querySelector('.abrir-pestana').href, frameURL.href);
+  }
   assert.equal(page.windows().length,4);
   const fct=page.windows()[2];assert.ok(fct.classList.contains('ventana-fct'));
   fct.querySelector('iframe').contentWindow.location={href:'https://example.test/FCT/tactics.html'};
   fct.querySelector('.abrir-pestana').dispatch('click');assert.equal(fct.querySelector('.abrir-pestana').href,'https://example.test/FCT/tactics.html');
+  fct.querySelector('.cerrar-ventana').dispatch('click');
+  await page.advance(1);
+  page.links[2].dispatch('click');
+  assert.equal(new URL(page.windows().at(-1).querySelector('iframe').src).searchParams.get('_bubble'), '5001');
 });
