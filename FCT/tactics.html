@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><meta name="theme-color" content="#192b2a" />
   <link rel="icon" type="image/png" href="/FCT/assets/bubble-fct-WznzNepr.png" /><title>Fantasy Chess Tactics</title>
-  <script type="module" crossorigin src="/FCT/assets/tactics-2wLc7IWU.js"></script>
-  <link rel="modulepreload" crossorigin href="/FCT/assets/audio-system-kaPUzbZ6.js">
+  <script type="module" crossorigin src="/FCT/assets/tactics-Dte8HGu4.js"></script>
+  <link rel="modulepreload" crossorigin href="/FCT/assets/audio-system-1HkYDQvU.js">
   <link rel="modulepreload" crossorigin href="/FCT/assets/capture-rack-qigeBcsv.js">
-  <link rel="stylesheet" crossorigin href="/FCT/assets/audio-system-DuHP-oUp.css">
-  <link rel="stylesheet" crossorigin href="/FCT/assets/tactics-1g6kqrmR.css">
+  <link rel="stylesheet" crossorigin href="/FCT/assets/audio-system-AEf0LyJ9.css">
+  <link rel="stylesheet" crossorigin href="/FCT/assets/tactics-Doht3iTX.css">
 </head>
 <body>
   <audio id="background-music" preload="metadata" playsinline></audio>
@@ -19,15 +19,18 @@
     <section class="battle-column" aria-label="Campo de batalla">
       <div class="tactical-board-wrap">
         <div id="board-2d" hidden class="tactical-board" role="grid" aria-label="Tablero de ocho por ocho"></div><div id="board-3d" class="tactical-board-3d" aria-busy="true"></div>
-        <div id="remaining-black" class="tactics-remaining enemy-strip" aria-label="Piezas restantes de la IA"></div><div id="remaining-white" class="tactics-remaining ally-strip" aria-label="Tus piezas restantes"></div>
-        <svg id="intent-overlay" class="intent-overlay" aria-hidden="true"></svg><p id="intent-caption" class="intent-note" aria-live="polite" hidden></p>
+        <div id="remaining-black" class="tactics-remaining enemy-strip" aria-label="Piezas restantes de la IA"></div>
+        <svg id="intent-overlay" class="intent-overlay" aria-hidden="true"></svg>
         <div id="board-actions" class="board-actions" aria-label="Acciones en el tablero"><div id="unit-actions" class="field-actions" hidden></div></div>
         <div class="board-toast" id="board-toast" aria-live="polite" hidden></div>
       </div>
     </section>
-    <aside class="command-column" aria-label="Revisión de partida">
-    <nav id="review-controls" class="review-controls command-card" aria-label="Revisión de partida" hidden><div class="review-buttons"><button type="button" data-review="first" aria-label="Inicio de partida">|‹</button><button type="button" data-review="prev" aria-label="Acción anterior">‹</button><strong id="review-position"></strong><button type="button" data-review="next" aria-label="Acción siguiente">›</button><button type="button" data-review="last" aria-label="Última posición">›|</button><button type="button" id="review-return">Volver</button></div><input id="review-range" type="range" min="0" max="0" value="0" aria-label="Posición de la partida" /></nav>
-    </aside>
+    <div class="command-column">
+      <div id="remaining-white" class="tactics-remaining ally-strip" aria-label="Tus piezas restantes"></div>
+    <nav id="review-controls" class="review-controls command-card" aria-label="Revisión de partida" hidden>
+      <p id="intent-caption" class="intent-note" aria-live="polite" hidden></p>
+      <div class="review-buttons"><button type="button" data-review="first" aria-label="Inicio de partida">|‹</button><button type="button" data-review="prev" aria-label="Acción anterior">‹</button><strong id="review-position"></strong><button type="button" data-review="next" aria-label="Acción siguiente">›</button><button type="button" data-review="last" aria-label="Última posición">›|</button><button type="button" id="review-return">Volver</button></div><input id="review-range" type="range" min="0" max="0" value="0" aria-label="Posición de la partida" /></nav>
+    </div>
 
   </main>
   <dialog id="rules-dialog" class="tactics-dialog" aria-labelledby="rules-title"><div class="dialog-top"><p class="eyebrow">MANUAL DE CAMPO</p><button type="button" id="rules-close" aria-label="Cerrar reglas">×</button></div><h2 id="rules-title">Fantasy Chess Tactics</h2><div class="rules-grid"><section><h3>Captura o jaque mate</h3><p>Formación normal de ajedrez. Capturar al rey o darle jaque mate termina la partida inmediatamente, aunque queden órdenes. El mate exige que no exista una respuesta legal para salvar al rey; agotar las acciones no basta. No hay vida, escudos ni ataques a distancia.</p></section><section><h3>Iniciativa y acciones</h3><p>Quien inicia tiene dos acciones; quien juega segundo, una. La misma pieza puede moverse dos veces. Tú empiezas las rondas impares y la IA las pares. Preparan en secreto y ejecutan intercaladamente dentro de cada ronda.</p></section><section><h3>Revisa y confirma</h3><p>Selecciona o arrastra, elige el destino y pulsa el chulo sobre el destino para confirmar o la X para cambiarlo. Las flechas y los detalles de intentos solo aparecen al revisar la partida. Tienes 20 segundos por orden; un movimiento sin confirmar se convierte en espera. El enroque disponible aparece en violeta.</p></section><section><h3>El camino puede cambiar</h3><p>Una pieza captura al primer enemigo de su recorrido y termina allí. Ante un aliado, se detiene una casilla antes. Los peones no capturan de frente: se detienen ante cualquier ocupante. Los caballos saltan obstáculos, pero no aterrizan sobre aliados. Si no hay espacio para avanzar, se pierde la acción. Puedes revisar el intento y su resultado en la revisión.</p></section><section><h3>Peones y promoción</h3><p>Avanzan una casilla; dos desde su fila inicial y sin movimiento previo. Capturan en diagonal. Puedes predecir una diagonal vacía: si al ejecutarse no hay rival ni captura al paso, falla. En la última fila elige reina, torre, alfil o caballo antes de confirmar.</p></section><section><h3>Movimientos especiales</h3><p>Captura al paso solo en la acción inmediatamente posterior al avance doble rival. Enroque con rey y torre sin mover, camino libre y rey sin amenazas al inicio, al pasar ni al llegar. Selecciona el rey y su torre o el destino c/g; si las condiciones cambian al ejecutar, se cancela.</p></section></div><button id="rules-done" type="button" class="primary-button">Entendido</button></dialog>
