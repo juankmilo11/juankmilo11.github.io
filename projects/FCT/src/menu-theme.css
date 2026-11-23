@@ -7,7 +7,7 @@
 .tactics-mode-link strong{font:600 21px var(--font-title)}
 .tactics-mode-link small{font-size:14px;color:#c1c9b2}
 body,button { font-family: var(--font-ui); }
-.app-shell:not(.is-playing) { background: linear-gradient(90deg,#ece1c5cc,#f0e5cd12 65%),url('/menu-keyart-v2.webp') center / cover no-repeat; }
+.app-shell:not(.is-playing) { background: linear-gradient(100deg,#060b1bcf,#11192ead 62%,#070b1ccf),url('/menu-keyart-v2.webp') center / cover no-repeat; }
 .app-shell:not(.is-playing) .topbar { background: #141d18ed; border-color: #aa986633; }
 .app-shell:not(.is-playing) .brand { color: #e7ddbf; }
 .app-shell:not(.is-playing) .brand-copy small { color: #b0ad97; }

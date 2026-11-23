@@ -55,7 +55,7 @@ function targetSquares(state,unit){
 function renderBoard(){
   const state=visibleState();if(!state)return;
   const selected=unitFrom(state),targets=new Set(targetSquares(state,selected)),castles=new Set(selected?.type==='k'?getCastleOptions(state,selected).flatMap(c=>[c.inputTarget,c.target]):[]);
-  if(!board.children.length)board.innerHTML=squares.map(square=>`<button type="button" class="tactical-cell" data-square="${square}" role="gridcell"><span class="cell-coordinate">${square}</span></button>`).join('');
+  if(!board.children.length)board.innerHTML=squares.map(square=>`<button type="button" class="tactical-cell" data-square="${square}" role="gridcell"></button>`).join('');
   const occupants=new Map(state.units.filter(isAlive).map(u=>[u.square,u]));
   for(const [index,cell]of [...board.children].entries()){
     const square=squares[index],unit=occupants.get(square),classes=['tactical-cell',(Math.floor(index/8)+index%8)%2?'dark':'light'];
