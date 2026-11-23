@@ -25,7 +25,7 @@ document.querySelector('.tactics-mode-link')?.addEventListener('click',event=>{
   if(event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||event.button!==0)return;
   event.preventDefault();if(document.body.classList.contains('is-opening-tactics'))return;
   try { sessionStorage.setItem('fct:tactics:loadout',JSON.stringify(getLoadout())); } catch { /* Cosmetic defaults remain available. */ }
-  audioSystem.playSound('menu4');document.body.classList.add('is-opening-tactics');
+  audioSystem.playSound('sound1');document.body.classList.add('is-opening-tactics');
   const curtain=document.querySelector('#battle-curtain');curtain?.classList.add('is-covering');
   const destination=event.currentTarget.href;setTimeout(()=>location.assign(destination),matchMedia('(prefers-reduced-motion: reduce)').matches?120:360);
 });

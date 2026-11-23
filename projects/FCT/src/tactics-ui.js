@@ -1,5 +1,5 @@
 import './tactics.css';
-import { createMatch, autoDeploy, confirmDeployment, beginBattle, roundRules, submitPlan, resolveNext, getLegalMoves, unitAt, validatePlan, previewPlan, publicView, UNIT_NAMES, getCastleOptions } from './tactics-engine.js';
+import { createMatch, autoDeploy, confirmDeployment, beginBattle, roundRules, submitPlan, resolveNext, getLegalMoves, unitAt, validatePlan, previewPlan, publicView, UNIT_NAMES, getCastleOptions, movementPath } from './tactics-engine.js';
 import { planAI } from './tactics-ai.js';
 import { describeBattleEvent } from './tactics-presentation.js';
 import { appearanceFor, thumbnailUrl, setLoadout } from './appearance.js';
@@ -48,26 +48,26 @@ function checkPlan(orders){
 function targetSquares(state,unit){
   if(!unit?.square||unit.color!==viewer||!planning||resolving||reviewIndex!==null)return [];
   const moves=getLegalMoves(state,unit).filter(target=>checkPlan([...draft,{unitId:unit.id,kind:'move',target}]).ok);
-  const castles=unit.type==='k'?getCastleOptions(state,unit).map(c=>c.inputTarget).filter(target=>checkPlan([...draft,{unitId:unit.id,kind:'move',target}]).ok):[];
+  const castles=unit.type==='k'?getCastleOptions(state,unit).flatMap(c=>[c.inputTarget,c.target]).filter(target=>checkPlan([...draft,{unitId:unit.id,kind:'move',target}]).ok):[];
   return [...new Set([...moves,...castles])];
 }
 function renderBoard(){
   const state=visibleState();if(!state)return;
-  const selected=unitFrom(state),targets=new Set(targetSquares(state,selected));
+  const selected=unitFrom(state),targets=new Set(targetSquares(state,selected)),castles=new Set(selected?.type==='k'?getCastleOptions(state,selected).flatMap(c=>[c.inputTarget,c.target]):[]);
   if(!board.children.length)board.innerHTML=squares.map(square=>`<button type="button" class="tactical-cell" data-square="${square}" role="gridcell"><span class="cell-coordinate">${square}</span></button>`).join('');
   const occupants=new Map(state.units.filter(isAlive).map(u=>[u.square,u]));
   for(const [index,cell]of [...board.children].entries()){
     const square=squares[index],unit=occupants.get(square),classes=['tactical-cell',(Math.floor(index/8)+index%8)%2?'dark':'light'];
     if(square===selectedSquare)classes.push('is-selected');
-    if(targets.has(square))classes.push('is-target');
+    if(targets.has(square))classes.push('is-target');if(castles.has(square))classes.push('is-castle');if(pendingTarget?.target===square)classes.push('is-pending');
     if(state.tiles[square])classes.push('terrain-'+state.tiles[square].kind);
     cell.querySelectorAll('.combat-number').forEach(n=>n.remove());const oldToken=cell.querySelector('.tactical-token');if(oldToken){oldToken.getAnimations().forEach(a=>a.cancel());oldToken.classList.remove('is-focusing','is-striking','is-falling');}
     cell.className=classes.join(' ');cell.setAttribute('aria-selected',String(square===selectedSquare));
-    cell.setAttribute('aria-label',`${square}${unit?`, ${UNIT_NAMES[unit.type]}, ${sideName(unit.color)}, ${unit.guard?'con escudo':'sin escudo'}`:''}`);
-    const signature=unit?`${unit.id}:${unit.type}:${unit.captured}:${unit.guard}`:'';
-    if(cell.dataset.piece!==signature){cell.querySelectorAll('.tactical-token').forEach(n=>n.remove());cell.dataset.piece=signature;if(unit){const token=document.createElement('span');token.className='tactical-token';token.dataset.unit=unit.id;const img=document.createElement('img');img.src=thumbnailUrl(look(unit),unit.captured?'defeated':'standing');img.alt='';img.draggable=false;token.append(img);if(unit.guard){token.classList.add('has-shield');const mark=document.createElement('span');mark.className='token-shield';mark.textContent='◇';token.append(mark);}cell.append(token);}}
+    cell.setAttribute('aria-label',`${square}${unit?`, ${UNIT_NAMES[unit.type]}, ${sideName(unit.color)}, `:''}`);
+    const signature=unit?`${unit.id}:${unit.type}:${unit.captured}:${state.matedSide===unit.color&&unit.type==='k'}`:'';
+    if(cell.dataset.piece!==signature){cell.querySelectorAll('.tactical-token').forEach(n=>n.remove());cell.dataset.piece=signature;if(unit){const token=document.createElement('span');token.className='tactical-token';token.dataset.unit=unit.id;const img=document.createElement('img');img.src=thumbnailUrl(look(unit),unit.captured||state.matedSide===unit.color&&unit.type==='k'?'defeated':'standing');img.alt='';img.draggable=false;token.append(img);cell.append(token);}}
   }
-  if(three&&view==='3d')three.render(state,{selectedSquare,targets:[...targets],lastEvent:reviewIndex!==null?history[reviewIndex].event:lastEvent,interactive:planning&&!resolving&&!presenting&&reviewIndex===null&&draft.length<roundRules(match).actions});
+  if(three&&view==='3d')three.render(state,{selectedSquare,targets:[...targets],castleTargets:[...castles],lastEvent:reviewIndex!==null?history[reviewIndex].event:lastEvent,interactive:planning&&!resolving&&!presenting&&reviewIndex===null&&draft.length<roundRules(match).actions});renderIntentOverlay();
 }
 
 function renderPhase(){
@@ -86,19 +86,22 @@ function inspectSquare(square){const unit=match&&square&&inspectableAt(forecast(
 function renderFieldActions(){
   const menu=$('#unit-actions'),unit=match&&unitFrom(forecast());menu.hidden=true;document.body.classList.remove('has-field-actions');
   if(!planning||resolving||presenting||reviewIndex!==null||!unit||unit.color!==viewer||view==='3d'&&!three)return;
-  if(pendingTarget){menu.innerHTML=`<span class="promotion-caption">Promocionar a</span>${['q','r','b','n'].map(type=>`<button type="button" data-promote="${type}">${UNIT_NAMES[type]}</button>`).join('')}`;}
-  else{const available=checkPlan([...draft,{unitId:unit.id,kind:'block'}]).ok;menu.innerHTML=`<button type="button" data-field-action="block" ${available?'':'disabled'}>◇ Escudo${match.shieldUsed?.[viewer]?' usado':''}</button>`;}
+  if(!pendingTarget)return;
+  const normalized=validatePlan(match,viewer,[...draft,pendingTarget]).orders?.at(-1)??pendingTarget;
+  const promotion=unit.type==='p'&&pendingTarget.target[1]===(viewer==='w'?'8':'1');
+  menu.innerHTML=`<span class="intent-caption">${normalized.castle?'Enroque · ':''}${UNIT_NAMES[unit.type]} ${unit.square} → ${normalized.target}</span>${promotion?['q','r','b','n'].map(type=>`<button type="button" data-promote="${type}" aria-pressed="${(pendingTarget.promotion??'q')===type}">${UNIT_NAMES[type]}</button>`).join(''):''}<button type="button" class="confirm-move" data-confirm-move>Confirmar movimiento</button><button type="button" data-cancel-move>Cambiar</button>`;
   menu.hidden=false;positionFieldActions();
 }
 function positionFieldActions(){
-  const menu=$('#unit-actions');if(menu.hidden)return;const box=$('.tactical-board-wrap').getBoundingClientRect(),clearance=20;
-  menu.style.left=view==='2d'?`${board.getBoundingClientRect().x+board.getBoundingClientRect().width/2}px`:'50%';menu.style.top=`${box.height-menu.offsetHeight-clearance}px`;
+  const menu=$('#unit-actions');if(menu.hidden){renderIntentOverlay();return;}const box=$('.tactical-board-wrap').getBoundingClientRect(),clearance=20;
+  menu.style.left=view==='2d'?`${board.getBoundingClientRect().x+board.getBoundingClientRect().width/2}px`:'50%';menu.style.top=`${box.height-menu.offsetHeight-clearance}px`;renderIntentOverlay();
 }
 function selectCell(square){
   selectedSquare=/^[a-h][1-8]$/.test(square??'')?square:null;for(const cell of board.children){const selected=cell.dataset.square===selectedSquare;cell.classList.toggle('is-selected',selected);cell.setAttribute('aria-selected',String(selected));}three?.setSelection(selectedSquare);
 }
-function commitOrder(order){const result=checkPlan([...draft,order]);if(!result.ok){toast(result.error);return;}draft.push(order);clearIntent();selectedId=null;selectCell(null);sound('menu4');advanceOrder();}
-function confirmMove(order){const unit=unitFrom(forecast(),order.unitId);if(unit?.type==='p'&&order.target[1]===(unit.color==='w'?'8':'1')){pendingTarget=order;renderFieldActions();return;}commitOrder(order);}
+function commitOrder(order){const result=validatePlan(match,viewer,[...draft,order]);if(!result.ok){toast(result.error);return;}draft=result.orders;clearIntent();selectedId=null;selectCell(null);sound('menu4');advanceOrder();}
+function confirmMove(order){const unit=unitFrom(forecast(),order.unitId);pendingTarget={...order,...(unit?.type==='p'&&['1','8'].includes(order.target[1])?{promotion:'q'}:{})};sound('menu2');renderBoard();renderFieldActions();}
+
 
 function render(){renderPhase();renderBoard();renderControls();}
 function selectUnit(id){if(!planning||resolving||presenting||reviewIndex!==null)return;const unit=unitFrom(forecast(),id);if(!unit||unit.color!==viewer||unit.captured)return;selectedId=id;selectedSquare=unit.square;inspectedId=id;clearIntent();sound();render();}
@@ -121,7 +124,7 @@ function advanceOrder(){
   render();
 }
 function expireOrder(){
-  if(pendingTarget){commitOrder({...pendingTarget,promotion:'q'});return;}
+  if(pendingTarget)toast('Tiempo agotado: el movimiento no se confirmó.');
   while(draft.length<=furthestOrder&&draft.length<roundRules(match).actions)draft.push({kind:'pass'});
   clearIntent();advanceOrder();
 }
@@ -150,7 +153,7 @@ function requestAI(){
   });
 }
 function recordPosition(event){
-  history.push({exchange:currentExchange,state:structuredClone({units:match.units,tiles:match.tiles,phase:match.phase,round:match.round,firstSide:match.firstSide,winner:match.winner,revision:match.revision,opponent:'ai',shieldUsed:match.shieldUsed,enPassant:match.enPassant}),event:event?structuredClone(event):null});
+  history.push({exchange:currentExchange,state:structuredClone({units:match.units,tiles:match.tiles,phase:match.phase,round:match.round,firstSide:match.firstSide,winner:match.winner,revision:match.revision,opponent:'ai',winReason:match.winReason,matedSide:match.matedSide,enPassant:match.enPassant}),event:event?structuredClone(event):null});
 }
 function enterReview(){if(resolving||reviewPlaying||history.length<2)return;$('#result-dialog').close();clearIntent();selectedId=null;selectedSquare=null;reviewIndex=history.length-1;render();}
 function renderReview(){
@@ -175,31 +178,31 @@ async function sealPlan(){
   revealRound();draft=[];await runResolution();
 }
 async function animate2D(event,after){
-  const duration=actionDuration(event,reduced),motions=[{id:event.unitId,from:event.from,to:event.bounced?event.attemptedTo:event.to},...(event.castle?[{id:event.castle.rookId,from:event.castle.rookFrom,to:event.castle.rookTo}]:[])];
+  const duration=actionDuration(event,reduced),motions=[{id:event.unitId,from:event.from,to:event.to},...(event.castle?[{id:event.castle.rookId,from:event.castle.rookFrom,to:event.castle.rookTo}]:[])];
   for(const motion of motions){const token=motion.from?board.querySelector(`[data-square="${motion.from}"] .tactical-token`):null;if(!token)continue;
-    if(event.kind==='move'&&motion.to&&motion.to!==motion.from){const a=board.querySelector(`[data-square="${motion.from}"]`).getBoundingClientRect(),b=board.querySelector(`[data-square="${motion.to}"]`).getBoundingClientRect(),dx=b.x-a.x,dy=b.y-a.y;token.style.zIndex='9';const frames=event.bounced?[{transform:'translate(0,0)'},{transform:`translate(${dx*.85}px,${dy*.85}px) scale(1.04)`,offset:.48},{transform:'translate(0,0)'}]:[{transform:'translate(0,0)'},{transform:`translate(${dx*.5}px,${dy*.5-8}px) scale(1.04)`,offset:.5},{transform:`translate(${dx}px,${dy}px)`}];token.animate(frames,{duration,easing:'cubic-bezier(.22,.7,.3,1)',fill:'forwards'});}
-    else if(event.kind==='block'){token.classList.add('has-shield');}
+    if(event.kind==='move'&&motion.to&&motion.to!==motion.from){const a=board.querySelector(`[data-square="${motion.from}"]`).getBoundingClientRect(),b=board.querySelector(`[data-square="${motion.to}"]`).getBoundingClientRect(),dx=b.x-a.x,dy=b.y-a.y;token.style.zIndex='9';const frames=[{transform:'translate(0,0)'},{transform:`translate(${dx*.5}px,${dy*.5-8}px) scale(1.04)`,offset:.5},{transform:`translate(${dx}px,${dy}px)`}];token.animate(frames,{duration,easing:'cubic-bezier(.22,.7,.3,1)',fill:'forwards'});}
   }
   for(const target of event.targets??[]){const cell=board.querySelector(`[data-square="${target.square}"]`);if(!cell)continue;
     if(event.reversed&&target.restored){const unit=after.units.find(u=>u.id===target.id);if(unit&&!cell.querySelector(`[data-unit="${unit.id}"]`)){const token=document.createElement('span');token.className='tactical-token';token.dataset.unit=unit.id;token.innerHTML=`<img src="${thumbnailUrl(look(unit))}" alt="" />`;cell.append(token);token.animate([{opacity:0,transform:'scale(.4)'},{opacity:1,transform:'scale(1)'}],{duration,fill:'forwards'});}}
     else if(target.captured){cell.querySelector('.tactical-token')?.animate([{opacity:1},{opacity:0,transform:'scale(.55) rotate(55deg)'}],{duration:duration*.8,fill:'forwards'});}
-    if(target.blocked){cell.classList.add('shield-impact');const token=cell.querySelector('.tactical-token');token?.animate([{filter:'drop-shadow(0 0 18px #a2eaff)'},{filter:'none'}],{duration});}
   }
+  if(event.checkmate){const king=after.units.find(u=>u.type==='k'&&u.color===event.checkmate.side),cell=king&&board.querySelector(`[data-square="${king.square}"] .tactical-token`);if(cell){if(event.reversed){const img=cell.querySelector('img');if(img)img.src=thumbnailUrl(look(king));}cell.animate(event.reversed?[{opacity:.4},{opacity:1}]:[{opacity:1,transform:'rotate(0)'},{opacity:.55,transform:'rotate(65deg)'}],{duration,easing:'ease-in-out',fill:'forwards'});}}
   await delay(duration);
 }
 async function playEvent(event,after){
-  audio.playSound(event.targets?.some(t=>t.captured||t.blocked)?'user_piece_move':event.kind==='move'?'AI_piece_move':'menu3',.7);
+  renderIntentOverlay();
+  audio.playSound(event.targets?.some(t=>t.captured)?'user_piece_move':event.kind==='move'?'AI_piece_move':'menu3',.7);
   if(view==='3d'&&three)await three.play(event,after);else await animate2D(event,after);
 }
 async function runResolution(){
   const token=phaseToken;resolving=true;planning=false;viewer='w';render();
   while(match.phase==='resolution'&&token===phaseToken){
     while($('#exit-dialog').open&&token===phaseToken)await delay(50);if(token!==phaseToken)return;
-    const before=publicView(match,viewer),result=resolveNext(match);if(!result.ok){toast(result.error);break;}const event=result.event;lastEvent=event;currentEvent=event;recordPosition(event);playbackState=before;renderPhase();
+    const before=publicView(match,viewer),result=resolveNext(match);if(!result.ok){toast(result.error);break;}const event=result.event;lastEvent=event;currentEvent=event;recordPosition(event);playbackState=before;renderPhase();renderIntentOverlay();
     await delay(reduced?30:100);if(token!==phaseToken)return;await playEvent(event,publicView(match,viewer));if(token!==phaseToken)return;playbackState=null;renderBoard();renderInspector();await delay(reduced?60:120);
   }
   resolving=false;if(token!==phaseToken)return;
-  if(match.phase==='finished'){render();await delay(300);if(token!==phaseToken)return;$('#result-title').textContent=winnerText();$('#result-description').textContent=match.winner==='draw'?'Los dos reyes cayeron en el mismo intercambio.':`El rey de ${sideName(other(match.winner)).toLowerCase()} ha caído en la ronda ${match.round}.`;$('#result-dialog').showModal();audio.playSound('checkmate');}
+  if(match.phase==='finished'){render();await delay(300);if(token!==phaseToken)return;$('#result-title').textContent=winnerText();$('#result-description').textContent=match.winReason==='checkmate'?`Jaque mate al rey de ${sideName(other(match.winner)).toLowerCase()} en la ronda ${match.round}.`:`El rey rival fue capturado en la ronda ${match.round}.`;$('#result-dialog').showModal();audio.playSound('checkmate');}
   else prepareRound();
 }
 function winnerText(){return match.winner==='draw'?'Ambas coronas han caído':match.winner==='w'?'Tu ejército vence':'El estratega vence';}
@@ -209,7 +212,7 @@ async function setView(next){
     if(!threePromise)threePromise=import('./tactics-board3d.js').then(module=>module.createTacticsBoard3D(host3d,handleSquare,{onDrag:handleBoardDrag,onDragStart:beginBoardDrag,onInspect:inspectSquare,onProject:positionFieldActions}));
     try{three=await threePromise;}catch{threePromise=null;toast('Vista 2D activada: este dispositivo no pudo iniciar 3D.');next='2d';}
   }
-  view=next;board.hidden=view!=='2d';host3d.hidden=view!=='3d';three?.setActive(view==='3d'&&!privacy);if(view==='3d'){three.setQuality(liteGraphics);three.resize();}renderBoard();renderControls();
+  view=next;board.hidden=view!=='2d';host3d.hidden=view!=='3d';three?.setActive(view==='3d'&&!privacy);host3d.setAttribute('aria-busy','false');if(view==='3d'){three.setQuality(liteGraphics);three.resize();}renderBoard();renderControls();
   document.querySelectorAll('[data-view]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.view===view)));sound();
 }
 function openRules(){rulesDialog.showModal();three?.setActive(false);sound('menu1');}
@@ -220,7 +223,9 @@ $('#board-actions').addEventListener('pointerdown',e=>e.stopPropagation());
 $('#board-actions').addEventListener('click',event=>{
   event.stopPropagation();const button=event.target.closest('button');if(!button||reviewIndex!==null)return;
   if(button.hasAttribute('data-field-cancel')){clearIntent();render();return;}
-  if(button.dataset.promote&&pendingTarget){commitOrder({...pendingTarget,promotion:button.dataset.promote});return;}
+  if(button.dataset.promote&&pendingTarget){pendingTarget.promotion=button.dataset.promote;renderFieldActions();return;}
+  if(button.hasAttribute('data-confirm-move')&&pendingTarget){commitOrder(pendingTarget);return;}
+  if(button.hasAttribute('data-cancel-move')){clearIntent();renderBoard();renderFieldActions();return;}
   if(button.dataset.fieldAction){setAction(button.dataset.fieldAction);return;}
 
 });
@@ -258,3 +263,20 @@ $('#result-dialog a').addEventListener('click',e=>{e.preventDefault();$('#result
 $('#exit-cancel').addEventListener('click',()=>$('#exit-dialog').close());
 $('#exit-confirm').addEventListener('click',()=>{phaseToken++;three?.cancelPlayback();three?.setActive(false);sound('menu4');location.assign($('#exit-dialog').dataset.destination);});
 $('#exit-dialog').addEventListener('close',()=>{lastTick=performance.now();});
+
+function renderIntentOverlay(){
+ const svg=$('#intent-overlay'),caption=$('#intent-caption');if(!svg||!match)return;
+ const box=$('.tactical-board-wrap').getBoundingClientRect();if(!box.width||!box.height)return;
+ const point=square=>{if(!/^[a-h][1-8]$/.test(square??''))return null;if(view==='3d')return three?.projectSquare(square);const cell=board.querySelector(`[data-square="${square}"]`);if(!cell)return null;const r=cell.getBoundingClientRect();return {x:r.x-box.x+r.width/2,y:r.y-box.y+r.height/2};};
+ let events=[],label='';
+ if(pendingTarget){const unit=unitFrom(forecast(),pendingTarget.unitId),check=validatePlan(match,viewer,[...draft,pendingTarget]),order=check.orders?.at(-1)??pendingTarget;events=[{side:viewer,from:unit?.square,intendedTo:order.target,to:order.target,pending:true}];label='Revisa el recorrido y confirma el movimiento';}
+ else if(resolving||reviewIndex!==null){const event=playbackEvent??(reviewIndex!==null?history[reviewIndex].event:currentEvent);if(event){events=[event];label=`${event.side==='w'?'Tú':'IA'} · ${describeBattleEvent(event,forecast())}`;}}
+ else if(planning){events=draft.filter(o=>o.kind==='move').map(o=>({side:viewer,from:o.from,intendedTo:o.target,to:o.target,queued:true}));}
+ svg.setAttribute('viewBox',`0 0 ${box.width} ${box.height}`);
+ svg.innerHTML='<defs><marker id="intent-arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="context-stroke"/></marker></defs>'+events.map((e,i)=>{
+  const a=point(e.from),b=point(e.intendedTo??e.to);if(!a||!b)return '';const color=e.pending?'#a5f1d1':e.side==='w'?'#71deff':'#ffc199',opacity=e.queued?.35:.9,failed=e.kind==='fizzle';
+  const stop=point(e.to),dots=movementPath(e.from,e.intendedTo??e.to).map(point).filter(Boolean).map(p=>`<circle cx="${p.x}" cy="${p.y}" r="3" fill="${color}"/>`).join(''),line=`<path d="M${a.x} ${a.y} L${b.x} ${b.y}" stroke="${color}" stroke-width="${e.pending?4:3}" stroke-dasharray="9 7" marker-end="url(#intent-arrow)" fill="none"/><circle cx="${a.x}" cy="${a.y}" r="8" stroke="${color}" stroke-width="2" fill="none"/>`;
+  return `<g opacity="${opacity}">${line}${dots}<circle cx="${b.x}" cy="${b.y}" r="15" stroke="${color}" stroke-width="3" fill="${color}25"/>${e.queued?`<text x="${b.x}" y="${b.y+5}" text-anchor="middle" fill="white" font-size="15">${i+1}</text>`:''}${failed?`<path d="M${b.x-8} ${b.y-8}l16 16m0-16l-16 16" stroke="#ffd183" stroke-width="4"/>`:stop&&e.to!==(e.intendedTo??e.to)?`<circle cx="${stop.x}" cy="${stop.y}" r="12" fill="#ffd18370" stroke="#fff2bf" stroke-width="3"/>`:''}</g>`;
+ }).join('');
+ caption.textContent=label;caption.hidden=!label;
+}

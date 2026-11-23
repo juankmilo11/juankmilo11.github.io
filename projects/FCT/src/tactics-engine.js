@@ -15,22 +15,15 @@ export const livingUnits=(state,side)=>state.units.filter(unit=>alive(unit)&&(!s
 const findUnit=(state,unit)=>typeof unit==='string'?state.units.find(item=>item.id===unit):unit;
 const solid=(state,square)=>['void','obstacle'].includes(state.tiles?.[square]?.kind);
 const attackDirections=unit=>unit.type==='b'?DIAGONALS:unit.type==='r'?ORTHOGONALS:ALL;
-function nextRandom(state){let x=state.rng>>>0;x^=x<<13;x^=x>>>17;x^=x<<5;state.rng=x>>>0;return state.rng/4294967296;}
-export function roundRules(state=1){const value=Number(typeof state==='number'?state:state?.round),round=Number.isFinite(value)?Math.floor(value):1,actions=Math.max(1,Math.min(3,round||1));return {seconds:20,actions,maxMoves:actions,maxOther:1};}
+export function roundRules(state=1){const value=Number(typeof state==='number'?state:state?.round),round=Number.isFinite(value)?Math.floor(value):1,actions=Math.max(1,Math.min(3,round||1));return {seconds:20,actions,maxMoves:actions,maxOther:0};}
 export function createMatch({seed=Date.now()}={}){
   let normalized=typeof seed==='number'?seed: [...String(seed)].reduce((n,c)=>Math.imul(n,31)+c.charCodeAt(0),7);
   const units=[];
   for(const color of ['w','b']) {
     const counts={};
-    TYPES.forEach((type,index)=>{const count=counts[type]=(counts[type]??0)+1;units.push({id:`${color}-${type}${type==='p'||count>1?count:''}`,color,type,homeSquare:sq(index%8,(color==='w'?(index<8?2:1):(index<8?7:8))-1),square:null,captured:false,guard:0,hasMoved:false});});
+    TYPES.forEach((type,index)=>{const count=counts[type]=(counts[type]??0)+1;units.push({id:`${color}-${type}${type==='p'||count>1?count:''}`,color,type,homeSquare:sq(index%8,(color==='w'?(index<8?2:1):(index<8?7:8))-1),square:null,captured:false,hasMoved:false});});
   }
-  const layout=Array(8).fill(null);let rngState={rng:(normalized>>>0)||0x9e3779b9};
-  for(let warmup=0;warmup<8;warmup++)nextRandom(rngState);
-  const choose=items=>items[Math.floor(nextRandom(rngState)*items.length)],empty=()=>layout.map((v,i)=>v===null?i:null).filter(i=>i!==null);
-  layout[choose([0,2,4,6])]='b';layout[choose([1,3,5,7])]='b';layout[choose(empty())]='q';
-  layout[choose(empty())]='n';layout[choose(empty())]='n';empty().forEach((file,i)=>layout[file]=['r','k','r'][i]);
-  for(const color of ['w','b']){const counts={};layout.forEach((type,file)=>{const list=units.filter(u=>u.color===color&&u.type===type);const u=list[counts[type]??0];counts[type]=(counts[type]??0)+1;u.homeSquare=sq(file,color==='w'?0:7);});}
-  return {version:7,opponent:'ai',rng:rngState.rng,units,tiles:{},phase:'deployment',round:0,firstSide:'w',lastSide:null,actionNumber:0,activePlanner:'w',ready:{w:false,b:false},deployed:{w:false,b:false},plans:{w:[],b:[]},winner:null,log:[],shieldUsed:{w:false,b:false},enPassant:null,resolution:[],resolutionIndex:0,revision:0};
+  return {version:8,opponent:'ai',rng:(normalized>>>0)||1,units,tiles:{},phase:'deployment',round:0,firstSide:'w',lastSide:null,actionNumber:0,activePlanner:'w',ready:{w:false,b:false},deployed:{w:false,b:false},plans:{w:[],b:[]},winner:null,log:[],enPassant:null,resolution:[],resolutionIndex:0,revision:0};
 }
 export function autoDeploy(state,side){
   if(!['w','b'].includes(side))return bad('Bando no válido.');
@@ -39,7 +32,7 @@ export function autoDeploy(state,side){
 }
 export function confirmDeployment(state,side){
   if(state.phase!=='deployment'||state.deployed[side])return bad('El despliegue ya está cerrado.');
-  if(!['w','b'].includes(side)||livingUnits(state,side).filter(u=>u.square===u.homeSquare).length!==16)return bad('Las dieciséis piezas deben estar en su formación inicial 960.');
+  if(!['w','b'].includes(side)||livingUnits(state,side).filter(u=>u.square===u.homeSquare).length!==16)return bad('Las dieciséis piezas deben estar en su formación inicial clásica.');
   state.deployed[side]=true;state.ready[side]=true;
   if(state.deployed.w&&state.deployed.b){state.phase='ready';state.activePlanner=null;state.ready={w:false,b:false};}
   state.revision++;return good();
@@ -49,12 +42,11 @@ export function startRound(state){
   if(state.winner)return bad('La partida ha terminado.');
   if(!(state.phase==='ready'||state.phase==='resolution'&&state.resolutionIndex>=state.resolution.length))return bad('La siguiente ronda todavía no puede empezar.');
   state.firstSide='w';state.round++;state.phase='planning';state.ready={w:false,b:false};state.plans={w:[],b:[]};state.activePlanner='w';state.resolution=[];state.resolutionIndex=0;
-  for(const unit of state.units)unit.guard=0;
   state.revision++;return good({rules:roundRules(state)});
 }
-function ray(state,unit,direction,max=7){
+function ray(state,unit,direction,max=7,ignoreBodies=false){
   if(!alive(unit))return [];const [x,y]=xy(unit.square),[dx,dy]=DIRECTIONS[direction],result=[];
-  for(let step=1;step<=max;step++){const square=sq(x+dx*step,y+dy*step);if(!square||solid(state,square))break;result.push(square);if(unitAt(state,square))break;}return result;
+  for(let step=1;step<=max;step++){const square=sq(x+dx*step,y+dy*step);if(!square||solid(state,square))break;result.push(square);if(!ignoreBodies&&unitAt(state,square))break;}return result;
 }
 export function getCaptureSquares(state,input){
   const unit=findUnit(state,input);if(!alive(unit))return [];const[x,y]=xy(unit.square);
@@ -84,70 +76,107 @@ export function getLegalMoves(state,input){
   const unit=findUnit(state,input);if(!alive(unit))return [];const [x,y]=xy(unit.square);
   if(unit.type==='p'){
     const dy=unit.color==='w'?1:-1,front=sq(x,y+dy),result=getCaptureSquares(state,unit);
-    if(front&&!solid(state,front)){result.push(front);const twice=sq(x,y+2*dy);if(!unit.hasMoved&&y===(unit.color==='w'?1:6)&&!unitAt(state,front)&&twice&&!solid(state,twice))result.push(twice);}return result;
+    if(front&&!solid(state,front)){result.push(front);const twice=sq(x,y+2*dy);if(!unit.hasMoved&&y===(unit.color==='w'?1:6)&&twice&&!solid(state,twice))result.push(twice);}return result;
   }
-  return [...new Set([...getCaptureSquares(state,unit),...(unit.type==='k'?getCastleOptions(state,unit).map(c=>c.inputTarget):[])])];
+  const area=['b','r','q'].includes(unit.type)?attackDirections(unit).flatMap(d=>ray(state,unit,d,7,true)):getCaptureSquares(state,unit);return [...new Set([...area,...(unit.type==='k'?getCastleOptions(state,unit).map(c=>c.inputTarget):[])])];
+}
+export function movementPath(from,to){
+ if(!validSquare(from)||!validSquare(to)||from===to)return [];
+ const[x,y]=xy(from),[u,v]=xy(to),dx=u-x,dy=v-y;if(dx&&dy&&Math.abs(dx)!==Math.abs(dy))return [to];
+ return Array.from({length:Math.max(Math.abs(dx),Math.abs(dy))},(_,i)=>sq(x+Math.sign(dx)*(i+1),y+Math.sign(dy)*(i+1)));
+}
+function geometricMove(unit,target){
+ if(!validSquare(target)||unit.square===target)return false;
+ const[x,y]=xy(unit.square),[u,v]=xy(target),dx=Math.abs(u-x),dy=Math.abs(v-y);
+ if(unit.type==='n')return dx*dy===2;
+ if(unit.type==='k')return Math.max(dx,dy)===1;
+ if(unit.type==='b')return dx===dy;
+ if(unit.type==='r')return dx===0||dy===0;
+ if(unit.type==='q')return dx===dy||dx===0||dy===0;
+ const forward=unit.color==='w'?1:-1,d=v-y;return dx<=1&&d===forward||dx===0&&d===2*forward&&!unit.hasMoved&&y===(unit.color==='w'?1:6);
 }
 export function validateOrder(state,side,raw,{executing=false}={}){
-  if(!raw||!['move','block','pass'].includes(raw.kind))return bad('Acción desconocida.');
-  if(raw.kind==='pass')return good({order:{kind:'pass'}});
-  const unit=findUnit(state,raw.unitId);if(!alive(unit)||unit.color!==side)return bad('La pieza ya no está disponible.');
-  if(raw.kind==='block'){
-    if(state.shieldUsed?.[side])return bad('Tu bando ya utilizó su único escudo.');
-    return good({order:{unitId:unit.id,kind:'block'}});
-  }
-  if(!validSquare(raw.target))return bad('Elige una casilla del tablero.');
-  const options=unit.type==='k'?getCastleOptions(state,unit):[];
-  const castle=raw.castle?options.find(c=>c.rookId===raw.castle.rookId):options.find(c=>c.inputTarget===raw.target)??options.find(c=>c.target===raw.target&&!unitAt(state,c.target)&&Math.abs(c.target.charCodeAt(0)-unit.square.charCodeAt(0))>1);
-  if(raw.castle&&(!castle||![castle.target,castle.inputTarget].includes(raw.target)))return bad('El enroque ya no es posible.');
-  const order={unitId:unit.id,kind:'move',target:castle?.target??raw.target};
-  if(castle)order.castle=castle;
-  else if(!getLegalMoves(state,unit).includes(order.target))return bad('Movimiento fuera del alcance o bloqueado.');
-  if(unit.type==='p'&&order.target[1]===(side==='w'?'8':'1')){
-    const promotion=raw.promotion??'q';if(!['q','r','b','n'].includes(promotion))return bad('Elige reina, torre, alfil o caballo para promocionar.');order.promotion=promotion;
-  }
-  if(executing&&!castle){
-    const target=unitAt(state,order.target);if(target?.color===side)return bad('La casilla sigue ocupada por una pieza aliada.');
-    if(unit.type==='p'){
-      const diagonal=unit.square[0]!==order.target[0];
-      if(!diagonal&&target)return bad('El peón no captura de frente.');
-      if(diagonal&&!target){const ep=state.enPassant,victim=ep&&findUnit(state,ep.victimId);if(!ep||ep.availableTo!==side||ep.square!==order.target||!alive(victim)||victim.color===side||victim.type!=='p')return bad('El peón solo captura en diagonal si hay un rival o captura al paso.');order.enPassant=victim.id;}
-    }
-  }
-  return good({order});
+ if(!raw||!['move','pass'].includes(raw.kind))return bad('Acción desconocida.');
+ if(raw.kind==='pass')return good({order:{kind:'pass'}});
+ const unit=findUnit(state,raw.unitId);if(!alive(unit)||unit.color!==side)return bad('La pieza ya fue capturada o no está disponible.');
+ if(!validSquare(raw.target))return bad('Elige una casilla del tablero.');
+ const options=unit.type==='k'?getCastleOptions(state,unit):[];
+ const castle=raw.castle?options.find(c=>c.rookId===raw.castle.rookId):options.find(c=>c.inputTarget===raw.target)??options.find(c=>c.target===raw.target&&!unitAt(state,c.target)&&Math.abs(c.target.charCodeAt(0)-unit.square.charCodeAt(0))>1);
+ if(raw.castle&&(!castle||![castle.target,castle.inputTarget].includes(raw.target)))return bad('Enroque cancelado: el camino o la seguridad del rey cambiaron.');
+ const order={unitId:unit.id,kind:'move',from:unit.square,target:castle?.target??raw.target};
+ if(castle)order.castle=castle;
+ else if(executing?!geometricMove(unit,order.target):!getLegalMoves(state,unit).includes(order.target))return bad('Movimiento fuera del alcance.');
+ if(unit.type==='p'&&order.target[1]===(side==='w'?'8':'1')){const promotion=raw.promotion??'q';if(!['q','r','b','n'].includes(promotion))return bad('Elige reina, torre, alfil o caballo.');order.promotion=promotion;}
+ return good({order});
 }
 function applyOrder(state,side,raw){
-  const check=validateOrder(state,side,raw,{executing:true});
-  const event={kind:raw?.kind??'pass',side,unitId:raw?.unitId??null,from:null,to:null,targets:[],round:state.round,message:'',revision:++state.revision};
-  // Any action consumes the immediately following en-passant opportunity.
-  state.enPassant=null;
-  if(!check.ok){event.kind='fizzle';event.message=check.error;return event;}
-  const order=check.order;if(order.kind==='pass'){event.message='Espera.';return event;}
-  const unit=findUnit(state,order.unitId);event.from=unit.square;event.to=unit.square;
-  if(order.kind==='block'){state.shieldUsed[side]=true;unit.guard=1;event.message=`${UNIT_NAMES[unit.type]}: escudo activo hasta finalizar la ronda.`;return event;}
-  const victim=order.enPassant?findUnit(state,order.enPassant):unitAt(state,order.target);
-  if(victim&&!order.castle){
-    if(victim.guard){victim.guard=0;event.bounced=true;event.attemptedTo=order.target;event.targets.push({id:victim.id,square:victim.square,captured:false,blocked:true});event.message='El escudo repele la captura.';return event;}
-    victim.captured=true;victim.guard=0;event.capture={id:victim.id,square:victim.square,...(order.enPassant?{enPassant:true}:{})};event.targets.push({id:victim.id,square:victim.square,captured:true});
-    if(victim.type==='k'){state.winner=side;state.phase='finished';state.activePlanner=null;event.winner=side;}
+ const check=validateOrder(state,side,raw,{executing:true});
+ const actor=findUnit(state,raw?.unitId),origin=alive(actor)?actor.square:raw?.from??actor?.square??null;
+ const event={kind:raw?.kind??'pass',side,unitId:raw?.unitId??null,from:origin,to:origin,intendedTo:raw?.target??null,path:origin&&raw?.target?movementPath(origin,raw.target):[],targets:[],round:state.round,message:'',revision:++state.revision};
+ const ep=state.enPassant;state.enPassant=null;
+ if(!check.ok){event.kind='fizzle';event.message=check.error;return event;}
+ const order=check.order;if(order.kind==='pass'){event.message='Espera: no se declaró movimiento.';return event;}
+ const unit=actor,originalType=unit.type;let target=order.target,victim=null;
+ if(order.castle){event.castle={...order.castle};}
+ else if(unit.type==='n'){
+  const occupant=unitAt(state,target);if(occupant?.color===side){event.kind='fizzle';event.message='El caballo no puede aterrizar sobre un aliado.';return event;}victim=occupant;
+ }else if(unit.type==='p'&&unit.square[0]!==target[0]){
+  victim=unitAt(state,target);if(victim?.color===side){event.kind='fizzle';event.message='Diagonal ocupada por un aliado.';return event;}
+  if(!victim){victim=ep?.availableTo===side&&ep.square===target?findUnit(state,ep.victimId):null;if(!alive(victim)||victim.type!=='p'||victim.color===side){event.kind='fizzle';event.message='No apareció un enemigo en la diagonal ni existe captura al paso.';return event;}event.enPassant=true;}
+ }else{
+  let previous=unit.square;
+  for(const cell of movementPath(unit.square,target)){
+   const occupant=unitAt(state,cell);
+   if(solid(state,cell)||occupant){
+    event.intercepted={square:cell,id:occupant?.id??null,color:occupant?.color??null};
+    if(occupant&&occupant.color!==side&&unit.type!=='p'){victim=occupant;target=cell;}
+    else{target=previous;event.stoppedShort=true;}
+    break;
+   }previous=cell;
   }
-  const originalType=unit.type;unit.square=order.target;unit.hasMoved=true;event.to=unit.square;
-  if(order.castle){const rook=findUnit(state,order.castle.rookId);rook.square=order.castle.rookTo;rook.hasMoved=true;event.castle={...order.castle};}
-  if(order.promotion){unit.type=order.promotion;event.promotion={from:'p',to:order.promotion};}
-  if(originalType==='p'&&Math.abs(Number(event.to[1])-Number(event.from[1]))===2)state.enPassant={square:unit.square[0]+((Number(event.to[1])+Number(event.from[1]))/2),victimId:unit.id,availableTo:other(side)};
-  event.message=`${UNIT_NAMES[originalType]}: ${event.from} → ${event.to}${event.capture?' · captura':''}${event.promotion?' · promoción':''}.`;return event;
+ }
+ if(target===unit.square&&!order.castle){event.kind='fizzle';event.message=unit.type==='p'?'El peón no pudo avanzar: la primera casilla está ocupada.':'No hay espacio antes de la pieza que bloquea el recorrido.';return event;}
+ if(victim){victim.captured=true;event.capture={id:victim.id,square:victim.square,...(event.enPassant?{enPassant:true}:{})};event.targets.push({id:victim.id,square:victim.square,captured:true});if(victim.type==='k'){state.winner=side;state.winReason='capture';state.phase='finished';state.activePlanner=null;event.winner=side;}}
+ unit.square=target;unit.hasMoved=true;event.to=target;
+ if(order.castle){const rook=findUnit(state,order.castle.rookId);rook.square=order.castle.rookTo;rook.hasMoved=true;}
+ if(order.promotion&&target[1]===(side==='w'?'8':'1')){unit.type=order.promotion;event.promotion={from:'p',to:order.promotion};}
+ if(originalType==='p'&&Math.abs(Number(target[1])-Number(event.from[1]))===2)state.enPassant={square:target[0]+((Number(target[1])+Number(event.from[1]))/2),victimId:unit.id,availableTo:other(side)};
+ event.message=`${UNIT_NAMES[originalType]}: ${event.from} → ${target}${event.capture?' · captura':''}${event.stoppedShort?' · se detuvo antes del bloqueo':''}.`;return event;
+}
+const mateCache=new Map();
+function rememberMate(key,result){if(mateCache.size>=4096)mateCache.delete(mateCache.keys().next().value);mateCache.set(key,result);return result;}
+export function isCheckmate(state,side){
+ const king=livingUnits(state,side).find(u=>u.type==='k');if(!king||!isSquareAttacked(state,king.square,other(side)))return false;
+ const cacheKey=side+state.units.filter(alive).map(u=>u.color+u.type+u.square+(u.type==='p'?Number(u.hasMoved):'')).join('')+JSON.stringify(state.enPassant)+JSON.stringify(state.tiles);
+ if(mateCache.has(cacheKey))return mateCache.get(cacheKey);
+ for(const unit of livingUnits(state,side))for(const target of getLegalMoves(state,unit)){
+  const occupant=unitAt(state,target);if(occupant?.color===side)continue;
+  if(unit.type!=='n'&&movementPath(unit.square,target).slice(0,-1).some(s=>unitAt(state,s)||solid(state,s)))continue;
+  let victim=occupant;
+  if(unit.type==='p'){
+   const diagonal=target[0]!==unit.square[0];if(!diagonal&&occupant)continue;
+   if(diagonal&&!occupant){const ep=state.enPassant;if(ep?.availableTo!==side||ep.square!==target)continue;victim=findUnit(state,ep.victimId);if(!alive(victim))continue;}
+  }
+  const probe={...state,units:state.units.map(u=>u.id===unit.id?{...u,square:target,type:u.type==='p'&&['1','8'].includes(target[1])?'q':u.type}:u.id===victim?.id?{...u,captured:true}:u)};
+  const square=unit.id===king.id?target:king.square;
+  if(!isSquareAttacked(probe,square,other(side)))return rememberMate(cacheKey,false);
+ }
+ return rememberMate(cacheKey,true);
+}
+function adjudicate(state,event,actor){
+ if(state.winner)return;
+ for(const side of [other(actor),actor])if(isCheckmate(state,side)){state.winner=other(side);state.winReason='checkmate';state.matedSide=side;state.phase='finished';state.activePlanner=null;event.winner=state.winner;event.checkmate={side,square:livingUnits(state,side).find(u=>u.type==='k').square};break;}
 }
 // A forecasted king capture is uncertain: enemy orders may move that king first.
 // Keep all declaration slots available while remembering its provisional result.
 function applyForecastOrder(state,side,order){
-  const phase=state.phase,event=applyOrder(state,side,order);
-  if(state.winner){state.predictedWinner=state.winner;state.winner=null;state.phase=phase;}
+  const phase=state.phase,event=applyOrder(state,side,order);adjudicate(state,event,side);
+  if(state.winner){state.predictedWinner??=state.winner;state.predictedReason??=state.winReason;state.winner=null;state.winReason=null;state.matedSide=null;state.phase=phase;}
   return event;
 }
-const priorityOrders=orders=>[...orders.filter(o=>o?.kind==='block'),...orders.filter(o=>o?.kind!=='block')];
 export function previewPlan(state,side,orders=[]){
   const projected=clone({...state,log:[],plans:{w:[],b:[]},resolution:[]});projected.forecastErrors=[];projected.forecastEvents=[];
-  for(const raw of priorityOrders(orders)){
+  for(const raw of orders){
     const check=validateOrder(projected,side,raw);
     if(!check.ok){projected.forecastErrors.push(check.error);continue;}
     projected.forecastEvents.push(applyForecastOrder(projected,side,check.order));
@@ -157,7 +186,7 @@ export function validatePlan(state,side,orders=[]){
   if(!['w','b'].includes(side)||!Array.isArray(orders))return bad('Plan no válido.');
   if(orders.length>roundRules(state).actions)return bad(`Dispones de ${roundRules(state).actions} acciones en esta ronda.`);
   const projected=clone({...state,log:[],plans:{w:[],b:[]},resolution:[]}),used=new Set(),normalized=[];
-  for(const raw of priorityOrders(orders)){
+  for(const raw of orders){
     const result=validateOrder(projected,side,raw);if(!result.ok)return result;const order=result.order;
     if(order.kind!=='pass'){
       const key=`${order.unitId}:${order.kind}`;if(used.has(key))return bad('Una misma pieza no puede repetir la misma acción en esta ronda.');used.add(key);
@@ -169,12 +198,12 @@ export function validatePlan(state,side,orders=[]){
 export function submitPlan(state,side,orders=[]){
   if(state.phase!=='planning'||state.ready[side])return bad('Este plan ya está cerrado.');const validation=validatePlan(state,side,orders);if(!validation.ok)return validation;
   state.plans[side]=clone(validation.orders);state.ready[side]=true;state.activePlanner=other(side);
-  if(state.ready.w&&state.ready.b){state.phase='resolution';state.activePlanner=null;state.resolution=[];state.resolutionIndex=0;const remaining={w:[],b:[]};for(const color of ['w','b']){const padded=Array.from({length:roundRules(state).actions},(_,i)=>state.plans[color][i]??{kind:'pass'});for(const order of padded)if(order.kind==='block')state.resolution.push({side:color,order:clone(order),priority:true});else remaining[color].push(order);}for(let i=0;i<roundRules(state).actions;i++)for(const color of ['w','b'])if(remaining[color][i])state.resolution.push({side:color,order:clone(remaining[color][i])});}
+  if(state.ready.w&&state.ready.b){state.phase='resolution';state.activePlanner=null;state.resolution=[];state.resolutionIndex=0;for(let i=0;i<roundRules(state).actions;i++)for(const color of ['w','b'])state.resolution.push({side:color,order:clone(state.plans[color][i]??{kind:'pass'})});}
   state.revision++;return good();
 }
 export function resolveNext(state){
   if(state.phase!=='resolution')return bad('No hay una secuencia pendiente.');const next=state.resolution[state.resolutionIndex++];if(!next)return bad('La secuencia ya terminó.');
-  const event=applyOrder(state,next.side,next.order);state.lastSide=next.side;event.priority=Boolean(next.priority);event.sequenceIndex=state.resolutionIndex-1;event.sequenceTotal=state.resolution.length;event.actionNumber=++state.actionNumber;state.log.push(clone(event));if(state.log.length>240)state.log.shift();
+  const event=applyOrder(state,next.side,next.order);adjudicate(state,event,next.side);state.lastSide=next.side;event.priority=Boolean(next.priority);event.sequenceIndex=state.resolutionIndex-1;event.sequenceTotal=state.resolution.length;event.actionNumber=++state.actionNumber;state.log.push(clone(event));if(state.log.length>240)state.log.shift();
   const roundEnded=state.resolutionIndex>=state.resolution.length;if(roundEnded&&!state.winner)startRound(state);
   return good({event,done:Boolean(state.winner||roundEnded),roundEnded,winner:state.winner});
 }

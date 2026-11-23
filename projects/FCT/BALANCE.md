@@ -1,89 +1,100 @@
-# FCT principal · IA y prioridad de escudos
+# FCT principal · predicción, capturas y mate
 
-## Reglas de esta revisión
+## Reglas evaluadas
 
-El usuario sigue jugando primero, con 1/2/3 acciones por ronda. Todos los escudos
-seleccionados se activan antes que los movimientos; después se alternan las
-órdenes restantes empezando por el usuario. Activar sigue consumiendo un hueco,
-el recurso único del bando y caduca al cerrar la ronda. Si ambos declaran escudo,
-se activan primero usuario e IA, sin capturas entre ambas activaciones.
+Formación normal de ajedrez, sin escudos. El usuario inicia todas las rondas y
+dispone, como la IA, de 1/2/3 acciones; 20 segundos para confirmar cada orden.
+Las secuencias se preparan en secreto. La resolución intercala los bandos y
+termina inmediatamente por captura del rey o mate. Un obstáculo puede acortar
+un desplazamiento o producir una captura anterior al destino declarado.
 
-La interfaz deja el tablero despejado: reloj y controles de vista en el banner,
-sin piezas en foco, secuencia ni intercambio. Salir solicita confirmación. La
-revisión mantiene solo navegación/deslizador. Estas decisiones no conceden a la
-IA información privada ni reglas diferentes.
+## Modelo de la IA
 
-## Cambios en la búsqueda
+La búsqueda compara parejas de planes mediante el motor real. El Worker recibe
+una copia pública del tablero antes de que el usuario termine de preparar sus
+órdenes. El plan contrario, el generador de azar de la partida, la preparación
+del rival y sus registros privados no participan en la elección.
 
-La versión anterior generaba un pequeño haz por material propio y elegía la
-secuencia por su peor respuesta aproximada. Sus límites podían omitir jugadas
-que solo funcionan al intercalarse con el rival, especialmente casillas aliadas
-que serían recapturadas y atacantes protegidos por escudo.
+El planificador combina:
 
-El modelo nuevo conserva ese arranque y añade:
+- Un haz inicial de secuencias, con diversidad de primeras jugadas.
+- Permutaciones para explorar el orden de capturas y desplazamientos.
+- Respuestas adversarias iterativas que sustituyen una orden de la secuencia y
+  se prueban contra planes contrarios completos.
+- Planes explícitos de presión al rey, recapturas en casillas actualmente
+  aliadas y alternativas defensivas con el rey al principio o al final.
+- Resolución real de intercepciones, promociones, captura al paso y enroque.
+- Prioridad terminal para captura del rey y jaque mate, y rechazo de posiciones
+  que entregan el rey al primer movimiento rival de la siguiente ronda.
+- Control del centro, desarrollo de piezas menores, avance de peones, piezas
+  expuestas, cobertura de peones y casillas amenazadas alrededor del rey.
 
-- Simulación de parejas de planes con el mismo motor de prioridad y capturas.
-- Permutaciones de órdenes para valorar cuándo capturar o escapar.
-- Mejores respuestas iterativas por casilla de la secuencia: cada candidata se
-  evalúa contra planes contrarios reales, no solo contra una previsión en solitario.
-- Planes explícitos de presión al rey con atacante protegido, y dos capturas
-  sucesivas por actores distintos para romper un escudo y recapturar.
-- Previsiones de capturas en casillas aliadas amenazadas y captura al paso futura.
-- Prioridad categórica a evitar una derrota inmediata, para que una media material
-  favorable no compense dejar capturar al rey en alguna respuesta considerada.
-- Valor de reserva del escudo de 120 centipeones, evitando gastarlo rutinariamente
-  por un peón y conservando la posibilidad de proteger al rey o una pieza mayor.
-- Caché de simulaciones y un máximo determinista de 1800 parejas por planificación.
-  El cálculo sigue en un Worker y no bloquea el tablero.
+Los valores materiales compartidos son peón 1, caballo 3,1, alfil 3,35, torre 5,
+reina 9,5 y rey 1000. El rey es un objetivo terminal, no una pieza intercambiable
+por ese material. Son prioridades heurísticas de esta variante; no una tabla
+de balance demostrada ni cambios en el valor de la partida clásica.
 
-El Worker aporta una semilla aleatoria nueva solo para variar entre planes con
-puntuación y peor respuesta casi iguales. No aleatoriza sacrificios graves ni
-abandona una captura ganadora para crear variedad. En pruebas puede pasarse una
-semilla fija; el mismo estado público y semilla producen la misma secuencia.
+Una caché evita repetir simulaciones y el presupuesto normal limita la búsqueda
+a 1400 parejas. La semilla del Worker solo desempata planes con puntuación y
+peor resultado casi iguales. La media se acota para que una captura especulativa
+del rey no compense un mal resultado contra una defensa sensata. No accede a
+decisiones secretas ni altera reglas. El cálculo ocurre fuera del hilo de
+dibujo; su coste depende del dispositivo y
+de la complejidad del tablero. No es Stockfish ni una búsqueda exhaustiva.
 
-Esto es búsqueda aproximada sobre un subconjunto de planes, no un solucionador
-completo de ajedrez ni un equilibrio de Nash. No se asigna una fuerza Elo.
+## Investigación e inferencias
 
-## Fuentes e inferencias
+Los movimientos y el mate se contrastan con las [reglas de FIDE](https://handbook.fide.com/chapter/E012023).
+El motor también se compara con chess.js en posiciones de mate, escapes y
+ahogado. La muestra reproducible de 80 partidas legales generadas recorrió
+13.535 posiciones, 710 con jaque y 10 con mate, sin diferencias:
+`node projects/FCT/scripts/check-mate-oracle.mjs`.
+La comprobación de mate ignora los presupuestos de órdenes: agotar las
+acciones de una ronda no convierte por sí solo un jaque en mate.
 
-La investigación de juegos simultáneos describe el uso de respuestas adversarias
-iterativas y juegos restringidos: [Using Double-Oracle Method and Serialized
-Alpha-Beta Search for Pruning in Simultaneous Move Games, IJCAI
-2013](https://www.ijcai.org/Proceedings/13/Papers/018.pdf). La inferencia aplicada
-es ampliar el conjunto con respuestas concretas que refutan un plan candidato;
-FCT no implementa literalmente ese algoritmo ni sus garantías.
+La investigación sobre juegos simultáneos motiva las mejores respuestas sobre
+un conjunto restringido de estrategias: [Using Double-Oracle Method and
+Serialized Alpha-Beta Search for Pruning in Simultaneous Move Games, IJCAI
+2013](https://ijcai.org/proceedings/2013/19). La inferencia aplicada
+es incorporar respuestas concretas que refuten un candidato. FCT no implementa
+literalmente ese algoritmo ni sus garantías de equilibrio.
 
-También se contrastó una mezcla aproximada mediante juego ficticio en la matriz
-restringida, motivada por la investigación sobre selección en juegos simultáneos
-[NeurIPS 2013](https://proceedings.neurips.cc/paper/2013/file/1579779b98ce9edb98dd85606f2c119d-Paper.pdf).
-No se mantuvo esa variante: en esta muestra obtuvo menos victorias que la
-selección conservadora. El azar final solo desempata planes casi equivalentes.
+La selección final sigue siendo conservadora. La aleatoriedad solo varía entre
+planes casi equivalentes; no se promete impredecibilidad completa, fuerza Elo
+ni equilibrio perfecto en este juego de órdenes secretas.
 
-## Comparaciones reproducibles
+## Comparación reproducible
 
-`node projects/FCT/scripts/benchmark-tactics.mjs --previous --rounds=35`
+```sh
+node projects/FCT/scripts/benchmark-tactics.mjs --previous --seeds=2141,3137 --rounds=30
+```
 
-La referencia está congelada en `scripts/reference-tactics-ai.mjs`: es el
-planificador de la versión anterior, ejecutado con el mismo motor actual y la
-misma prioridad de escudos. No es un humano ni Stockfish. Cuatro semillas
-(1103,1240,1377,1514), con bandos intercambiados: ocho partidas.
+La referencia congelada en scripts/reference-tactics-ai.mjs es el planificador
+de la publicación anterior, ejecutado con las reglas actuales de captura,
+intercepción y mate. Nunca se importa en producción. Las semillas varían los
+desempates de planes, no la formación inicial, que siempre es clásica. Cada
+semilla intercambia los dos bandos para separar fuerza e iniciativa.
 
-La configuración conservada ganó 5/8 (4/4 primero, 1/4 segundo); la referencia
-3/8. No hubo planes inválidos, empates ni límite de rondas. Tiempo medio de la
-nueva: unos 753 ms por plan; referencia: 411 ms en el equipo de desarrollo,
-compartiendo CPU con otras comprobaciones. Son medidas orientativas de escritorio,
-no de teléfonos físicos. La variante de mezcla y la de presión sin reserva ni
-recaptura obtuvieron 4/8 y se descartaron.
+La primera medición de esta revisión obtuvo 2/4 victorias: ganó ambos juegos
+como primer bando y perdió ambos como segundo. Coste medio aproximado: 2771 ms
+por plan frente a 2884 ms de la referencia, compartiendo CPU con otras pruebas.
+La traza detectó que el haz ofensivo podía excluir retiradas seguras del rey;
+se añadieron esas alternativas y una prueba de regresión específica.
 
-La muestra sirve para detectar regresiones, no demuestra superioridad general.
-La iniciativa sigue siendo una ventaja importante; no se alteran reglas para
-ocultarla. La validación adicional, sin retocar la configuración, usó semillas 2141, 2663,
-3137 y 4211 con bandos intercambiados (`--seeds=2141,2663,3137,4211`). Ganó 6/8:
-4/4 primero y 2/4 segundo; referencia 2/8. Sin empates, límites ni planes inválidos.
-Coste medio: 881 ms frente a 474 ms. Sumando ambas muestras: 11/16 para la nueva,
-8/8 primero y 3/8 segundo. La muestra sigue siendo pequeña y no establece Elo.
+La repetición final con retiradas del rey, desarrollo/cobertura y evaluación
+conservadora mantuvo 2/4 victorias: 2/2 primero, 0/2 segundo. Las derrotas como
+segundo llegaron en las rondas 19 y 20, frente a la ronda 6 inicial. No hubo planes
+inválidos, empates ni límites de ronda. Coste medio orientativo: 3430 ms por
+plan frente a 3038 ms de la referencia. Estas cifras no prueban que la nueva
+sea más fuerte en general: corrigen fallos tácticos concretos y muestran que
+la iniciativa sigue condicionando mucho esta variante. No se cambia una regla
+solicitada ni se consulta el plan humano para compensarlo.
 
-Las pruebas automáticas cubren escudos prioritarios, seguridad del rey,
-promoción segura, captura al paso, recurso único, intentos ocupados, presupuestos,
-órdenes privadas y reproducibilidad con semilla. La interfaz se verifica en
-escritorio y móvil emulado. El balance humano requiere partidas reales.
+Estos ensayos detectan fallos y comparan configuraciones. Una muestra pequeña
+contra otro planificador no demuestra superioridad ante personas. La ventaja
+de mover primero sigue siendo relevante y no se oculta cambiando las reglas.
+
+Las pruebas cubren privacidad de órdenes, presupuestos, planes legales, mate
+durante un intercambio, escapes, intercepciones, enroque, promoción y captura
+al paso. La interfaz se comprueba en escritorio y móvil emulado; el balance
+humano y el rendimiento en teléfonos físicos requieren partidas reales.

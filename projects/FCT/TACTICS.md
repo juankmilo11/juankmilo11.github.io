@@ -1,89 +1,103 @@
 # Fantasy Chess Tactics · modo principal
 
-El objetivo es capturar al rey rival. El tablero es 8×8, con 16 piezas por bando
-y primera fila simétrica sorteada como Ajedrez960. El usuario es Atacantes y
-siempre ejecuta primero; la IA es Defensores. No hay dados, puntos de vida,
-Focus, definitivas ni ataques a distancia.
+Tablero 8×8, con las 16 piezas de cada bando en la posición inicial del ajedrez
+normal. El usuario siempre juega primero. La partida termina inmediatamente al
+capturar al rey rival o producir una posición de jaque mate, incluso en mitad
+de un intercambio. Las órdenes restantes no se ejecutan. No hay escudos, vida,
+ataques a distancia, definitivas ni dados.
 
-## Secuencias y predicción
+## Preparar y confirmar
 
 La primera ronda permite una acción por bando; la segunda, dos; desde la tercera,
-tres. Cada orden dispone de 20 segundos activos. Se preparan en secreto y se
-revelan juntas; la ejecución intercala A1, B1, A2, B2… Los escudos forman una fase de prioridad anterior a los movimientos. Después
-se alternan las órdenes restantes empezando por el usuario. La prioridad es una
-excepción al orden ordinario. Al completar los huecos comienza automáticamente el intercambio.
-«Esperar» o agotar el reloj consume un hueco sin mover.
+tres. Cada orden tiene 20 segundos activos. Ambos bandos preparan en secreto y
+después ejecutan A1, B1, A2, B2… El usuario inicia cada ronda y la IA la cierra.
+Esperar, agotar el reloj o un intento fallido también consume su hueco.
 
-Una pieza puede moverse una sola vez en la misma ronda. Puede activar escudo y
-moverse, consumiendo dos acciones. El enroque cuenta como movimiento de rey y
-torre. Esta restricción conserva el reparto de acciones entre el ejército.
+Seleccionar o arrastrar una pieza muestra sus destinos posibles. Elegir una
+casilla dibuja el recorrido y permite **Confirmar movimiento** o **Cambiar** en
+el tablero. Soltar la pieza no confirma por sí solo. La promoción se elige antes
+de confirmar. Si vence el reloj sin confirmación, esa orden se convierte en
+espera; no se ejecuta un movimiento pendiente.
 
-Seleccionar o arrastrar muestra destinos con el mismo color. Elegir la casilla
-confirma la orden. Se permiten intentos sobre una casilla aliada y diagonales
-vacías de peón: se está prediciendo lo que habrá allí, no capturando aliados.
-Si sigue ocupada por un aliado al ejecutarse, o el peón no encuentra rival ni
-captura al paso, se cancela y el hueco se pierde. El camino intermedio debe estar
-libre. El motor vuelve a comprobar cada orden en su momento real de ejecución.
-Los movimientos previstos siguen siendo predicciones: el rival puede cambiar
-el resultado, incluso si una previsión mostraba una captura del rey.
+Una pieza puede moverse una sola vez en la ronda. El enroque consume los
+movimientos de rey y torre. Los destinos normales comparten color; el enroque
+disponible usa violeta y la casilla seleccionada conserva su propio contorno.
 
-## Capturas y movimientos especiales
+## Predicción y obstáculos
 
-Las piezas capturan desplazándose a la casilla enemiga y retirando a su ocupante.
-No existe fuego aliado. Gana inmediatamente el bando que captura al rey; no se
-exige evitar jaque ni resolverlo, porque el objetivo es capturarlo.
+Las declaraciones siguen la geometría de cada pieza. Se permite apuntar más
+allá de piezas ocupantes, a una casilla aliada o a una diagonal vacía de peón:
+el rival podría cambiar la posición antes de ejecutar la orden. La previsión de
+tus órdenes no garantiza su resultado real. Cada intento se resuelve de nuevo
+con la posición que encuentra en ese instante:
 
-Los peones avanzan una casilla; pueden avanzar dos solo desde su fila inicial,
-sin movimientos previos y con camino libre. Capturan una diagonal delantera.
-Al llegar al fondo el jugador elige reina, torre, alfil o caballo en el propio
-tablero. Agotar el reloj mientras se elige confirma promoción a reina.
+- Torres, alfiles, reinas y reyes capturan al primer enemigo de su recorrido y
+  terminan en esa casilla, aunque el destino declarado estuviera más lejos.
+- Ante un aliado, terminan en la casilla inmediatamente anterior. Si no queda
+  espacio para avanzar, permanecen en el origen y consumen la acción.
+- Los peones nunca capturan avanzando recto. Ante cualquier ocupante se detienen
+  una casilla antes; solo capturan en sus diagonales delanteras.
+- Los caballos saltan las piezas intermedias. Si al aterrizar encuentran un
+  enemigo, lo capturan; si encuentran un aliado, permanecen en el origen.
 
-La captura al paso se permite únicamente en la acción inmediatamente posterior
-al avance doble rival, incluso si cruza el límite de ronda. Una espera, escudo
-o cualquier otra orden consume esa oportunidad. El enroque conserva las reglas
-960: ambas piezas sin mover, camino libre, rey sin amenaza al inicio, al pasar
-y al llegar; termina en c/g y d/f. Para declararlo, selecciona rey y torre.
-Los patrones y movimientos especiales se basan en las [reglas de FIDE](https://handbook.fide.com/chapter/e012023), adaptados aquí a órdenes intercaladas y captura del rey.
+No existe fuego aliado. Una diagonal vacía de peón falla si al ejecutarse no
+contiene enemigo ni permite captura al paso. El tablero muestra una flecha del
+intento, el punto real de llegada y el motivo de una detención o cancelación.
+Las acciones sin desplazamiento conservan una pausa breve para poder leerlas.
 
-## Un escudo por bando
+## Jaque mate y movimientos especiales
 
-Cada ejército tiene un único escudo para toda la partida. Activarlo en cualquier
-pieza consume una acción. Se activa antes de cualquier movimiento de ambos bandos, aunque se haya
-seleccionado como segunda o tercera orden, y dura hasta el final de esa ronda. Si alguien intenta capturar esa ficha,
-el atacante se aproxima y rebota al origen: ambas sobreviven y el escudo se
-rompe. La captura al paso también puede rebotar. No causa daño ni devuelve golpes.
-El recurso queda gastado incluso si nadie intenta capturar o si la ficha cambia
-de casilla. El rey usa la misma regla que las demás piezas.
+El motor busca jaque mate después de cada acción. Se comprueba si el rey está
+amenazado y existe alguna respuesta legal de ajedrez que quite la amenaza,
+independientemente de los huecos o piezas ya usados en esa ronda. Un rey sin
+amenaza y sin salida no constituye mate. En esta variante se sigue permitiendo
+declarar movimientos que dejan el rey amenazado; capturarlo también gana.
+
+Los peones avanzan una casilla, o dos desde su fila inicial si todavía no se han
+movido. Capturan en diagonal y promocionan a reina, torre, alfil o caballo. La
+captura al paso solo está disponible en la acción inmediatamente posterior al
+avance doble enemigo, incluso al cruzar una ronda; una espera o intento fallido
+también consume esa oportunidad.
+
+El enroque usa la formación normal: rey y torre sin mover, camino libre y rey
+sin amenaza al inicio, durante el trayecto ni al llegar. Se selecciona el rey y
+su torre o el destino c/g. Si el recorrido cambia y deja de ser válido, se
+cancela: no se transforma en captura. Los movimientos y la definición de mate
+se contrastan con las [reglas de FIDE](https://handbook.fide.com/chapter/E012023),
+adaptadas aquí a órdenes secretas intercaladas y captura del rey.
 
 ## Presentación y revisión
 
-El modo principal ocupa la ventana, con anochecer y presentación giratoria. El banner superior reúne el reloj, el progreso de las acciones y los controles
-2D/3D/cámara. El campo no tiene paneles de pieza, secuencia ni intercambio.
-La promoción cambia la apariencia y conserva la identidad de la ficha. Salir
-pide confirmación; cancelar permite continuar y conserva el tiempo restante.
+JUGAR usa el mismo sonido que Partida clásica y abre directamente el campo 3D,
+sin mostrar antes el tablero 2D. El modo principal conserva el anochecer y la
+presentación giratoria. El banner reúne reloj, progreso y controles de vista.
+Confirmación, promoción e intentos se muestran sobre el propio tablero.
 
-Los escudos tienen contorno y envolvente visibles en 3D y 2D. Las capturas,
-rebotes, promociones y movimientos se ejecutan en unos 160–600 ms, con movimiento
-reducido y perfil Ligero disponibles. El arrastre sigue el puntero con una
-ligera elevación, sombra cálida y aterrizaje suave.
+Las piezas se elevan ligeramente al arrastrarlas, siguen el puntero y aterrizan
+con una sombra cálida. Movimientos, capturas, enroques y promociones duran unos
+420–600 ms; las esperas e intentos fallidos, 550–700 ms. Se respetan movimiento
+reducido y perfil Ligero. El rey abatido también se representa al recibir mate.
 
-La revisión solo muestra navegación y deslizador; no incluye repetición manual
-ni información adicional debajo. Guarda cada posición y reproduce o revierte los movimientos,
-capturas, rebotes, enroques y promociones sin volver a ejecutar reglas sobre
-la partida real. El reloj se pausa mientras se revisa.
+Revisar conserva cada posición y reproduce o revierte movimientos, capturas,
+enroques, promociones y mate sin modificar la partida real. Las flechas y el
+detalle de cada intento también aparecen en revisión. El reloj se pausa.
+Salir pide confirmación y cancelar conserva el tiempo restante.
 
-## IA, balance y comprobación
+## IA y comprobación
 
-La IA usa un Worker y solo la información pública anterior al intercambio.
-Compara planes propios con respuestas adversarias usando el mismo motor real,
-incluidas capturas, escudos y cancelaciones. La búsqueda tiene límites de nodos
-para mantener el tablero receptivo. Los detalles, fuentes y límites del balance
-se documentan en [BALANCE.md](BALANCE.md).
+La IA calcula en un Worker desde la posición pública previa al intercambio.
+Compara secuencias con respuestas enemigas plausibles usando el mismo motor,
+incluidas intercepciones, cancelaciones, captura al paso, enroque y mate. No
+consulta las órdenes secretas del usuario. La búsqueda conserva alternativas
+defensivas para que una amenaza ofensiva no excluya todas las salidas del rey.
+Valores, mediciones y límites están en [BALANCE.md](BALANCE.md).
 
-Se prueban reglas puras, planes legales, jugadas tácticas, movimientos especiales,
-revisión y renderizado en escritorio/móvil emulado. Las simulaciones comprueban
-consistencia; no demuestran un equilibrio perfecto ni sustituyen partidas humanas.
+Se prueban reglas, planes legales, táctica, privacidad, revisión y renderizado
+en escritorio y móvil emulado. Reproducir desde la raíz:
 
-Reproducir: `npm test` desde projects/FCT; desde la raíz,
-`node scripts/qa-fct-tactics.cjs` y
-`node projects/FCT/scripts/simulate-tactics.mjs --games=4 --rounds=60`.
+```sh
+npm --prefix projects/FCT test
+node projects/FCT/scripts/check-mate-oracle.mjs
+node scripts/qa-fct-tactics.cjs
+node projects/FCT/scripts/benchmark-tactics.mjs --previous --seeds=2141,3137 --rounds=30
+```

@@ -10,29 +10,34 @@ move/capture audio for both sides (including en passant).
 ## Fantasy Chess Tactics
 
 The main **JUGAR** button plays a sound and fades into a fullscreen 3D battle.
-Both sides use a mirrored Chess960 army. The human always executes first.
+Both sides use the standard chess formation. The human always executes first.
 Rounds contain 1, 2, then 3 secret actions per side, with 20 seconds per action.
-Orders interleave continuously. A unit moves at most once per round; a shield
-and movement by the same unit are allowed.
+Orders interleave continuously. A unit moves at most once per round. Choosing a
+destination previews its route; **Confirmar movimiento** commits the order.
+An unconfirmed order expires as a pass when the clock runs out.
 
-Captures work by moving onto the enemy and removing it. Capturing the king wins;
-there is no HP, ranged attack, Focus, ultimate or dice. Ordinary pawn movement,
-all four promotions, immediate en passant and Chess960 castling are supported.
+Captures work by moving onto the enemy and removing it. King capture or checkmate
+ends the match immediately, even halfway through an exchange. There is no HP,
+shield, ranged attack, Focus, ultimate or dice. Ordinary pawn movement,
+all four promotions, immediate en passant and standard castling are supported.
 Occupied allied destinations and empty pawn diagonals can be declared as
-predictions; execution fails and spends the slot if the required occupancy
-does not materialize. These attempts never capture allies.
+predictions. Sliding pieces capture the first enemy encountered or stop before
+an ally. Forward-moving pawns stop before any blocker and never capture straight
+ahead. Knights jump over intermediate pieces but cannot land on allies. Empty
+pawn diagonal captures fail unless en passant applies. Attempts consume their
+slot, including failures, and never capture allies.
 
-Each army can activate one shield in the entire match. It consumes an action,
-activates before either side moves, lasts to the current round's end, and repels one attempted capture: the attacker
-bounces back, both survive and the shield breaks. Shields have visible 2D/3D
-effects. Animations last roughly 160–600 ms, with reduced-motion support and
-smooth raised dragging/shadows. Review replays and reverses captures, shields,
-promotion and castling without changing the live match.
+The board draws attempted routes and actual endpoints, explains stopped or
+cancelled moves, and marks available castling destinations in violet. Initial
+loading shows 3D directly. Move/capture animations last roughly 420–600 ms, with
+reduced-motion support and smooth raised dragging/shadows; failures remain
+visible briefly. Review replays and reverses captures, mate, promotion and
+castling without changing the live match.
 
 The AI compares complete action sequences against plausible enemy responses
 using actual interleaved engine resolution. It runs in a bounded Worker search,
 uses only public information, and considers king safety, material, promotions,
-en passant, occupied-square predictions and the scarce shield. See
+en passant, interceptions, checkmate and explicit king-retreat alternatives. See
 [BALANCE.md](BALANCE.md) for research, measurements and limitations, and
 [TACTICS.md](TACTICS.md) for the current Spanish rules.
 
