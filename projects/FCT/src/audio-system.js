@@ -23,7 +23,7 @@ export function createAudioSystem() {
   document.addEventListener('visibilitychange',()=>{if(active())attempt();else suspend();});
   window.addEventListener('pagehide',()=>{saveSession();pageActive=false;suspend();});
   window.addEventListener('pageshow',()=>{pageActive=true;if(active())attempt();});
-  window.addEventListener('blur',()=>{setTimeout(()=>{if(document.activeElement?.matches('iframe[data-fct-app]'))return;pageActive=false;suspend();},0);});
+  window.addEventListener('blur',()=>{setTimeout(()=>{if(document.hasFocus()&&document.activeElement?.matches('iframe[data-fct-app]'))return;pageActive=false;suspend();},0);});
   window.addEventListener('focus',()=>{pageActive=true;if(active())attempt();});
   window.addEventListener('message',event=>{if(event.source!==window.parent||event.origin!==location.origin||event.data?.type!=='fct:visibility')return;hostActive=event.data.active===true;if(active())attempt();else suspend();});
   function sync() {
