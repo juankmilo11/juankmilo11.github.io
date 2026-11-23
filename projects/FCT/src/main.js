@@ -1,3 +1,4 @@
+import {armyPieceIcon} from './army-piece-icon.js';
 import {navigateApp} from './app-navigation.js';
 import { Chess } from 'chess.js';
 import './style.css';
@@ -191,13 +192,13 @@ function renderRemainingPieces(board) {
     strip.setAttribute('aria-label', `${color === 'w' ? 'Blancas' : 'Negras'}: ${count.title}`);
     icons.replaceChildren(...pieces.map((piece) => {
       const icon = document.createElement('span');
-      icon.textContent = pieceGlyphs[color][piece.type];
+      icon.innerHTML = armyPieceIcon(piece.type,color);
       icon.title = `${pieceNames[piece.type]} en juego`;
       return icon;
     }));
     captured.replaceChildren(...capturedByColor[color].map((type,index) => {
       const icon = document.createElement('span');
-      icon.textContent = pieceGlyphs[color][type];
+      icon.innerHTML = armyPieceIcon(type,color);
       icon.title = `${pieceNames[type]} capturada`;
       const key=`${color}-${index}-${type}`;
       if(!capturedCheers.has(key))capturedCheers.set(key,{period:3.2+Math.random()*4.8,phase:Math.random()*8});

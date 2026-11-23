@@ -24,3 +24,5 @@ body.fct-hosting>:not(iframe[data-fct-app]):not(audio){display:none!important}.t
 .tactical-board{width:min(calc(100vw - 32px),calc(100dvh - var(--toolbar-height) - 110px));height:min(calc(100vw - 32px),calc(100dvh - var(--toolbar-height) - 110px))}.is-reviewing .tactical-board{width:min(calc(100vw - 32px),calc(100dvh - var(--toolbar-height) - 230px));height:min(calc(100vw - 32px),calc(100dvh - var(--toolbar-height) - 230px));top:calc((100dvh + var(--toolbar-height) - 120px)/2)}
 
 .tactics-potion{width:34px;height:34px;filter:drop-shadow(0 0 4px #96dcff66)}@media(max-width:740px){.tactics-potion{width:28px;height:30px}}
+
+.remaining-icons .army-pawn,.captured-icons .army-pawn{display:inline-block;width:1em;height:1em;vertical-align:-.1em;fill:currentColor;flex:none}.remaining-icons,.captured-icons{font-variant-emoji:text}
