@@ -18,7 +18,7 @@ function evaluate(s,side){
 }
 function greedy(state,side){
  const s=publicView(state,side);s.plans={w:[],b:[]};s.ready={w:false,b:false};s.log=[];let orders=[],position=s;
- for(let slot=0;slot<roundRules(s).actions;slot++){
+ for(let slot=0;slot<roundRules(s,side).actions;slot++){
   const used=new Set(orders.filter(o=>o.kind==='move').map(o=>o.unitId));for(const o of orders)if(o.castle)used.add(o.castle.rookId);
   const proposals=[{kind:'pass'}];
   for(const u of livingUnits(position,side)){

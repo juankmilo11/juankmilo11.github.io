@@ -173,13 +173,17 @@ async function cambiarFondoGif() {
 
 function enfocarVentana(ventana) {
   ventana.style.zIndex = String(++zIndexVentana);
+  actualizarActividadFct();
 }
+function actualizarActividadFct(){const superior=[...ventanasAbiertas].sort((a,b)=>Number(b.style.zIndex)-Number(a.style.zIndex))[0];for(const ventana of ventanasAbiertas)if(ventana.classList.contains('ventana-fct'))ventana.querySelector('iframe').contentWindow?.postMessage?.({type:'fct:visibility',active:ventana===superior&&!document.hidden},location.origin);}
+document.addEventListener('visibilitychange',actualizarActividadFct);
 
 function cerrarVentana(ventana) {
   const devolverFoco = document.activeElement === ventana.querySelector('iframe') || ventana.contains(document.activeElement);
   ventana.querySelector("iframe").src = "about:blank";
   ventana.remove();
   ventanasAbiertas.delete(ventana);
+  actualizarActividadFct();
   if (devolverFoco) enlacesOrigen.get(ventana)?.focus({ preventScroll: true });
 }
 
@@ -277,6 +281,7 @@ function crearVentana(enlace) {
   if (enlace.getAttribute('href') === 'pages/admin/index.html') ventana.classList.add('ventana-admin');
   if (enlace.getAttribute('href') === '/FCT/') ventana.classList.add('ventana-fct');
   iframe.src = enlace.getAttribute("href");
+  iframe.addEventListener('load',actualizarActividadFct);
   document.body.append(ventana);
   ventanasAbiertas.add(ventana);
   enfocarVentana(ventana);

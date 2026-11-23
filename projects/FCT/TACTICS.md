@@ -1,22 +1,21 @@
 # Fantasy Chess Tactics · modo principal
 
 Tablero 8×8, con las 16 piezas de cada bando en la posición inicial del ajedrez
-normal. La iniciativa cambia cada dos rondas. La partida termina inmediatamente
+normal. La iniciativa cambia en cada ronda. La partida termina inmediatamente
 al capturar al rey rival o producir una posición de jaque mate, incluso en mitad
 de un intercambio. Las órdenes restantes no se ejecutan. No hay escudos, vida,
 ataques a distancia, definitivas ni dados.
 
 ## Preparar y confirmar
 
-La primera ronda permite una acción por bando; desde la segunda son dos. Cada
-orden tiene 20 segundos activos. Ambos preparan en secreto y alternan sus
-acciones dentro de la ronda. El usuario empieza las rondas 1 y 2; la IA, 3 y 4;
-el usuario, 5 y 6, y así sucesivamente. Al cambiar la iniciativa puede coincidir
-el último bando de una ronda con el primero de la siguiente.
+El usuario inicia las rondas impares y la IA las pares. Quien inicia dispone de
+dos acciones y quien responde de una: A1, B1, A2. En la siguiente ronda B inicia
+con dos acciones. Cada orden dispone de 20 segundos. Se pueden preparar dos
+movimientos de una misma pieza cuando el bando dispone de ambos huecos.
 Esperar, agotar el reloj o un intento fallido también consume su hueco.
 
 Seleccionar o arrastrar una pieza muestra sus destinos posibles. Elegir una
-casilla dibuja una flecha plana sobre el suelo y muestra un **chulo** para
+casilla muestra un **chulo** para
 confirmar y una **X** para cambiar, justo encima de la casilla destino. Soltar
 la pieza no confirma por sí solo. La promoción se elige antes de confirmar. Si vence el reloj sin confirmación, esa orden se convierte en
 espera; no se ejecuta un movimiento pendiente.
@@ -44,8 +43,8 @@ con la posición que encuentra en ese instante:
   enemigo, lo capturan; si encuentran un aliado, permanecen en el origen.
 
 No existe fuego aliado. Una diagonal vacía de peón falla si al ejecutarse no
-contiene enemigo ni permite captura al paso. El tablero muestra una flecha del
-intento, el punto real de llegada y el motivo de una detención o cancelación.
+contiene enemigo ni permite captura al paso. Solo en revisión se muestran las flechas del intento, el punto de llegada y
+el motivo de detención o cancelación.
 Las acciones sin desplazamiento conservan una pausa breve para poder leerlas.
 
 ## Jaque mate y movimientos especiales

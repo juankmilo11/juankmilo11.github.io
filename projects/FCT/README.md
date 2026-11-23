@@ -10,12 +10,14 @@ move/capture audio for both sides (including en passant).
 ## Fantasy Chess Tactics
 
 The main **JUGAR** button plays a sound and fades into a fullscreen 3D battle.
-Both sides use the standard chess formation. The human starts rounds 1–2, the
-AI rounds 3–4, the human rounds 5–6, and so on. Round 1 has one secret action
-per side; all subsequent rounds have two, with 20 seconds per action. Orders
-interleave within each round and the same piece may move twice. Choosing a
-destination previews a flat route on the floor; a checkmark directly above the
-destination commits the order, while the adjacent X cancels its preview.
+Both sides use the standard chess formation. The human starts odd rounds and
+the AI even rounds. The first side gets two secret actions and the second one,
+one; each order has 20 seconds. A piece may move twice when its side has two
+slots. The checkmark above a destination confirms; X cancels its preview.
+Routes and attempt explanations appear only in review. Music pauses while the
+page is hidden, unfocused, or covered by another JK application window. A shared
+oak, stone and bronze theme covers menus, the appearance selector, both game
+modes and review, with text selection and touch callouts disabled.
 An unconfirmed order expires as a pass when the clock runs out.
 
 Captures work by moving onto the enemy and removing it. King capture or checkmate

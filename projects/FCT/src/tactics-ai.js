@@ -92,7 +92,7 @@ function candidates(state,side,orders){
 }
 function generatePlans(state,side,{beam=LIMITS.beam,count=LIMITS.plans}={}){
   const initial=scorePosition(state,side);let frontier=[{orders:[],position:state,score:initial}],finished=[];
-  for(let depth=0;depth<roundRules(state).actions;depth++){
+  for(let depth=0;depth<roundRules(state,side).actions;depth++){
     const next=[];
     for(const node of frontier){
       if(node.position.winner){finished.push(node);continue;}
@@ -132,7 +132,7 @@ function variations(state,side,plan){
 // would reject their landing square as defended. Mate and capture are checked by the real resolution engine.
 function kingPressurePlans(state,side){
  const king=livingUnits(state,other(side)).find(u=>u.type==='k');if(!king)return [];
- const slots=roundRules(state).actions,result=[];
+ const slots=roundRules(state,side).actions,result=[];
  for(const unit of livingUnits(state,side))if(unit.type!=='k')for(const target of getLegalMoves(state,unit)){
   if(unitAt(state,target)?.color===side)continue;
   if(unit.type==='p'&&target[0]!==unit.square[0]&&!unitAt(state,target)&&state.enPassant?.square!==target)continue;
@@ -146,13 +146,13 @@ function kingPressurePlans(state,side){
 // Two separate actors can intercept and recapture on a square
 // currently occupied by an ally. Solo forecasts cannot discover this pairing.
 function recapturePlans(state,side){
- if(roundRules(state).actions<2)return [];
+ if(roundRules(state,side).actions<2)return [];
  const enemy=attacks(state)[other(side)],units=livingUnits(state,side),result=[];
  for(const victim of units)if(enemy.has(victim.square)){
   const actors=units.filter(u=>u.id!==victim.id&&getCaptureSquares(state,u).includes(victim.square));
   for(const first of actors)for(const second of actors)if(first.id!==second.id){
    const raw=[{unitId:first.id,kind:'move',target:victim.square},{unitId:second.id,kind:'move',target:victim.square}];
-   while(raw.length<roundRules(state).actions)raw.push({kind:'pass'});const r=validatePlan(state,side,raw);if(r.ok)result.push(r.orders);
+   while(raw.length<roundRules(state,side).actions)raw.push({kind:'pass'});const r=validatePlan(state,side,raw);if(r.ok)result.push(r.orders);
   }
  }
  return result.slice(0,10);
@@ -162,7 +162,7 @@ function recapturePlans(state,side){
 // let actual enemy responses decide whether retreat or counterplay is better.
 function kingSafetyPlans(state,side,bases){
  const king=livingUnits(state,side).find(u=>u.type==='k');if(!king)return [];
- const slots=roundRules(state).actions,enemyMap=attacks(state)[other(side)],castles=getCastleOptions(state,king),result=[];
+ const slots=roundRules(state,side).actions,enemyMap=attacks(state)[other(side)],castles=getCastleOptions(state,king),result=[];
  const targets=new Set([...getCaptureSquares(state,king),...castles.map(c=>c.inputTarget)]);
  for(const target of targets){
   const castle=castles.some(c=>c.inputTarget===target),occupant=unitAt(state,target);
@@ -187,7 +187,7 @@ function kingSafetyPlans(state,side,bases){
 export function planAI(state,side='b',options={}){
  if(!['w','b'].includes(side)||state.phase!=='planning'||state.winner)return [];
  const observation=publicView(state,side);observation.ready={w:false,b:false};observation.plans={w:[],b:[]};observation.log=[];observation.resolution=[];observation.resolutionIndex=0;
- const enemy=other(side),slots=roundRules(state).actions,pairCache=new Map(),limit=options.pairBudget??1400;
+ const enemy=other(side),slots=roundRules(state,side).actions,pairCache=new Map(),limit=options.pairBudget??1400;
  let evaluations=0;
  const evaluate=(own,reply)=>{
   const id=key(own)+'|'+key(reply);if(pairCache.has(id))return pairCache.get(id);
@@ -213,7 +213,7 @@ export function planAI(state,side='b',options={}){
  // Coordinate best responses search slots against actual opponent plans rather
  // than selecting every action solely by its solo-position material score.
  function improve(initial,actor,opponents,opposing=false){
-  let plan=initial,best=-Infinity;
+  const slots=roundRules(observation,actor).actions;let plan=initial,best=-Infinity;
   const value=candidate=>{const scores=opponents.map(p=>opposing?evaluate(p,candidate):evaluate(candidate,p)).filter(v=>v!==null).map(v=>opposing?-v:v);return scores.length?robustScore(scores):-Infinity;};
   best=value(plan);
   for(let slot=0;slot<slots&&evaluations<limit;slot++){

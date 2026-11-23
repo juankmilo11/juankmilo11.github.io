@@ -469,3 +469,5 @@ button { cursor: pointer; font: inherit; }
 .ventana-fct{--action-light:#b9f2c4;--action-mid:#4a9c65;--action-dark:#175b36}
 .ventana .abrir-pestana,.ventana .cerrar-ventana,.ventana .ampliar-ventana{background:linear-gradient(135deg,var(--action-light,#d4e8ff),var(--action-mid,#8caed3) 48%,var(--action-dark,#45698e));box-shadow:inset 1px 1px #ffffff80,0 1px 1px var(--action-dark,#45698e)}
 .ventana .cerrar-ventana{color:#fff;text-shadow:0 1px 1px var(--action-dark,#45698e)}
+
+html,body,.ventana,.escenario{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}img,a,button{-webkit-user-drag:none}input,textarea,[contenteditable=true]{user-select:text;-webkit-user-select:text}

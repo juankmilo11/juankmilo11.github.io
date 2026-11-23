@@ -2,10 +2,10 @@
 
 ## Reglas evaluadas
 
-Formación normal de ajedrez, sin escudos. Una acción por bando en la ronda 1 y
-dos desde la ronda 2, pudiendo mover la misma pieza dos veces. La iniciativa
-cambia cada dos rondas: usuario 1–2, IA 3–4, usuario 5–6, etc. Se conservan los
-20 segundos para confirmar cada orden.
+El usuario inicia las rondas impares y la IA las pares. Quien inicia dispone de
+dos acciones y quien responde de una: A1, B1, A2. En la siguiente ronda B inicia
+con dos acciones. Cada orden dispone de 20 segundos. Se pueden preparar dos
+movimientos de una misma pieza cuando el bando dispone de ambos huecos.
 Las secuencias se preparan en secreto. La resolución intercala los bandos y
 termina inmediatamente por captura del rey o mate. Un obstáculo puede acortar
 un desplazamiento o producir una captura anterior al destino declarado.
@@ -80,7 +80,7 @@ semilla intercambia los dos bandos para separar fuerza e iniciativa.
 
 Las mediciones de la publicación anterior correspondían a 1/2/3 acciones y al
 usuario empezando siempre. No se presentan como resultados de estas reglas:
-la iniciativa por parejas y la posibilidad de mover dos veces una pieza cambian
+la iniciativa alterna y el presupuesto 2/1 y la posibilidad de mover dos veces una pieza cambian
 las respuestas válidas y la estrategia. La IA genera ahora esas continuaciones
 y evalúa la seguridad del rey según quién empieza realmente la siguiente ronda.
 

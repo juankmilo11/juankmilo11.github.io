@@ -15,8 +15,8 @@ export const livingUnits=(state,side)=>state.units.filter(unit=>alive(unit)&&(!s
 const findUnit=(state,unit)=>typeof unit==='string'?state.units.find(item=>item.id===unit):unit;
 const solid=(state,square)=>['void','obstacle'].includes(state.tiles?.[square]?.kind);
 const attackDirections=unit=>unit.type==='b'?DIAGONALS:unit.type==='r'?ORTHOGONALS:ALL;
-export function roundRules(state=1){const value=Number(typeof state==='number'?state:state?.round),round=Number.isFinite(value)?Math.floor(value):1,actions=round>=2?2:1;return {seconds:20,actions,maxMoves:actions,maxOther:0};}
-export function firstSideForRound(round){return Math.floor((Math.max(1,Number(round)||1)-1)/2)%2?'b':'w';}
+export function firstSideForRound(round){return Number(round)%2===0?'b':'w';}
+export function roundRules(state=1,side){const round=typeof state==='number'?state:state.round,first=typeof state==='number'?firstSideForRound(round):state.firstSide??firstSideForRound(round),actions=!side||side===first?2:1;return {seconds:20,actions,maxMoves:actions,maxOther:0};}
 export function createMatch({seed=Date.now()}={}){
   let normalized=typeof seed==='number'?seed: [...String(seed)].reduce((n,c)=>Math.imul(n,31)+c.charCodeAt(0),7);
   const units=[];
@@ -185,7 +185,7 @@ export function previewPlan(state,side,orders=[]){
 }
 export function validatePlan(state,side,orders=[]){
   if(!['w','b'].includes(side)||!Array.isArray(orders))return bad('Plan no válido.');
-  if(orders.length>roundRules(state).actions)return bad(`Dispones de ${roundRules(state).actions} acciones en esta ronda.`);
+  if(orders.length>roundRules(state,side).actions)return bad(`Dispones de ${roundRules(state,side).actions} acciones en esta ronda.`);
   const projected=clone({...state,log:[],plans:{w:[],b:[]},resolution:[]}),normalized=[];
   for(const raw of orders){
     const result=validateOrder(projected,side,raw);if(!result.ok)return result;const order=result.order;
@@ -195,7 +195,7 @@ export function validatePlan(state,side,orders=[]){
 export function submitPlan(state,side,orders=[]){
   if(state.phase!=='planning'||state.ready[side])return bad('Este plan ya está cerrado.');const validation=validatePlan(state,side,orders);if(!validation.ok)return validation;
   state.plans[side]=clone(validation.orders);state.ready[side]=true;state.activePlanner=other(side);
-  if(state.ready.w&&state.ready.b){state.phase='resolution';state.activePlanner=null;state.resolution=[];state.resolutionIndex=0;for(let i=0;i<roundRules(state).actions;i++)for(const color of [state.firstSide,other(state.firstSide)])state.resolution.push({side:color,order:clone(state.plans[color][i]??{kind:'pass'})});}
+  if(state.ready.w&&state.ready.b){state.phase='resolution';state.activePlanner=null;state.resolution=[];state.resolutionIndex=0;for(let i=0;i<2;i++)for(const color of [state.firstSide,other(state.firstSide)])if(i<roundRules(state,color).actions)state.resolution.push({side:color,order:clone(state.plans[color][i]??{kind:'pass'})});}
   state.revision++;return good();
 }
 export function resolveNext(state){

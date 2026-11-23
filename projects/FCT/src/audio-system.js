@@ -9,6 +9,15 @@ export function createAudioSystem() {
   const cues=Object.fromEntries(['sound1','menu1','menu2','menu3','menu4','user_piece_move','AI_piece_move','check','checkmate'].map(name=>[name,new Audio(`${import.meta.env.BASE_URL}audio/${name}.wav`)]));
   let fxLevel=.35, fxMuted=false, wantsMusic=true, pending=false, lastAttempt=0, failures=0, generation=0;
   music.volume=.15; music.loop=false;
+  let pageActive=true,hostActive=window.parent===window;
+  const active=()=>pageActive&&hostActive&&!document.hidden;
+  function suspend(){music.pause();for(const cue of Object.values(cues))cue.pause();sync();}
+  document.addEventListener('visibilitychange',()=>{if(active())attempt();else suspend();});
+  window.addEventListener('pagehide',()=>{pageActive=false;suspend();});
+  window.addEventListener('pageshow',()=>{pageActive=true;if(active())attempt();});
+  window.addEventListener('blur',()=>{pageActive=false;suspend();});
+  window.addEventListener('focus',()=>{pageActive=true;if(active())attempt();});
+  window.addEventListener('message',event=>{if(event.source!==window.parent||event.origin!==location.origin||event.data?.type!=='fct:visibility')return;hostActive=event.data.active===true;if(active())attempt();else suspend();});
   function sync() {
     musicButton.setAttribute('aria-label',wantsMusic?'Desactivar música':'Activar música');
     musicButton.setAttribute('aria-pressed',String(wantsMusic));
@@ -19,10 +28,10 @@ export function createAudioSystem() {
     effectsButton.classList.toggle('is-muted',fxMuted||fxLevel===0);
   }
   async function attempt() {
-    if(!wantsMusic||pending||!music.paused)return;
+    if(!wantsMusic||!active()||pending||!music.paused)return;
     pending=true;lastAttempt=performance.now();
     const request=generation;
-    try { await music.play();if(request===generation){if(!wantsMusic)music.pause();failures=0;} }
+    try { await music.play();if(request===generation){if(!wantsMusic||!active())music.pause();failures=0;} }
     catch { /* Autoplay may wait for the next deliberate interaction. */ }
     finally {if(request===generation){pending=false;sync();}}
   }
@@ -48,7 +57,7 @@ export function createAudioSystem() {
   select(queue.next());sync();
   return {
     playSound(name,gain=1) {
-      const audio=cues[name];if(!audio||fxMuted||fxLevel===0)return;
+      const audio=cues[name];if(!active()||!audio||fxMuted||fxLevel===0)return;
       if(/^menu[1-4]$/.test(name))for(const [key,cue]of Object.entries(cues))if(/^menu[1-4]$/.test(key)&&cue!==audio)cue.pause();
       audio.volume=Math.min(1,fxLevel*gain);audio.currentTime=0;audio.play().catch(()=>{});
     },

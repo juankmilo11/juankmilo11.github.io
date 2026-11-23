@@ -1,4 +1,5 @@
 import './tactics.css';
+import './imperial-hud.css';
 import { createMatch, autoDeploy, confirmDeployment, beginBattle, roundRules, submitPlan, resolveNext, getLegalMoves, unitAt, validatePlan, previewPlan, publicView, UNIT_NAMES, getCastleOptions, movementPath } from './tactics-engine.js';
 import { planAI } from './tactics-ai.js';
 import { describeBattleEvent } from './tactics-presentation.js';
@@ -67,7 +68,7 @@ function renderBoard(){
     const signature=unit?`${unit.id}:${unit.type}:${unit.captured}:${state.matedSide===unit.color&&unit.type==='k'}`:'';
     if(cell.dataset.piece!==signature){cell.querySelectorAll('.tactical-token').forEach(n=>n.remove());cell.dataset.piece=signature;if(unit){const token=document.createElement('span');token.className='tactical-token';token.dataset.unit=unit.id;const img=document.createElement('img');img.src=thumbnailUrl(look(unit),unit.captured||state.matedSide===unit.color&&unit.type==='k'?'defeated':'standing');img.alt='';img.draggable=false;token.append(img);cell.append(token);}}
   }
-  if(three&&view==='3d')three.render(state,{selectedSquare,targets:[...targets],castleTargets:[...castles],lastEvent:reviewIndex!==null?history[reviewIndex].event:lastEvent,interactive:planning&&!resolving&&!presenting&&reviewIndex===null&&draft.length<roundRules(match).actions});renderIntentOverlay();
+  if(three&&view==='3d')three.render(state,{selectedSquare,targets:[...targets],castleTargets:[...castles],lastEvent:reviewIndex!==null?history[reviewIndex].event:lastEvent,interactive:planning&&!resolving&&!presenting&&reviewIndex===null&&draft.length<roundRules(match,viewer).actions});renderIntentOverlay();
 }
 
 function renderPhase(){
@@ -122,13 +123,13 @@ function handleBoardDrag(from,to){
   selectedId=unit.id;clearIntent();handleSquare(to);
 }
 function advanceOrder(){
-  if(draft.length>=roundRules(match).actions){void sealPlan();return;}
+  if(draft.length>=roundRules(match,viewer).actions){void sealPlan();return;}
   if(draft.length>furthestOrder){furthestOrder=draft.length;secondsLeft=totalSeconds;lastTick=performance.now();}
   render();
 }
 function expireOrder(){
   if(pendingTarget)toast('Tiempo agotado: el movimiento no se confirmó.');
-  while(draft.length<=furthestOrder&&draft.length<roundRules(match).actions)draft.push({kind:'pass'});
+  while(draft.length<=furthestOrder&&draft.length<roundRules(match,viewer).actions)draft.push({kind:'pass'});
   clearIntent();advanceOrder();
 }
 function setAction(kind){if(!planning||reviewIndex!==null)return;const unit=unitFrom(forecast());if(!unit)return;commitOrder({unitId:unit.id,kind});}
@@ -172,8 +173,8 @@ async function seekReview(target,replay=false){
   await playEvent(event,history[target].state);if(token!==phaseToken)return;playbackState=null;playbackEvent=null;playbackExchange=null;reviewPlaying=false;lastTick=performance.now();render();
 }
 function leaveReview(){if(reviewPlaying)return;reviewIndex=null;selectedId=null;selectedSquare=null;lastTick=performance.now();render();if(match.phase==='finished')$('#result-dialog').showModal();}
-function beginPlanning(){planning=true;draft=[];furthestOrder=0;selectedId=null;selectedSquare=null;clearIntent();totalSeconds=roundRules(match).seconds;secondsLeft=totalSeconds;lastTick=performance.now();render();}
-function updateTimer(){if(planning&&reviewIndex===null)$('#toolbar-clock').textContent=`${Math.max(0,Math.ceil(secondsLeft))}s · ${draft.length}/${roundRules(match).actions}`;}
+function beginPlanning(){planning=true;draft=[];furthestOrder=0;selectedId=null;selectedSquare=null;clearIntent();totalSeconds=roundRules(match,viewer).seconds;secondsLeft=totalSeconds;lastTick=performance.now();render();}
+function updateTimer(){if(planning&&reviewIndex===null)$('#toolbar-clock').textContent=`${Math.max(0,Math.ceil(secondsLeft))}s · ${draft.length}/${roundRules(match,viewer).actions}`;}
 async function sealPlan(){
   if(!planning||match.phase!=='planning')return;const token=phaseToken,result=submitPlan(match,'w',draft);if(!result.ok){toast(result.error);return;}
   planning=false;clearIntent();selectedId=null;render();const orders=await aiPending;if(token!==phaseToken)return;
@@ -272,11 +273,9 @@ function renderIntentOverlay(){
  const box=$('.tactical-board-wrap').getBoundingClientRect();if(!box.width||!box.height)return;
  const point=square=>{if(!/^[a-h][1-8]$/.test(square??''))return null;if(view==='3d')return three?.projectSquare(square);const cell=board.querySelector(`[data-square="${square}"]`);if(!cell)return null;const r=cell.getBoundingClientRect();return {x:r.x-box.x+r.width/2,y:r.y-box.y+r.height/2};};
  let events=[],label='';
- if(pendingTarget){const unit=unitFrom(forecast(),pendingTarget.unitId),check=validatePlan(match,viewer,[...draft,pendingTarget]),order=check.orders?.at(-1)??pendingTarget;events=[{side:viewer,from:unit?.square,intendedTo:order.target,to:order.target,pending:true}];}
- else if(resolving||reviewIndex!==null){const event=playbackEvent??(reviewIndex!==null?history[reviewIndex].event:currentEvent);if(event){events=[event];label=`${event.side==='w'?'Tú':'IA'} · ${describeBattleEvent(event,forecast())}`;}}
- else if(planning){events=draft.filter(o=>o.kind==='move').map(o=>({side:viewer,from:o.from,intendedTo:o.target,to:o.target,queued:true}));}
- caption.textContent=label;caption.hidden=!label;three?.setIntents(view==='3d'?events:[]);svg.toggleAttribute('hidden',view==='3d');
- if(view==='3d'){svg.innerHTML='';return;}
+ if(reviewIndex!==null){const event=playbackEvent??history[reviewIndex].event;if(event){events=[event];label=`${event.side==='w'?'Tú':'IA'} · ${describeBattleEvent(event,forecast())}`;}}
+ caption.textContent=label;caption.hidden=!label;three?.setIntents(view==='3d'?events:[]);svg.toggleAttribute('hidden',view==='3d'||!events.length);
+ if(view==='3d'||!events.length){svg.innerHTML='';return;}
  svg.setAttribute('viewBox',`0 0 ${box.width} ${box.height}`);
  svg.innerHTML='<defs><marker id="intent-arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="context-stroke"/></marker></defs>'+events.map((e,i)=>{
   const a=point(e.from),b=point(e.intendedTo??e.to);if(!a||!b)return '';const color=e.pending?'#a5f1d1':e.side==='w'?'#71deff':'#ffc199',opacity=e.queued?.35:.9,failed=e.kind==='fizzle';
