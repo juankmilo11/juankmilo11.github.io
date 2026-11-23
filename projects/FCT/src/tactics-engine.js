@@ -137,7 +137,7 @@ function applyOrder(state,side,raw){
   }
  }
  if(target===unit.square&&!order.castle){event.kind='fizzle';event.message=unit.type==='p'?'El peón no pudo avanzar: la primera casilla está ocupada.':'No hay espacio antes de la pieza que bloquea el recorrido.';return event;}
- if(victim){victim.captured=true;event.capture={id:victim.id,square:victim.square,...(event.enPassant?{enPassant:true}:{})};event.targets.push({id:victim.id,square:victim.square,captured:true});if(victim.type==='k'){state.winner=side;state.winReason='capture';state.phase='finished';state.activePlanner=null;event.winner=side;}}
+ if(victim){victim.captured=true;victim.captureOrder=state.actionNumber+1;event.capture={id:victim.id,square:victim.square,...(event.enPassant?{enPassant:true}:{})};event.targets.push({id:victim.id,square:victim.square,captured:true});if(victim.type==='k'){state.winner=side;state.winReason='capture';state.phase='finished';state.activePlanner=null;event.winner=side;}}
  unit.square=target;unit.hasMoved=true;event.to=target;
  if(order.castle){const rook=findUnit(state,order.castle.rookId);rook.square=order.castle.rookTo;rook.hasMoved=true;}
  if(order.promotion&&target[1]===(side==='w'?'8':'1')){unit.type=order.promotion;event.promotion={from:'p',to:order.promotion};}

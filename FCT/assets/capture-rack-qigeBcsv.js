@@ -1,0 +1,1 @@
+function e(e,t){let n=e===`w`?1:-1;return{x:n*(4.66+Math.floor(t/8)*.98),y:.12,z:(3.5-t%8)*1.08,yaw:-n*Math.PI/2}}function t(e,t){return e.filter(e=>e.captured&&(!t||e.color===t)).sort((e,t)=>(e.captureOrder??1/0)-(t.captureOrder??1/0)||e.id.localeCompare(t.id))}export{t as n,e as t};

@@ -1,3 +1,4 @@
+import {captureRackPose} from './capture-rack.js';
 import * as THREE from 'three';
 import { deviceRenderQuality } from './render-quality.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -447,19 +448,9 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
         const origin = mesh.userData.basePosition?.clone() ?? mesh.position.clone();
         const color = mesh.userData.color;
         const occupiedSlots = new Set(capturedSlots[color].values());
-        const availableSlots = Array.from({ length: 16 }, (_, slot) => slot).filter((slot) => !occupiedSlots.has(slot));
-        const slot = availableSlots[Math.floor(Math.random() * availableSlots.length)] ?? 0;
-        capturedSlots[color].set(state.lastMoveIndex, slot);
-        const side = mesh.userData.color === 'w' ? 1 : -1;
-        const tier = Math.floor(slot / 8);
-        const row = slot % 8;
-        const jitter = (range) => (Math.random() - 0.5) * range;
-        const position = new THREE.Vector3(
-          side * (4.66 + tier * 0.98 + jitter(0.08)),
-          0.12,
-          (row - 3.5) * 1.08 + jitter(0.08),
-        );
-        const facing = (Math.random() - 0.5) * Math.PI * 2;
+        const slot=Array.from({length:16},(_,i)=>i).find(i=>!occupiedSlots.has(i))??0;
+        capturedSlots[color].set(state.lastMoveIndex,slot);
+        const pose=captureRackPose(color,slot),position=new THREE.Vector3(pose.x,pose.y,pose.z),facing=pose.yaw-(color==='w'?Math.PI:0);
         mesh.position.copy(origin);
         mesh.rotation.y = facing;
         mesh.userData.captureIndex = state.lastMoveIndex;
@@ -639,7 +630,7 @@ export function create3DBoard(host, onSquare, onDragMove, canDragPiece = () => t
       const eased = progress * progress * (3 - 2 * progress);
       effect.mesh.position.lerpVectors(effect.from, effect.position, eased);
       effect.mesh.position.y += Math.sin(Math.PI * progress) * 0.38;
-      effect.mesh.rotation.y = effect.rotation + eased * (0.6 + Math.sin(effect.phase) * 0.2);
+      effect.mesh.rotation.y = effect.rotation;
       effect.mesh.rotation.z = Math.sin(Math.PI * progress) * 0.16;
       effect.mesh.scale.setScalar(1 + Math.sin(Math.PI * progress) * 0.08);
       if (progress >= 1) {

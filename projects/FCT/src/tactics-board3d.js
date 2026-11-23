@@ -1,3 +1,4 @@
+import {captureRackPose,orderedCaptures} from './capture-rack.js';
 import * as THREE from 'three';
 import { actionDuration } from './tactics-animation.js';
 import { deviceRenderQuality } from './render-quality.js';
@@ -32,7 +33,7 @@ export async function createTacticsBoard3D(host,onSquare,{onDrag,onDragStart,onI
   }
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;let active=true,frame=0,disposed=false,terrainKey='',snapshot=null,busy=false,selectedCell=null,visibleTargets=new Set(),castleCells=new Set(),lastSquare=null,motionToken=0,introFrame=0,introToken=0,introResolve=null,presenting=false,portraitProfile=null;
   let cameraProfile={radius:11.5,height:8.8,fov:36};
-  const shadowTextures=new Map();
+  const rack=new Map(),shadowTextures=new Map();
   const shadowMaterial=new THREE.MeshBasicMaterial({color:0x83784f,transparent:true,opacity:.24,alphaTest:.04,depthWrite:false,side:THREE.DoubleSide,toneMapped:false});
   const dropShadow=new THREE.Mesh(new THREE.PlaneGeometry(.74,.88),shadowMaterial);dropShadow.name='drag-contact-shadow';dropShadow.rotation.x=-Math.PI/2;dropShadow.renderOrder=4;dropShadow.visible=false;world.add(dropShadow);
   const dropMarker=new THREE.Mesh(new THREE.PlaneGeometry(.87,.87),new THREE.MeshBasicMaterial({color:0xf3d665,transparent:true,opacity:.25,side:THREE.DoubleSide,depthWrite:false}));dropMarker.name='drag-destination';dropMarker.rotation.x=-Math.PI/2;dropMarker.renderOrder=3;dropMarker.visible=false;world.add(dropMarker);
@@ -74,9 +75,12 @@ export async function createTacticsBoard3D(host,onSquare,{onDrag,onDragStart,onI
       if(mesh)terrain.add(mesh);
     }
   }
-  function render(state,{selectedSquare=null,targets=[],moveTargets=[],attackTargets=[],lastEvent=null,castleTargets=[],interactive=false}={}){snapshot={...state,interactive};dirty=true;renderer.shadowMap.needsUpdate=true;drawTerrain(state);const retained=new Set();
+  function render(state,{selectedSquare=null,targets=[],moveTargets=[],attackTargets=[],lastEvent=null,castleTargets=[],capturedUnits=orderedCaptures(state.units),interactive=false}={}){snapshot={...state,interactive};dirty=true;renderer.shadowMap.needsUpdate=true;drawTerrain(state);const retained=new Set();
     for(const unit of state.units||[]){const corpse=unit.type==='k'&&(unit.captured||state.matedSide===unit.color)&&state.phase==='finished';if(!unit.square||(unit.captured&&!corpse))continue;retained.add(unit.id);let e=units.get(unit.id);const key=unit.type+':'+appearanceKey(pieceLook(unit));if(e&&e.key!==key){removeUnit(unit.id);e=null;}e??=addUnit(unit);e.unit={...unit,mated:unit.type==='k'&&state.matedSide===unit.color&&state.phase==='finished'};if(!busy&&!e.drop){e.group.position.copy(location(unit.square));e.group.scale.setScalar(1);e.group.rotation.set(0,0,0);}e.visual.rotation.y=unit.color==='w'?Math.PI:0;if(corpse){e.group.position.x+=.32;e.group.position.z+=.22;e.group.scale.setScalar(.72);animateCharacter(e.visual,0,{kingPose:'defeated',reducedMotion:true});}}
     for(const id of units.keys())if(!retained.has(id)&&!busy)removeUnit(id);
+    const retainedRack=new Set();
+    for(const side of ['w','b'])orderedCaptures(capturedUnits,side).filter(u=>u.type!=='k').forEach((unit,index)=>{retainedRack.add(unit.id);let entry=rack.get(unit.id);const key=unit.type+':'+appearanceKey(pieceLook(unit));if(entry&&entry.key!==key){world.remove(entry.group);releaseCharacter(entry.visual);rack.delete(unit.id);entry=null;}if(!entry){const group=new THREE.Group(),visual=createCharacter(pieceLook(unit),0,unit.type);group.add(visual);world.add(group);entry={group,visual,key};rack.set(unit.id,entry);visual.userData.ready.then(()=>{dirty=true;renderer.shadowMap.needsUpdate=true;});}const pose=captureRackPose(side,index);entry.group.position.set(pose.x,pose.y,pose.z);entry.visual.rotation.y=pose.yaw;entry.group.scale.setScalar(.8);animateCharacter(entry.visual,0,{reducedMotion:true,kingPose:'standing'});});
+    for(const [id,entry]of rack)if(!retainedRack.has(id)){world.remove(entry.group);releaseCharacter(entry.visual);rack.delete(id);}
     visibleTargets=new Set(targets);castleCells=new Set(castleTargets);lastSquare=lastEvent?.to??null;setSelection(selectedSquare);
   }
   function ring(point,color,size=.38){const m=new THREE.Mesh(new THREE.RingGeometry(size*.75,size,32),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false}));m.position.copy(point);m.position.y+=.04;m.rotation.x=-Math.PI/2;effects.add(m);return m;}
@@ -182,7 +186,7 @@ export async function createTacticsBoard3D(host,onSquare,{onDrag,onDragStart,onI
   document.addEventListener('visibilitychange',schedule);schedule();
   function setQuality(lite){quality=deviceRenderQuality(lite);renderer.setPixelRatio(Math.min(devicePixelRatio,quality.pixelRatio));renderer.shadowMap.enabled=quality.shadows;renderer.shadowMap.needsUpdate=true;controls.enableDamping=quality.idle;dirty=true;resize();}
   setQuality(false);
-  return {render,play,resize,projectSquare,squareAnchor,setIntents,setQuality,setSelection,playIntro,cancelIntro,cancelPlayback,resetCamera(){cancelIntro();controls.reset();},setActive(value){active=value;if(value)resize();schedule();},dispose(){disposed=true;cancelIntro();cancelPlayback();scene.background?.dispose?.();shadowTextures.forEach(t=>t.dispose());clearTimeout(inspectTimer);cancelAnimationFrame(frame);document.removeEventListener('visibilitychange',schedule);observer.disconnect();controls.dispose();for(const id of units.keys())removeUnit(id);clearGroup(effects);clearGroup(intents);clearGroup(terrain);scene.traverse(m=>{m.geometry?.dispose();if(m.material)for(const mat of Array.isArray(m.material)?m.material:[m.material])mat.dispose();});renderer.dispose();renderer.domElement.remove();}};
+  return {render,play,resize,projectSquare,squareAnchor,setIntents,setQuality,setSelection,playIntro,cancelIntro,cancelPlayback,resetCamera(){cancelIntro();controls.reset();},setActive(value){active=value;if(value)resize();schedule();},dispose(){disposed=true;cancelIntro();cancelPlayback();scene.background?.dispose?.();shadowTextures.forEach(t=>t.dispose());clearTimeout(inspectTimer);cancelAnimationFrame(frame);document.removeEventListener('visibilitychange',schedule);observer.disconnect();controls.dispose();for(const id of units.keys())removeUnit(id);for(const e of rack.values()){world.remove(e.group);releaseCharacter(e.visual);}rack.clear();clearGroup(effects);clearGroup(intents);clearGroup(terrain);scene.traverse(m=>{m.geometry?.dispose();if(m.material)for(const mat of Array.isArray(m.material)?m.material:[m.material])mat.dispose();});renderer.dispose();renderer.domElement.remove();}};
 }
 
 function createDuskSky(){

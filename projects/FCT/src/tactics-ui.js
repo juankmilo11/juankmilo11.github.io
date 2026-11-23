@@ -1,3 +1,4 @@
+import {orderedCaptures} from './capture-rack.js';
 import {navigateApp} from './app-navigation.js';
 import './tactics.css';
 import './retro-hud.css';
@@ -69,7 +70,14 @@ function renderBoard(){
     const signature=unit?`${unit.id}:${unit.type}:${unit.captured}:${state.matedSide===unit.color&&unit.type==='k'}`:'';
     if(cell.dataset.piece!==signature){cell.querySelectorAll('.tactical-token').forEach(n=>n.remove());cell.dataset.piece=signature;if(unit){const token=document.createElement('span');token.className='tactical-token';token.dataset.unit=unit.id;const img=document.createElement('img');img.src=thumbnailUrl(look(unit),unit.captured||state.matedSide===unit.color&&unit.type==='k'?'defeated':'standing');img.alt='';img.draggable=false;token.append(img);cell.append(token);}}
   }
-  if(three&&view==='3d')three.render(state,{selectedSquare,targets:[...targets],castleTargets:[...castles],lastEvent:reviewIndex!==null?history[reviewIndex].event:lastEvent,interactive:planning&&!resolving&&!presenting&&reviewIndex===null&&draft.length<roundRules(match,viewer).actions});renderIntentOverlay();
+  const actual=planning&&reviewIndex===null&&!playbackState?match:state;renderRemaining(actual);
+  if(three&&view==='3d')three.render(state,{capturedUnits:orderedCaptures(actual.units),selectedSquare,targets:[...targets],castleTargets:[...castles],lastEvent:reviewIndex!==null?history[reviewIndex].event:lastEvent,interactive:planning&&!resolving&&!presenting&&reviewIndex===null&&draft.length<roundRules(match,viewer).actions});renderIntentOverlay();
+}
+
+function renderRemaining(state){
+ const glyphs={w:{k:'♔',q:'♕',r:'♖',b:'♗',n:'♘',p:'♙'},b:{k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟'}},values={k:0,q:9,r:5,b:3,n:3,p:1};
+ const material=side=>state.units.filter(u=>u.color===side&&!u.captured).reduce((n,u)=>n+values[u.type],0);
+ for(const side of ['w','b']){const strip=$('#remaining-'+(side==='w'?'white':'black')),live=state.units.filter(u=>u.color===side&&!u.captured).sort((a,b)=>'kqrbnp'.indexOf(a.type)-'kqrbnp'.indexOf(b.type)),dead=orderedCaptures(state.units,side),advantage=material(side)-material(other(side)),key=JSON.stringify([live.map(u=>u.type),dead.map(u=>u.id),advantage]);if(strip.dataset.content===key)continue;strip.dataset.content=key;strip.setAttribute('aria-label',`${side==='w'?'Tu ejército':'IA'}: ${live.length} piezas restantes, balance material ${advantage}`);strip.innerHTML=`<span class="army-piece-count">${live.length}</span><span class="remaining-icons">${live.map(u=>`<span title="${UNIT_NAMES[u.type]} en juego">${glyphs[side][u.type]}</span>`).join('')}</span><span class="material-balance">${advantage>0?'+':''}${advantage}</span><span class="captured-icons">${dead.map(u=>`<span title="${UNIT_NAMES[u.type]} capturada">${glyphs[side][u.type]}</span>`).join('')}</span>`;}
 }
 
 function renderPhase(){

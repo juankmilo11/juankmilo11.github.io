@@ -111,3 +111,7 @@ El resultado ofrece Jugar otra batalla, Revisar partida y Salir al menú.
 La elección de una pieza de promoción confirma directamente esa orden.
 La navegación entre menú y modo principal conserva el mismo reproductor activo,
 sin recargar el documento que reproduce la música.
+
+Las barras de ambos bandos muestran piezas restantes, balance material y capturas.
+Las piezas capturadas ocupan las gradas en orden cronológico, con orientaciones
+simétricas. La revisión restaura las barras y las gradas de cada posición.

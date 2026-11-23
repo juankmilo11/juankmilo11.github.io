@@ -3,21 +3,23 @@
 <head>
   <meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><meta name="theme-color" content="#192b2a" />
   <link rel="icon" type="image/png" href="/FCT/assets/bubble-fct-WznzNepr.png" /><title>Fantasy Chess Tactics</title>
-  <script type="module" crossorigin src="/FCT/assets/tactics-Cj54Ugw4.js"></script>
-  <link rel="modulepreload" crossorigin href="/FCT/assets/audio-system-Bf9bXpkN.js">
-  <link rel="stylesheet" crossorigin href="/FCT/assets/audio-system-BXGcC4_b.css">
+  <script type="module" crossorigin src="/FCT/assets/tactics-iLrM_Zqs.js"></script>
+  <link rel="modulepreload" crossorigin href="/FCT/assets/audio-system-DAt8m9bW.js">
+  <link rel="modulepreload" crossorigin href="/FCT/assets/capture-rack-qigeBcsv.js">
+  <link rel="stylesheet" crossorigin href="/FCT/assets/audio-system-DYMK69sB.css">
   <link rel="stylesheet" crossorigin href="/FCT/assets/tactics-1g6kqrmR.css">
 </head>
 <body>
   <audio id="background-music" preload="metadata" playsinline></audio>
   <header class="tactics-header">
-    <a class="tactics-brand" href="./"><h1>Fantasy Chess Tactics</h1><span class="toolbar-status"><span id="player-role"></span><span id="toolbar-round"></span><span id="toolbar-clock" aria-live="off"></span></span></a>
+    <a class="tactics-brand" href="./"><h1><img class="tactics-potion" src="/FCT/fct-potion.png" alt="" aria-hidden="true" />Fantasy Chess Tactics</h1></a><div class="toolbar-status" role="status"><span id="player-role"></span><span id="toolbar-round"></span><span id="toolbar-clock" aria-live="off"></span></div>
     <div class="tactics-tools"><div class="audio-dock"><button id="audio-reopen" type="button" aria-label="Música" aria-pressed="true" title="Música">♫</button><button id="effects-open" type="button" aria-label="Efectos" aria-pressed="true" title="Efectos">♪</button></div><button id="graphics-mode" type="button" aria-pressed="false" title="Activar gráficos ligeros">Auto</button><div class="view-controls" role="group" aria-label="Vista"><button type="button" data-view="2d" aria-pressed="false">2D</button><button type="button" data-view="3d" aria-pressed="true">3D</button><button type="button" id="camera-reset" aria-label="Restablecer cámara" title="Restablecer cámara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></div><button id="wait-action" type="button" disabled>Esperar</button><button id="review-open" type="button" disabled>Revisar</button><button id="new-match" type="button" aria-label="Reiniciar partida" title="Reiniciar partida">↻</button><button id="rules-open" type="button">Reglas</button><button id="exit-game" type="button">Salir</button></div>
   </header>
   <main class="tactics-shell">
     <section class="battle-column" aria-label="Campo de batalla">
       <div class="tactical-board-wrap">
         <div id="board-2d" hidden class="tactical-board" role="grid" aria-label="Tablero de ocho por ocho"></div><div id="board-3d" class="tactical-board-3d" aria-busy="true"></div>
+        <div id="remaining-black" class="tactics-remaining enemy-strip" aria-label="Piezas restantes de la IA"></div><div id="remaining-white" class="tactics-remaining ally-strip" aria-label="Tus piezas restantes"></div>
         <svg id="intent-overlay" class="intent-overlay" aria-hidden="true"></svg><p id="intent-caption" class="intent-note" aria-live="polite" hidden></p>
         <div id="board-actions" class="board-actions" aria-label="Acciones en el tablero"><div id="unit-actions" class="field-actions" hidden></div></div>
         <div class="board-toast" id="board-toast" aria-live="polite" hidden></div>
