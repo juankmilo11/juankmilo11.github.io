@@ -1,3 +1,4 @@
+import {navigateApp} from './app-navigation.js';
 import { Chess } from 'chess.js';
 import './style.css';
 import { moveSound } from './audio-cues.js';
@@ -28,7 +29,7 @@ document.querySelector('.tactics-mode-link')?.addEventListener('click',event=>{
   try { sessionStorage.setItem('fct:tactics:loadout',JSON.stringify(getLoadout())); } catch { /* Cosmetic defaults remain available. */ }
   audioSystem.playSound('sound1');document.body.classList.add('is-opening-tactics');
   const curtain=document.querySelector('#battle-curtain');curtain?.classList.add('is-covering');
-  const destination=event.currentTarget.href;setTimeout(()=>location.assign(destination),matchMedia('(prefers-reduced-motion: reduce)').matches?120:360);
+  const destination=event.currentTarget.href;setTimeout(()=>navigateApp(destination),matchMedia('(prefers-reduced-motion: reduce)').matches?120:360);
 });
 window.addEventListener('pageshow',()=>{document.body.classList.remove('is-opening-tactics');document.querySelector('#battle-curtain')?.classList.remove('is-covering','is-revealing');});
 function playUiSound(name,gain=1) { audioSystem.playSound(name,gain); }

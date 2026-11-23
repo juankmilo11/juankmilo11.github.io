@@ -268,3 +268,7 @@ benchmarks under the same current rules.
 Music restores the same track, playback position, remaining shuffle queue and
 mute preferences across menu/main-mode navigation using session storage.
 The final result offers only another battle, review or exit to the main menu.
+
+Normal menu/main-mode transitions now use isolated views inside a persistent
+audio owner: the same media element keeps playing on entry and exit. Reloads
+retain the session-position fallback. Choosing a promotion commits the order.

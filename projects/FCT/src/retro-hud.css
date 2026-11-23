@@ -16,3 +16,7 @@ button[aria-pressed=true],button.active,.tactics-header .audio-dock button[aria-
 @media(prefers-reduced-motion:reduce){button,a{transition:none!important}}
 
 .primary-button,.selector-save{background:linear-gradient(#b1f9ff,#60cce4 48%,#3d9fc6 50%,#70c6e2)!important;color:#102d4d!important;border-color:#bcf5ff!important;text-shadow:0 1px #e8ffff!important}
+
+body.fct-hosting>:not(iframe[data-fct-app]):not(audio){display:none!important}.tactics-brand{min-width:0}.toolbar-status{justify-content:center;text-align:center;flex-wrap:wrap;font-size:13px!important;gap:6px 12px!important;margin-top:4px}#player-role{display:block!important;width:100%;font:800 16px/1.3 'Trebuchet MS',system-ui,sans-serif!important;text-align:center;color:#b9f8ff!important;text-shadow:0 1px 3px #070e24}.toolbar-status #toolbar-round,.toolbar-status #toolbar-clock{font-size:12px}.tactics-brand h1{text-align:center}@media(max-width:740px){#player-role{font-size:15px!important}.toolbar-status{margin-bottom:3px}}
+/* The turn indicator has its own centered row across the entire banner. */
+.tactics-header .tactics-brand{display:contents}.tactics-header .tactics-brand h1{order:1}.tactics-header .tactics-tools{order:2;margin-left:auto}.tactics-header .toolbar-status{order:3;flex:0 0 100%;justify-content:center;padding:5px 8px;margin:0;background:#0a142980;border:1px solid #6cb9d044;border-radius:8px}.tactics-header #player-role{width:auto!important}.tactics-header .toolbar-status #toolbar-round,.tactics-header .toolbar-status #toolbar-clock{align-self:center}

@@ -1,3 +1,4 @@
+import {navigateApp} from './app-navigation.js';
 import './tactics.css';
 import './retro-hud.css';
 import { createMatch, autoDeploy, confirmDeployment, beginBattle, roundRules, submitPlan, resolveNext, getLegalMoves, unitAt, validatePlan, previewPlan, publicView, UNIT_NAMES, getCastleOptions, movementPath } from './tactics-engine.js';
@@ -227,7 +228,7 @@ $('#board-actions').addEventListener('pointerdown',e=>e.stopPropagation());
 $('#board-actions').addEventListener('click',event=>{
   event.stopPropagation();const button=event.target.closest('button');if(!button||reviewIndex!==null)return;
   if(button.hasAttribute('data-field-cancel')){clearIntent();render();return;}
-  if(button.dataset.promote&&pendingTarget){pendingTarget.promotion=button.dataset.promote;renderFieldActions();return;}
+  if(button.dataset.promote&&pendingTarget){commitOrder({...pendingTarget,promotion:button.dataset.promote});return;}
   if(button.hasAttribute('data-confirm-move')&&pendingTarget){commitOrder(pendingTarget);return;}
   if(button.hasAttribute('data-cancel-move')){clearIntent();renderBoard();renderFieldActions();return;}
   if(button.dataset.fieldAction){setAction(button.dataset.fieldAction);return;}
@@ -263,9 +264,10 @@ function confirmExit(destination='./'){
 }
 $('#exit-game').addEventListener('click',()=>confirmExit());
 $('.tactics-brand').addEventListener('click',e=>{e.preventDefault();confirmExit();});
-$('#result-exit').addEventListener('click',()=>location.assign('./'));
+function leaveBattle(destination='./'){$('#exit-dialog').close();$('#result-dialog').close();phaseToken++;planning=false;resolving=false;reviewPlaying=false;aiWorker?.terminate();aiWorker=null;three?.cancelPlayback();three?.setActive(false);navigateApp(destination);}
+$('#result-exit').addEventListener('click',()=>leaveBattle());
 $('#exit-cancel').addEventListener('click',()=>$('#exit-dialog').close());
-$('#exit-confirm').addEventListener('click',()=>{phaseToken++;three?.cancelPlayback();three?.setActive(false);sound('menu4');location.assign($('#exit-dialog').dataset.destination);});
+$('#exit-confirm').addEventListener('click',()=>{sound('menu4');leaveBattle($('#exit-dialog').dataset.destination);});
 $('#exit-dialog').addEventListener('close',()=>{lastTick=performance.now();});
 
 function renderIntentOverlay(){
@@ -284,3 +286,5 @@ function renderIntentOverlay(){
  }).join('');
  caption.textContent=label;caption.hidden=!label;
 }
+
+window.addEventListener('fct:app-return',()=>newMatch());

@@ -5,6 +5,8 @@ import './audio-system.css';
 export function createAudioSystem() {
   const music = document.querySelector('#background-music');
   const musicButton=document.querySelector('#audio-reopen'), effectsButton=document.querySelector('#effects-open');
+  try{if(window.parent!==window&&window.parent.__fctAudio){const shared=window.parent.__fctAudio;shared.attachControls(musicButton,effectsButton);return shared;}}catch{}
+  const controls=new Set([{musicButton,effectsButton}]);
   const queue=new ShuffleQueue(tracks);
   const cues=Object.fromEntries(['sound1','menu1','menu2','menu3','menu4','user_piece_move','AI_piece_move','check','checkmate'].map(name=>[name,new Audio(`${import.meta.env.BASE_URL}audio/${name}.wav`)]));
   let fxLevel=.35, fxMuted=false, wantsMusic=true, pending=false, lastAttempt=0, failures=0, generation=0;
@@ -21,10 +23,12 @@ export function createAudioSystem() {
   document.addEventListener('visibilitychange',()=>{if(active())attempt();else suspend();});
   window.addEventListener('pagehide',()=>{saveSession();pageActive=false;suspend();});
   window.addEventListener('pageshow',()=>{pageActive=true;if(active())attempt();});
-  window.addEventListener('blur',()=>{pageActive=false;suspend();});
+  window.addEventListener('blur',()=>{setTimeout(()=>{if(document.activeElement?.matches('iframe[data-fct-app]'))return;pageActive=false;suspend();},0);});
   window.addEventListener('focus',()=>{pageActive=true;if(active())attempt();});
   window.addEventListener('message',event=>{if(event.source!==window.parent||event.origin!==location.origin||event.data?.type!=='fct:visibility')return;hostActive=event.data.active===true;if(active())attempt();else suspend();});
   function sync() {
+   for(const entry of controls){
+    const {musicButton,effectsButton}=entry;if(musicButton.ownerDocument!==document&&!musicButton.ownerDocument.defaultView?.frameElement?.isConnected){controls.delete(entry);continue;}
     musicButton.setAttribute('aria-label',wantsMusic?'Desactivar música':'Activar música');
     musicButton.setAttribute('aria-pressed',String(wantsMusic));
     musicButton.classList.toggle('is-muted',!wantsMusic);
@@ -32,6 +36,7 @@ export function createAudioSystem() {
     effectsButton.setAttribute('aria-pressed',String(!fxMuted));
     effectsButton.setAttribute('aria-label',fxMuted?'Activar efectos':'Desactivar efectos');
     effectsButton.classList.toggle('is-muted',fxMuted||fxLevel===0);
+   }
   }
   async function attempt() {
     if(restoreTime!==null||!wantsMusic||!active()||pending||!music.paused)return;
@@ -48,8 +53,13 @@ export function createAudioSystem() {
     music.dataset.track=track.id;
     music.load();pending=false;sync();if(wantsMusic)attempt();
   }
-  musicButton.addEventListener('click',()=>{wantsMusic=!wantsMusic;if(wantsMusic)attempt();else music.pause();sync();});
-  effectsButton.addEventListener('click',()=>{fxMuted=!fxMuted;sync();});
+  function attachControls(musicButton,effectsButton){
+    const entry={musicButton,effectsButton};if(![...controls].some(c=>c.musicButton===musicButton))controls.add(entry);
+    musicButton.addEventListener('click',()=>{wantsMusic=!wantsMusic;if(wantsMusic)attempt();else music.pause();sync();});
+    effectsButton.addEventListener('click',()=>{fxMuted=!fxMuted;sync();});
+    const owner=musicButton.ownerDocument.defaultView;if(owner!==window)owner.addEventListener('pagehide',()=>controls.delete(entry),{once:true});sync();
+  }
+  attachControls(musicButton,effectsButton);
   music.addEventListener('play',sync);music.addEventListener('pause',sync);
   music.addEventListener('ended',()=>select(queue.next()));
   music.addEventListener('error',()=>{
@@ -61,7 +71,8 @@ export function createAudioSystem() {
   document.addEventListener('keydown',unlock,{capture:true});
   document.addEventListener('pointermove',()=>{if(performance.now()-lastAttempt>1600)unlock();},{passive:true});
   select(queue.current??queue.next());sync();
-  return {
+  return window.__fctAudio={
+    music,attachControls,
     playSound(name,gain=1) {
       const audio=cues[name];if(!active()||!audio||fxMuted||fxLevel===0)return;
       if(/^menu[1-4]$/.test(name))for(const [key,cue]of Object.entries(cues))if(/^menu[1-4]$/.test(key)&&cue!==audio)cue.pause();

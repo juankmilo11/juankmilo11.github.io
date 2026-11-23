@@ -107,3 +107,7 @@ node projects/FCT/scripts/benchmark-tactics.mjs --previous --seeds=2141,3137 --r
 El HUD comparte un diseño retrofuturista en ambos modos, menús y selector.
 Al cambiar de pantalla se conservan canción, segundo y preferencias de audio.
 El resultado ofrece Jugar otra batalla, Revisar partida y Salir al menú.
+
+La elección de una pieza de promoción confirma directamente esa orden.
+La navegación entre menú y modo principal conserva el mismo reproductor activo,
+sin recargar el documento que reproduce la música.
