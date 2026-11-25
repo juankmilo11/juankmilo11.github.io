@@ -1,5 +1,5 @@
-@font-face{font-family:"Paca Editorial";src:url("../../../FCT/fonts/Cinzel.ttf") format("truetype");font-weight:400 900;font-display:swap}
-@font-face{font-family:"Paca Script";src:url("../../../FCT/fonts/CrimsonPro.ttf") format("truetype");font-weight:200 900;font-display:swap}
+@font-face{font-family:"Paca Editorial";src:url("../assets/fonts/PacaEditorial.woff2") format("woff2");font-weight:400 900;font-display:swap}
+@font-face{font-family:"Paca Script";src:url("../assets/fonts/PacaScript.woff2") format("woff2");font-weight:200 900;font-display:swap}
 .reading-progress{position:fixed;inset:0 0 auto;height:3px;background:var(--accent);z-index:60;transform:scaleX(var(--reading-progress,0));transform-origin:left;pointer-events:none}
 .masthead{transition:box-shadow .3s,background .3s}.masthead.is-scrolled{background:#fbf5ee;box-shadow:0 5px 24px #51333f0b}
 .hero-photo{overflow:hidden}.hero-previous{position:absolute;inset:0;pointer-events:none}

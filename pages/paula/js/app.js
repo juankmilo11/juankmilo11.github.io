@@ -44,10 +44,10 @@
   const grid = $('#catalog-grid'), more = $('#catalog-more');
   let entries = [], filtered = [], limit = 9, category = 'all', activeIndex = 0, opener = null, loadFailed = false, pendingBooking = null;
   const reveals = 'IntersectionObserver' in window ? new IntersectionObserver(records => records.forEach(record => {
-    if(record.isIntersecting){record.target.classList.add('is-revealed');reveals.unobserve(record.target);}
+    record.target.classList.toggle('is-revealed',record.isIntersecting);
   }),{threshold:.08}) : null;
   function reveal(element){if(reveals){element.classList.add('reveal');reveals.observe(element);}}
-  document.querySelectorAll('.section-heading,.artist-portrait,.artist-copy,.faq>div:first-child').forEach(reveal);
+  document.querySelectorAll('.section-heading,.artist-copy,.faq>div:first-child').forEach(reveal);
   function curatedOrder(all) {
     const buckets = Object.fromEntries(Object.keys(labels).map(key => [key, all.filter(item => item.category === key)]));
     const result = [], pattern = ['nails','tattoo','pmu','nails','makeup','tattoo','nails','makeup','nails'];

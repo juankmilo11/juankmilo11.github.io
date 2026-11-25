@@ -2,6 +2,10 @@
 (function(root){
   const locales={
   "staticText": {
+    "Pink nails with small hand-painted flowers.": "Uñas rosas con flores pequeñas pintadas a mano.",
+    "PACA": "PACA",
+    "PACA, Paula Daniela": "PACA, Paula Daniela",
+    "Event makeup with softly shaded eyeshadow.": "Maquillaje social con sombras en tonos suaves.",
     "Scroll, drag or use the arrow keys to explore the collection.": "Desplázate, arrastra o usa las flechas para explorar la colección.",
     "Paula Daniela’s creative universe. Explore real nail art, tattoos and permanent makeup in New Jersey, and prepare your appointment request.": "El universo creativo de Paula Daniela. Explora trabajos reales de uñas, tatuajes y maquillaje permanente en New Jersey y prepara tu solicitud de cita.",
     "Skip to the catalog": "Ir al catálogo",
@@ -260,6 +264,11 @@
     "Yes! Upload an inspiration design photo with every request, even if you selected a catalog reference. Tell Paula what you love and what you would change.": "¡Sí! Adjunta una foto del diseño de inspiración en cada solicitud, incluso si seleccionaste una referencia del catálogo. Cuéntale a Paula qué te gusta y qué cambiarías."
   },
   "en": {
+    "serviceNext": "Next service",
+    "servicePrevious": "Previous",
+    "serviceChoose": "Choose a service",
+    "serviceGo": "Service {index}: {title}",
+    "serviceCurrent": "Service {index} of {total}: {title}",
     "artistAnimation": "Paula Daniela name animation",
     "animationPause": "Pause animation",
     "animationPlay": "Play animation",
@@ -353,6 +362,11 @@
     "slotConflict": "That time is no longer available. Edit your details and choose another date and time."
   },
   "es": {
+    "serviceNext": "Siguiente servicio",
+    "servicePrevious": "Anterior",
+    "serviceChoose": "Elegir un servicio",
+    "serviceGo": "Servicio {index}: {title}",
+    "serviceCurrent": "Servicio {index} de {total}: {title}",
     "artistAnimation": "Animación del nombre Paula Daniela",
     "animationPause": "Pausar animación",
     "animationPlay": "Reproducir animación",

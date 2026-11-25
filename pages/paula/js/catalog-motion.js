@@ -10,7 +10,7 @@
     const controls=document.createElement('div');controls.className='stream-controls';
     const previous=document.createElement('button'),next=document.createElement('button'),count=document.createElement('span');
     const status=document.createElement('p');status.className='sr-only';status.setAttribute('role','status');status.setAttribute('aria-live','polite');
-    previous.type=next.type='button';previous.textContent='↑';next.textContent='↓';count.setAttribute('aria-hidden','true');
+    previous.type=next.type='button';previous.textContent='←';next.textContent='→';count.setAttribute('aria-hidden','true');
     controls.append(previous,count,next);stage.append(help,status);grid.before(stage,controls);
     let renderer,scene,camera,T,geometry,clock,loading=false,failed=false,entries=[],meshes=new Map(),textures=new Map();
     let position=0,target=0,velocity=0,lastVelocity=0,snapTimer=0,announceTimer=0,drag=null,revision=0;
@@ -48,7 +48,7 @@
         geometry=new T.PlaneGeometry(1,1,12,24);
         renderer.domElement.setAttribute('aria-hidden','true');stage.append(renderer.domElement);
         renderer.domElement.addEventListener('webglcontextlost',event=>{event.preventDefault();fallback();},{signal});
-        catalog.dataset.galleryState='ready';stage.hidden=false;controls.hidden=false;grid.setAttribute('aria-hidden','true');
+        catalog.dataset.galleryState='ready';stage.hidden=false;controls.hidden=false;stage.setAttribute('aria-busy','false');grid.setAttribute('aria-hidden','true');
         size();syncMeshes();clock.request();
       }catch(error){console.warn('PACA: static catalog fallback.',error);fallback();}
       finally{loading=false;}
@@ -101,11 +101,11 @@
       meshes.forEach(mesh=>{
         const index=mesh.userData.index,d=index-position,depth=Math.min(1,Math.abs(d));
         const entry=entries[index];if(!entry)return;
-        const cardHeight=Math.min(5.65,(viewWidth*.78)/(entry.width/entry.height));
+        const cardHeight=Math.min(5.9,(viewWidth*.68)/(entry.width/entry.height));
         const scale=1-depth*.16;
         mesh.scale.set(cardHeight*(entry.width/entry.height)*scale,cardHeight*scale,1);
-        mesh.position.set(Math.sin(d*.55)*Math.min(.6,viewWidth*.05),-d*4.75,-Math.abs(d)*1.4);
-        mesh.rotation.set(Math.sign(d)*depth*.48,Math.sign(d)*depth*.22,Math.sign(d)*depth*-.025);
+        mesh.position.set(d*Math.min(5.3,viewWidth*.78),Math.sin(d*.5)*.16,-Math.abs(d)*1.4);
+        mesh.rotation.set(0,Math.sign(d)*depth*-.42,Math.sign(d)*depth*.012);
         mesh.material.uniforms.flex.value=Math.max(-.65,Math.min(.65,velocity*.045));
         mesh.material.uniforms.opacity.value=Math.max(0,1-Math.max(0,Math.abs(d)-1.1)*.55);
         mesh.renderOrder=10-Math.round(Math.abs(d));
@@ -116,7 +116,8 @@
     },signal);
     stage.addEventListener('wheel',event=>{
       if(M.reduced.matches||!renderer||event.ctrlKey)return;
-      const delta=(Math.abs(event.deltaY)>Math.abs(event.deltaX)?event.deltaY:event.deltaX)*(event.deltaMode===1?16:event.deltaMode===2?height:1);
+      const delta=event.deltaX*(event.deltaMode===1?16:event.deltaMode===2?width:1);
+      // Vertical wheel scrolling always belongs to the page.
       if(!delta||(target<=0&&delta<0)||(target>=entries.length-1&&delta>0))return;
       event.preventDefault();move(target+Math.max(-.85,Math.min(.85,delta*.003)),true);
     },{passive:false,signal});
@@ -127,9 +128,9 @@
       // Enter and click intentionally never open a detail or booking dialog.
     },{signal});
     stage.addEventListener('pointerdown',event=>{
-      if(!renderer||event.button!==0)return;drag={id:event.pointerId,y:event.clientY,target};stage.setPointerCapture(event.pointerId);stage.focus({preventScroll:true});
+      if(!renderer||event.button!==0)return;drag={id:event.pointerId,x:event.clientX,target};stage.setPointerCapture(event.pointerId);stage.focus({preventScroll:true});
     },{signal});
-    stage.addEventListener('pointermove',event=>{if(drag?.id===event.pointerId)move(drag.target+(drag.y-event.clientY)/Math.max(130,height*.32),true);},{signal});
+    stage.addEventListener('pointermove',event=>{if(drag?.id===event.pointerId)move(drag.target+(drag.x-event.clientX)/Math.max(130,width*.32),true);},{signal});
     const release=()=>{if(drag){drag=null;clearTimeout(snapTimer);snapTimer=setTimeout(()=>move(target),160);}};
     for(const event of ['pointerup','pointercancel','lostpointercapture'])stage.addEventListener(event,release,{signal});
     previous.addEventListener('click',()=>move(Math.round(target)-1),{signal});next.addEventListener('click',()=>move(Math.round(target)+1),{signal});
@@ -143,7 +144,8 @@
     M.reduced.addEventListener('change',()=>{if(!M.reduced.matches)init();clock.request();},{signal});
     const observer=new ResizeObserver(size);observer.observe(stage);
     labels();render(window.PacaCatalog?.entries||[]);
-    stage.hidden=true;controls.hidden=true;catalog.dataset.galleryState='static';
+    stage.hidden=M.reduced.matches;controls.hidden=true;catalog.dataset.galleryState=M.reduced.matches?'static':'pending';
+    if(!M.reduced.matches){grid.setAttribute('aria-hidden','true');stage.setAttribute('aria-busy','true');}
     return ()=>{clearTimeout(snapTimer);clearTimeout(announceTimer);observer.disconnect();fallback();stage.remove();controls.remove();delete catalog.dataset.galleryState;};
   });
 })();

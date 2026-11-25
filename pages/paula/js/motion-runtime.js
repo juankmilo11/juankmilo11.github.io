@@ -24,7 +24,7 @@
     }
     function tick(now) {
       frame = 0;
-      const dt = last ? Math.min(50, now - last) : 16.67;
+      const dt = last ? Math.min(100, now - last) : 16.67;
       last = now;
       node.dataset.motionRunning = 'true';
       const again = paint(now, dt, reduced.matches);

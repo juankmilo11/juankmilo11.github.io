@@ -44,12 +44,12 @@ window.PacaMotion.mount(signal => {
   addEventListener('resize', measure, { signal });
   measure();
 
-  const ticker=document.querySelector('.ticker');
-  let tickerVisible=false;
-  const syncTicker=()=>{ticker.querySelector('.ticker-track').style.animationPlayState=tickerVisible&&!document.hidden&&!window.PacaMotion.reduced.matches?'running':'paused';};
-  const tickerObserver=new IntersectionObserver(entries=>{tickerVisible=entries[0].isIntersecting;syncTicker();});
-  tickerObserver.observe(ticker);
-  document.addEventListener('visibilitychange',syncTicker,{signal});
-  window.PacaMotion.reduced.addEventListener('change',syncTicker,{signal});
-  return ()=>{resize?.disconnect();tickerObserver.disconnect();cancelAnimationFrame(frame);ticker.querySelector('.ticker-track').style.animationPlayState='paused';};
+  const floating=document.querySelector('.floating-book');
+  let heroVisible=false,footerVisible=false;
+  const context=new IntersectionObserver(records=>{
+    records.forEach(record=>{if(record.target.id==='inicio')heroVisible=record.isIntersecting;else footerVisible=record.isIntersecting;});
+    floating.classList.toggle('is-hidden',heroVisible||footerVisible);
+  });
+  context.observe(document.querySelector('#inicio'));context.observe(document.querySelector('.footer'));
+  return ()=>{resize?.disconnect();context.disconnect();cancelAnimationFrame(frame);floating.classList.remove('is-hidden');};
 });

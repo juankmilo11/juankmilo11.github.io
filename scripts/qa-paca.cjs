@@ -56,7 +56,8 @@ async function settleAnimations(page, selector) {
     await page.route('**/shared/api-config.js*',route=>route.fulfill({contentType:'text/javascript',body:'/* Browser QA configuration */'}));
     await page.goto(url);
     await page.locator('.work-card').first().waitFor({state:'attached'});
-    assert.equal(await page.locator('.service[open]').count(),0);
+    assert.equal(await page.locator('.service[open]').count(),4);
+    assert.equal(await page.locator('.service[aria-hidden="false"]').count(),1);
     assert.equal(await page.locator('.hero-tabs small').count(),0);
     assert.equal(await page.locator('#motion-toggle,#catalog-search,#total-count,.service-number,#booking-copy,#booking-instagram').count(),0);
     assert.equal(await page.locator('main #agendar').count(),0);
@@ -174,7 +175,7 @@ async function settleAnimations(page, selector) {
     await closeBooking(page);
     await page.locator('[data-language="es"]').click();
     await page.locator('#theme-toggle').click();
-    await page.locator('.floating-book').click();
+    await page.locator('.nav-book').click();
     assert.equal(await page.locator('#booking-window-title').innerText(),'Solicitar una cita');
     assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
     await page.locator('#calendar-open').click();

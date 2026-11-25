@@ -60,25 +60,43 @@ solicitar una cita; el formulario no envía datos por GET.
   accesibles. Cambiar el idioma conserva datos escritos y selecciones.
 - `js/theme.js`, `css/theme.css`: contraste claro/oscuro de ambas subventanas.
 - `js/experience.js`, `css/experience.css`: progreso de lectura, sección activa,
-  entradas y tipografía original. El ticker se pausa fuera de pantalla.
+  entradas que se repiten al volver a pantalla y tipografía original. La reserva
+  flotante se oculta en el hero y el cierre para evitar duplicar sus llamadas.
 - `css/motion.css`: navbar flotante, capas de PACA y controles de al menos
   16 px/44 px. Mantiene las fuentes, fotografías y colores existentes.
 - `js/motion-runtime.js`: un reloj por sección, suspendido fuera del viewport
   y con la pestaña oculta. Desmonta listeners/observers/GPU en `pagehide` y
   restaura una sola instancia al volver desde la caché de navegación.
-- `js/hero-motion.js`: foto real con shader ambiental (DPR 1) y revelado por
-  muestreo de glifos. El H1 sigue siendo texto vivo y seleccionable. En touch
-  se usa un recorte diagonal; con movimiento reducido se muestra completo.
+- `index.html`: loader crítico con el logo real vectorizado en
+  `assets/logo-paca.svg`, símbolo y wordmark separados, fondo muestreado
+  `#e5c2ea`, trazado/relleno y salida en 2,6 s (límite 3 s). Se muestra una
+  vez por sesión; se omite en anclas, sin JS, con movimiento reducido y al
+  ocultar la pestaña. Tab/Escape lo descartan sin atrapar el foco.
+- `js/hero-motion.js`: escena sticky de 100svh dentro de 260svh, texto SVG
+  sobre el sendero especificado y foto real con zoom/parallax. Solo responde
+  al scroll (suavizado 140 ms), se detiene al estabilizarse y es reversible.
+  No usa WebGL ni animación de entrada. El H1 permanece vivo y seleccionable.
 - `js/catalog-motion.js`: Three.js local con licencia MIT, cámara ortográfica,
-  siete texturas como máximo y snap a los 160 ms. Wheel, drag, touch y flechas
-  controlan el índice; la geometría se aplana al detenerse. DPR máximo 1,5.
+  siete texturas como máximo y snap a los 160 ms. Drag/touch horizontal,
+  rueda horizontal y flechas controlan el índice; la rueda vertical sigue
+  desplazando la página. La geometría se aplana al detenerse. DPR máximo 1,5.
   Sin WebGL, al perder contexto o con movimiento reducido se muestra la lista.
-- `js/services-motion.js`: seis capas SVG PACA reversibles con scroll.
+- `js/services-motion.js`: cuatro pósteres con contenido real y transición
+  local de tres fases de 600 ms. Anterior/Siguiente, puntos, teclado y swipe;
+  sin autoplay. Un nuevo clic asienta el destino anterior antes de empezar.
+  Los paneles inactivos son inert/aria-hidden. Sin JS quedan los details
+  originales; con movimiento reducido el cambio es instantáneo. Makeup usa
+  `makeup-social.webp`, procedente del archivo original de Paula.
 - `js/artist-motion.js`: nombre real de Paula en las fuentes actuales,
-  dibujado/relleno/espera/desvanecido en 5,6 s. Pausar deja el nombre completo;
-  Reproducir y Repetir son controles accesibles. El retrato queda estático.
+  dibujado/relleno/espera/desvanecido en 5,6 s, continuo mientras es visible.
+  El retrato tiene revelado circular, profundidad, inclinación por puntero,
+  luz y movimiento suave. Un solo reloj anima nombre y foto. No hay botones
+  de pausa/reproducción; con movimiento reducido la foto y el nombre son fijos.
 - `js/story-motion.js`: cierre PACA con fotografía real, copy existente,
   enlace de Instagram verificado y capas con respuesta suavizada de 200 ms.
+  Las seis capas PACA del abanico reemplazan el wordmark minúsculo anterior.
+- `css/fonts.css`, `assets/fonts/`: mismas Barlow Condensed y DM Sans, ahora
+  WOFF2 locales con licencias OFL verificadas. No hay peticiones a Google Fonts.
 
 Las URLs de imágenes fallidas se notifican en la página y en consola; no se
 sustituyen por imágenes externas. Los nuevos efectos no requieren cuentas,
@@ -112,14 +130,37 @@ node scripts/qa-paca.cjs
 node scripts/qa-online.mjs
 ```
 
-Con `npm run dev` activo, `node scripts/qa-paca-motion.cjs` comprueba las seis
-secciones a 390/768/1440 px. `node scripts/qa-paca-resilience.cjs` comprueba
-los assets, mouse/touch/teclado, DPR, pérdida de WebGL, pestaña oculta,
-desmontaje/restauración, EN/ES y tema nocturno. Ambas usan Playwright/Edge,
-aceptan `PLAYWRIGHT_MODULE_PATH` y `PACA_DEPLOYMENT_URL`, y guardan capturas
-en la carpeta temporal `paca-motion-qa`. No envían citas. La prueba de
-resiliencia simula intencionalmente una imagen fallida únicamente en su
-última página de pruebas, para verificar que se informa su URL.
+Con el servidor local activo, `node scripts/qa-paca-studio.cjs` (también
+`qa-paca-motion.cjs`) comprueba 390/768/1440 px, extremos del hero, transiciones,
+repetición rápida, reservas por servicio, retrato, EN/ES y tema nocturno.
+`qa-paca-resilience.cjs` prueba sesión/reload, red lenta y límite del loader,
+pestaña oculta, movimiento reducido, ausencia de JS/WebGL, swipe horizontal y
+desmontaje/restauración. Usan Playwright/Edge, aceptan `PLAYWRIGHT_MODULE_PATH`
+y `PACA_DEPLOYMENT_URL` (por defecto el servidor en puerto 4250); las capturas
+se guardan en `dist/qa-studio`. No envían citas reales.
+
+`scripts/prepare-paca-logo.py` documenta el trazado del JPG suministrado con
+Pillow/numpy/vtracer. `scripts/prepare-paca-fonts.mjs` documenta la obtención de
+las fuentes oficiales y licencias. Los resultados están versionados; ninguno
+de estos procesos ni sus dependencias se necesita para compilar/publicar.
+`scripts/compress-paca-fonts.py` comprime sin cambiar los glifos las fuentes
+editoriales Cinzel/Crimson Pro que ya se usaban en PACA; conserva sus OFL.
+
+Verificación local del 25 de noviembre de 2026, Lighthouse 13.6.0, perfil móvil
+simulado y la misma máquina/servidor, comparando el build anterior con el nuevo:
+
+| Métrica | Anterior | Nuevo |
+| --- | ---: | ---: |
+| Performance | 55 | 79 |
+| LCP simulado | 5,29 s | 4,76 s |
+| TBT | 1180 ms | 38 ms |
+| CLS | 0 | 0 |
+
+Son mediciones de laboratorio de una ejecución por versión, no una garantía
+de métricas de campo. Informes locales: `dist/paca-lighthouse-before.json` y
+`dist/paca-lighthouse-optimized.json`. La compresión WOFF2 de las fuentes de
+Artista reduce 371 792 bytes a 133 864 sin cambiar sus glifos. La galería reserva
+su espacio y evita descargar imágenes de respaldo mientras espera al viewport.
 
 Las dos últimas pruebas requieren Playwright y Edge (o `PLAYWRIGHT_MODULE_PATH`
 y `PACA_BROWSER_CHANNEL`). `qa-paca.cjs` usa un servicio simulado explícito para

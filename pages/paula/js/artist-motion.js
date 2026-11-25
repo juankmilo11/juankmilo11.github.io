@@ -6,16 +6,11 @@
     const live=document.createElement('span');live.className='artist-name-live';live.append(...title.childNodes);title.append(live);
     const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');
     svg.classList.add('artist-name-drawing');svg.setAttribute('aria-hidden','true');svg.setAttribute('focusable','false');title.append(svg);
-    const controls=document.createElement('div');controls.className='artist-animation-controls';controls.setAttribute('role','group');
-    const toggle=document.createElement('button'),replay=document.createElement('button');toggle.type=replay.type='button';
-    controls.append(toggle,replay);title.after(controls);
-    let elapsed=0,paused=false,clock,ready=false;
+    const portrait=artist.querySelector('.artist-portrait');
+    const light=document.createElement('span');light.className='portrait-light';light.setAttribute('aria-hidden','true');portrait.append(light);
+    let elapsed=0,clock,ready=false,portraitVisible=false,reveal=0,phase=0,px=0,py=0,x=0,y=0;
     const metric=document.createElement('canvas').getContext('2d');
     const clamp=value=>Math.max(0,Math.min(1,value));
-    function labels(){
-      controls.setAttribute('aria-label',I.t('artistAnimation'));toggle.textContent=I.t(paused?'animationPlay':'animationPause');
-      toggle.setAttribute('aria-pressed',String(paused));replay.textContent=I.t('animationReplay');
-    }
     function sample(){
       if(signal.aborted||!metric)return;
       const box=title.getBoundingClientRect();svg.setAttribute('viewBox',`0 0 ${box.width} ${box.height}`);svg.replaceChildren();
@@ -34,9 +29,19 @@
       ready=true;clock?.request();
     }
     clock=M.section(artist,(now,dt,reduced)=>{
-      controls.hidden=reduced;
-      title.classList.toggle('is-name-playing',!reduced&&!paused&&ready);
-      if(reduced||paused||!ready)return false;
+
+      title.classList.toggle('is-name-playing',!reduced&&ready);
+      if(reduced){portrait.style.transform='none';portrait.style.clipPath='none';light.style.opacity='0';return false;}
+      if(!ready)return false;
+      phase+=dt/1000;
+      x+=(px-x)*(1-Math.exp(-dt/180));y+=(py-y)*(1-Math.exp(-dt/180));
+      if(portraitVisible)reveal=Math.min(1,reveal+dt/1100);
+      const eased=1-Math.pow(1-reveal,3);
+      portrait.style.clipPath=eased>=1?'none':`circle(${eased*76}% at 50% 50%)`;
+      portrait.style.transform=`perspective(900px) rotateX(${-y*7+Math.sin(phase*.7)*1.5}deg) rotateY(${x*8+Math.cos(phase*.65)*2}deg) translateY(${Math.sin(phase*.9)*5}px) scale(${.96+eased*.04})`;
+      light.style.background=`radial-gradient(ellipse at ${50+x*35}% ${45+y*35}%,#fff8,transparent 65%)`;
+      light.style.opacity=String(.25+Math.sin(phase*.8)*.13);
+      artist.querySelector('.artist-seal').style.rotate=`${12+Math.sin(phase*.8)*12}deg`;
       elapsed=(elapsed+dt)%5600;
       const draw=clamp(elapsed/1900),fill=clamp((elapsed-1900)/800),fade=clamp((elapsed-4800)/800);
       svg.style.setProperty('--name-dash',String(600*(1-draw)));
@@ -46,13 +51,16 @@
       artist.dataset.namePhase=elapsed<1900?'draw':elapsed<2700?'fill':elapsed<4800?'hold':'fade';
       return true;
     },signal,.1);
-    toggle.addEventListener('click',()=>{paused=!paused;labels();clock.request();},{signal});
-    replay.addEventListener('click',()=>{elapsed=0;paused=false;labels();clock.request();},{signal});
-    document.addEventListener('paca:language',()=>{labels();sample();},{signal});
+    const portraitObserver=new IntersectionObserver(entries=>{
+      const visible=entries[0].isIntersecting;if(visible&&!portraitVisible)reveal=0;portraitVisible=visible;clock.request();
+    },{threshold:.15});portraitObserver.observe(portrait);
+    portrait.addEventListener('pointermove',event=>{const r=portrait.getBoundingClientRect();px=(event.clientX-r.left)/r.width*2-1;py=(event.clientY-r.top)/r.height*2-1;},{passive:true,signal});
+    portrait.addEventListener('pointerleave',()=>{px=py=0;},{passive:true,signal});
+    document.addEventListener('paca:language',sample,{signal});
     const resize=new ResizeObserver(sample);resize.observe(title);
     const theme=new MutationObserver(sample);theme.observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
     document.fonts.ready.then(()=>{if(!signal.aborted)sample();});
-    labels();sample();
-    return ()=>{resize.disconnect();theme.disconnect();title.classList.remove('is-name-playing');svg.remove();controls.remove();live.replaceWith(...live.childNodes);delete artist.dataset.namePhase;};
+    sample();
+    return ()=>{resize.disconnect();theme.disconnect();title.classList.remove('is-name-playing');svg.remove();light.remove();portraitObserver.disconnect();portrait.style.transform='';portrait.style.clipPath='';live.replaceWith(...live.childNodes);delete artist.dataset.namePhase;};
   });
 })();
