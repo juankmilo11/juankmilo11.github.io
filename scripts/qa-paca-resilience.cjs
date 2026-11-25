@@ -10,6 +10,10 @@ const output=path.join(require('node:os').tmpdir(),'paca-motion-qa');fs.mkdirSyn
  try{
   const page=await browser.newPage({viewport:{width:1440,height:960}});track(page);
   await page.goto(url);await page.locator('.work-card').first().waitFor({state:'attached'});
+  await page.evaluate(()=>{document.querySelector('#hero-title').style.display='none';window.PacaI18n.setLanguage('es');});
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  await page.evaluate(()=>{document.querySelector('#hero-title').style.display='';window.PacaI18n.setLanguage('en');});
+  await page.waitForFunction(()=>document.querySelector('.hero-title-live').getBoundingClientRect().width>0);
   assert.ok(await page.evaluate(async()=>{
    const data=await(await fetch('assets/catalog.json')).json();
    const checks=await Promise.all(data.entries.map(entry=>new Promise(resolve=>{const img=new Image();img.onload=()=>resolve(true);img.onerror=()=>resolve(false);img.src=entry.src;})));

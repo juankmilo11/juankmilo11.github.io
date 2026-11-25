@@ -73,6 +73,11 @@
     function sampleTitle() {
       if (signal.aborted || !ctx || !maskCtx) return;
       const box=title.getBoundingClientRect();
+      // Language/layout updates can briefly measure a hidden title at zero size.
+      // Keep the live heading readable until ResizeObserver supplies its layout.
+      if(box.width<1||box.height<1){
+        ready=false;title.classList.remove('is-stippling');glyphs.hidden=true;live.style.clipPath='';return;
+      }
       glyphs.width=mask.width=dots.width=Math.ceil(box.width); glyphs.height=mask.height=dots.height=Math.ceil(box.height);
       maskCtx.clearRect(0,0,mask.width,mask.height);
       const walker=document.createTreeWalker(live,NodeFilter.SHOW_TEXT);
