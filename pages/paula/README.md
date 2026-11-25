@@ -60,7 +60,10 @@ solicitar una cita; el formulario no envía datos por GET.
   accesibles. Cambiar el idioma conserva datos escritos y selecciones.
 - `js/theme.js`, `css/theme.css`: contraste claro/oscuro de ambas subventanas.
 - `js/experience.js`, `css/experience.css`: progreso de lectura, sección activa,
-  entradas que se repiten al volver a pantalla y tipografía original. La reserva
+  entradas que se repiten al volver a pantalla y tipografía original. Los grupos
+  de títulos/copy esperan 120 ms, un 18% visible y 64 px dentro del viewport;
+  solo se reinician tras salir por completo (margen de 48 px), evitando parpadeo.
+  El foco de teclado y el movimiento reducido muestran el contenido directamente. La reserva
   flotante se oculta en el hero y el cierre para evitar duplicar sus llamadas.
 - `css/motion.css`: navbar flotante, capas de PACA y controles de al menos
   16 px/44 px. Mantiene las fuentes, fotografías y colores existentes.
@@ -69,18 +72,29 @@ solicitar una cita; el formulario no envía datos por GET.
   restaura una sola instancia al volver desde la caché de navegación.
 - `index.html`: loader crítico con el logo real vectorizado en
   `assets/logo-paca.svg`, símbolo y wordmark separados, fondo muestreado
-  `#e5c2ea`, trazado/relleno y salida en 2,6 s (límite 3 s). Se muestra una
-  vez por sesión; se omite en anclas, sin JS, con movimiento reducido y al
-  ocultar la pestaña. Tab/Escape lo descartan sin atrapar el foco.
+  `#e5c2ea`, trazado/relleno y salida en 2,6 s (límite 3 s). Se muestra en cada
+  carga/recarga completa, incluso con anclas; no usa sessionStorage para omitirlo.
+  Se omite sin JS, con movimiento reducido y al ocultar la pestaña.
+  Tab/Escape lo descartan sin atrapar el foco; un cambio de ancla no lo reinicia.
 - `js/hero-motion.js`: escena sticky de 100svh dentro de 260svh, texto SVG
-  sobre el sendero especificado y foto real con zoom/parallax. Solo responde
-  al scroll (suavizado 140 ms), se detiene al estabilizarse y es reversible.
-  No usa WebGL ni animación de entrada. El H1 permanece vivo y seleccionable.
+  sobre el sendero especificado: la cinta se mueve automáticamente mientras
+  está visible; solo el zoom/parallax de la foto responde al scroll. El H1
+  revela sus glifos por puntos fijos que crecen hasta el sólido, una vez al
+  entrar al 15% del viewport y después de retirarse el loader. En touch se usa
+  recorte diagonal; con movimiento reducido el título aparece completo y la
+  cinta queda fija. El texto real sigue siendo seleccionable y accesible.
 - `js/catalog-motion.js`: Three.js local con licencia MIT, cámara ortográfica,
-  siete texturas como máximo y snap a los 160 ms. Drag/touch horizontal,
-  rueda horizontal y flechas controlan el índice; la rueda vertical sigue
-  desplazando la página. La geometría se aplana al detenerse. DPR máximo 1,5.
-  Sin WebGL, al perder contexto o con movimiento reducido se muestra la lista.
+  flujo vertical y plano 12×32. Conserva N, orden, src y alt del catálogo.
+  Cámara (20,12.1,16.6) hacia (-7,-2.1,1.3), frustum 10.8/12.5 ajustado a las
+  proporciones reales; pista (4.3,2.1,5.1) con Euler XYZ (-.0215,2.2884,.2884).
+  Se usa el pivote y las tres correcciones de rotación solicitadas, U volteada
+  una vez y color sRGB. Cull 3.2, siete texturas como máximo, DPR máximo 1,5.
+  Rueda/drag/touch vertical y flechas arriba/abajo; Home reinicia al primero.
+  Damping .047 normalizado a 60Hz, dt máximo .05 s y snap a los 160 ms.
+  La flexión usa la velocidad real y es exactamente cero en reposo.
+  Sin botones, contadores, títulos visibles ni acciones de clic/Enter.
+  Con movimiento reducido se conserva la navegación explícita instantánea;
+  solo sin WebGL o al perder contexto se muestra la lista completa con sus alt.
 - `js/services-motion.js`: cuatro pósteres con contenido real y transición
   local de tres fases de 600 ms. Anterior/Siguiente, puntos, teclado y swipe;
   sin autoplay. Un nuevo clic asienta el destino anterior antes de empezar.
@@ -90,7 +104,9 @@ solicitar una cita; el formulario no envía datos por GET.
 - `js/artist-motion.js`: nombre real de Paula en las fuentes actuales,
   dibujado/relleno/espera/desvanecido en 5,6 s, continuo mientras es visible.
   El retrato tiene revelado circular, profundidad, inclinación por puntero,
-  luz y movimiento suave. Un solo reloj anima nombre y foto. No hay botones
+  luz y movimiento suave. La entrada observa el contenedor estable, no el
+  retrato recortado, para que no pueda quedar invisible en escritorio.
+  Un solo reloj anima nombre y foto. No hay botones
   de pausa/reproducción; con movimiento reducido la foto y el nombre son fijos.
 - `js/story-motion.js`: cierre PACA con fotografía real, copy existente,
   enlace de Instagram verificado y capas con respuesta suavizada de 200 ms.
@@ -101,7 +117,8 @@ solicitar una cita; el formulario no envía datos por GET.
 Las URLs de imágenes fallidas se notifican en la página y en consola; no se
 sustituyen por imágenes externas. Los nuevos efectos no requieren cuentas,
 CDN de JavaScript ni fuentes adicionales. Con movimiento reducido quedan
-visibles los textos finales y no se carga Three.js.
+visibles los textos finales; la galería sigue siendo navegable sin suavizado
+ni flexión y solo inicializa Three.js al entrar en pantalla.
 
 ## Disponibilidad
 
@@ -133,11 +150,16 @@ node scripts/qa-online.mjs
 Con el servidor local activo, `node scripts/qa-paca-studio.cjs` (también
 `qa-paca-motion.cjs`) comprueba 390/768/1440 px, extremos del hero, transiciones,
 repetición rápida, reservas por servicio, retrato, EN/ES y tema nocturno.
-`qa-paca-resilience.cjs` prueba sesión/reload, red lenta y límite del loader,
-pestaña oculta, movimiento reducido, ausencia de JS/WebGL, swipe horizontal y
+`qa-paca-resilience.cjs` prueba recargas normales/con anclas, red lenta y límite
+del loader, pestaña oculta, movimiento reducido, ausencia de JS/WebGL, swipe vertical y
 desmontaje/restauración. Usan Playwright/Edge, aceptan `PLAYWRIGHT_MODULE_PATH`
 y `PACA_DEPLOYMENT_URL` (por defecto el servidor en puerto 4250); las capturas
 se guardan en `dist/qa-studio`. No envían citas reales.
+`qa-paca-gallery.cjs` comprueba el retrato de PC desde una carga nueva,
+rueda/drag, reposo sin flexión, no acción de clic/Enter, scroll fuera del canvas,
+los 35 alt en su orden, navegación reducida y pérdida de contexto.
+`qa-paca-headings.cjs` comprueba entrada retrasada, estabilidad en el borde,
+repetición tras salir del viewport y accesibilidad de teclado/movimiento reducido.
 
 `scripts/prepare-paca-logo.py` documenta el trazado del JPG suministrado con
 Pillow/numpy/vtracer. `scripts/prepare-paca-fonts.mjs` documenta la obtención de
@@ -146,7 +168,8 @@ de estos procesos ni sus dependencias se necesita para compilar/publicar.
 `scripts/compress-paca-fonts.py` comprime sin cambiar los glifos las fuentes
 editoriales Cinzel/Crimson Pro que ya se usaban en PACA; conserva sus OFL.
 
-Verificación local del 25 de noviembre de 2026, Lighthouse 13.6.0, perfil móvil
+Verificación histórica del commit `74eaeab`, 25 de noviembre de 2026,
+Lighthouse 13.6.0, perfil móvil
 simulado y la misma máquina/servidor, comparando el build anterior con el nuevo:
 
 | Métrica | Anterior | Nuevo |

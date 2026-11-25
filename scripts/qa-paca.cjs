@@ -66,10 +66,10 @@ async function settleAnimations(page, selector) {
     }
     await page.locator('[data-filter="all"]').click();
     await page.emulateMedia({reducedMotion:'reduce'});
-    const originalCard=await page.locator('.work-card').first().elementHandle();
-    await page.locator('#catalog-more').click();
-    assert.equal(await page.locator('.work-card').count(),18);
-    assert.ok(await originalCard.evaluate(card=>card===document.querySelector('.work-card')));
+    await page.waitForFunction(()=>document.querySelector('#catalogo').dataset.galleryState==='ready');
+    assert.equal(await page.evaluate(()=>window.PacaCatalog.entries.length),35);
+    await page.locator('.catalog-stream').focus();await page.locator('.catalog-stream').press('Home');await page.locator('.catalog-stream').press('ArrowDown');
+    assert.equal(await page.locator('.catalog-stream').getAttribute('data-index'),'1');
     await page.emulateMedia({reducedMotion:'no-preference'});
     await page.locator('#artist-title').scrollIntoViewIfNeeded();
     await page.waitForFunction(()=>document.querySelector('#paula').dataset.motionRunning==='true');

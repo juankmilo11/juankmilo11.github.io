@@ -8,7 +8,7 @@
     svg.classList.add('artist-name-drawing');svg.setAttribute('aria-hidden','true');svg.setAttribute('focusable','false');title.append(svg);
     const portrait=artist.querySelector('.artist-portrait');
     const light=document.createElement('span');light.className='portrait-light';light.setAttribute('aria-hidden','true');portrait.append(light);
-    let elapsed=0,clock,ready=false,portraitVisible=false,reveal=0,phase=0,px=0,py=0,x=0,y=0;
+    let elapsed=0,clock,ready=false,portraitVisible=false,reveal=1,phase=0,px=0,py=0,x=0,y=0;
     const metric=document.createElement('canvas').getContext('2d');
     const clamp=value=>Math.max(0,Math.min(1,value));
     function sample(){
@@ -53,7 +53,7 @@
     },signal,.1);
     const portraitObserver=new IntersectionObserver(entries=>{
       const visible=entries[0].isIntersecting;if(visible&&!portraitVisible)reveal=0;portraitVisible=visible;clock.request();
-    },{threshold:.15});portraitObserver.observe(portrait);
+    },{threshold:.15});portraitObserver.observe(portrait.parentElement);
     portrait.addEventListener('pointermove',event=>{const r=portrait.getBoundingClientRect();px=(event.clientX-r.left)/r.width*2-1;py=(event.clientY-r.top)/r.height*2-1;},{passive:true,signal});
     portrait.addEventListener('pointerleave',()=>{px=py=0;},{passive:true,signal});
     document.addEventListener('paca:language',sample,{signal});

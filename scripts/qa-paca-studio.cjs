@@ -10,11 +10,16 @@ const output=path.resolve('dist/qa-studio');fs.mkdirSync(output,{recursive:true}
   await intro.goto(url,{waitUntil:'domcontentloaded'});
   await intro.screenshot({path:path.join(output,'loader-390.png')});
   await intro.locator('#paca-intro').waitFor({state:'detached',timeout:3200});
-  await intro.reload({waitUntil:'domcontentloaded'});assert.equal(await intro.locator('#paca-intro').count(),0,'Reload skips loader');await intro.close();
+  await intro.reload({waitUntil:'domcontentloaded'});assert.equal(await intro.locator('#paca-intro').count(),1,'Reload shows the logo again');await intro.close();
   for(const width of [390,768,1440]){
    const page=await browser.newPage({viewport:{width,height:960}});page.on('pageerror',e=>errors.push(e.message));
    await page.addInitScript(()=>sessionStorage.setItem('paca-intro-seen','1'));
    await page.goto(url);await page.evaluate(()=>document.fonts.ready);
+   await page.locator('#paca-intro').waitFor({state:'detached',timeout:3200});
+   if(width>768){await page.waitForFunction(()=>document.querySelector('#inicio').dataset.titleReveal==='running');await page.screenshot({path:path.join(output,`hero-stipple-${width}.png`)});}
+   await page.waitForFunction(()=>document.querySelector('#inicio').dataset.titleReveal==='complete');
+   const ribbon=await page.locator('#inicio').getAttribute('data-ribbon-offset');
+   await page.waitForFunction(value=>document.querySelector('#inicio').dataset.ribbonOffset!==value,ribbon);
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'No overflow '+width);
    assert.equal(await page.locator('.artist-animation-controls').count(),0);
    assert.equal(await page.locator('#servicios .services-fan').count(),0);
@@ -29,10 +34,12 @@ const output=path.resolve('dist/qa-studio');fs.mkdirSync(output,{recursive:true}
    await page.locator('.circle-link').click();
    await page.waitForFunction(()=>document.querySelector('#catalogo').dataset.galleryState==='ready');
    await page.locator('.catalog-stream').scrollIntoViewIfNeeded();
-   const stream=page.locator('.catalog-stream');await stream.focus();await stream.press('ArrowRight');
+   const stream=page.locator('.catalog-stream');await stream.focus();await stream.press('ArrowDown');
    await page.waitForFunction(()=>document.querySelector('.catalog-stream').dataset.index==='1');
-   await page.waitForFunction(()=>document.querySelector('#catalogo').dataset.motionRunning==='false');
+   await page.waitForFunction(()=>Number(document.querySelector('.catalog-stream').dataset.phase)===1&&document.querySelector('#catalogo').dataset.motionRunning==='false');
    await page.screenshot({path:path.join(output,`catalog-${width}.png`)});
+   assert.equal(await page.locator('.stream-controls').count(),0);
+   const before=await stream.getAttribute('data-index');await stream.press('Enter');await stream.click();assert.equal(await stream.getAttribute('data-index'),before);assert.ok(await page.locator('#work-dialog').isHidden());
    await page.locator('.masthead nav a[href="#servicios"]').click();
    await page.locator('.service.is-active').scrollIntoViewIfNeeded();
    await page.screenshot({path:path.join(output,`service-${width}.png`)});
@@ -68,7 +75,7 @@ const output=path.resolve('dist/qa-studio');fs.mkdirSync(output,{recursive:true}
    await page.locator('.paca-story').scrollIntoViewIfNeeded();
    await page.screenshot({path:path.join(output,`footer-${width}.png`)});
    await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await page.locator('.artist-portrait').evaluate(el=>getComputedStyle(el).transform),'none');
-   await page.close();console.log('OK '+width+'px: hero endpoints, horizontal catalog, posters, booking service, EN/ES, night, portrait and footer.');
+   await page.close();console.log('OK '+width+'px: automatic ribbon, title reveal, vertical gallery, posters, booking service, EN/ES, night, visible portrait and footer.');
   }
   assert.deepEqual(errors,[]);console.log('Screenshots: '+output);
  }finally{await browser.close();}

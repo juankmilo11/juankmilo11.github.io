@@ -43,9 +43,42 @@
   const dialog = $('#work-dialog'), media = $('#work-media');
   const grid = $('#catalog-grid'), more = $('#catalog-more');
   let entries = [], filtered = [], limit = 9, category = 'all', activeIndex = 0, opener = null, loadFailed = false, pendingBooking = null;
-  const reveals = 'IntersectionObserver' in window ? new IntersectionObserver(records => records.forEach(record => {
-    record.target.classList.toggle('is-revealed',record.isIntersecting);
-  }),{threshold:.08}) : null;
+  const reveals = 'IntersectionObserver' in window ? (()=>{
+    const targets=new Map();
+    const cancel=state=>{clearTimeout(state.timer);state.timer=0;};
+    function enter(node,state){
+      if(state.shown||state.timer||document.hidden)return;
+      state.timer=setTimeout(()=>{
+        state.timer=0;const box=node.getBoundingClientRect();
+        const visible=Math.max(0,Math.min(box.bottom,innerHeight-64)-Math.max(0,box.top));
+        if(node.isConnected&&!document.hidden&&visible/Math.max(1,box.height)>=.16){state.shown=true;node.classList.add('is-revealed');}
+      },120);
+    }
+    const entrance=new IntersectionObserver(records=>records.forEach(record=>{
+      const state=targets.get(record.target);if(!state)return;
+      if(record.isIntersecting&&record.intersectionRatio>=.18)enter(record.target,state);
+      else if(!state.shown)cancel(state);
+    }),{threshold:[0,.18],rootMargin:'0px 0px -64px 0px'});
+    // Reset only after completely leaving an expanded viewport. The buffer is
+    // larger than the 18px reveal transform, so the animation cannot retrigger itself.
+    const exit=new IntersectionObserver(records=>records.forEach(record=>{
+      const state=targets.get(record.target);if(!state||record.isIntersecting)return;
+      cancel(state);state.shown=false;record.target.classList.remove('is-revealed');record.target.style.animation='';
+    }),{rootMargin:'48px 0px 48px 0px'});
+    document.addEventListener('focusin',event=>{
+      const node=event.target.closest('.reveal'),state=targets.get(node);
+      if(state){cancel(state);state.shown=true;node.style.animation='none';node.classList.add('is-revealed');}
+    });
+    document.addEventListener('visibilitychange',()=>targets.forEach((state,node)=>{
+      if(document.hidden)cancel(state);else enter(node,state);
+    }));
+    addEventListener('pagehide',()=>{targets.forEach(cancel);entrance.disconnect();exit.disconnect();});
+    addEventListener('pageshow',event=>{if(event.persisted)targets.forEach((state,node)=>{entrance.observe(node);exit.observe(node);});});
+    return {
+      observe(node){targets.set(node,{shown:node.classList.contains('is-revealed'),timer:0});entrance.observe(node);exit.observe(node);},
+      unobserve(node){const state=targets.get(node);if(state)cancel(state);targets.delete(node);entrance.unobserve(node);exit.unobserve(node);}
+    };
+  })() : null;
   function reveal(element){if(reveals){element.classList.add('reveal');reveals.observe(element);}}
   document.querySelectorAll('.section-heading,.artist-copy,.faq>div:first-child').forEach(reveal);
   function curatedOrder(all) {

@@ -11,7 +11,9 @@ const url=process.env.PACA_DEPLOYMENT_URL||'http://127.0.0.1:4250/pages/paula/';
    const box=await page.locator('#paca-intro svg').boundingBox();
    if(box){assert.ok(box.x>=0&&box.y>=0&&box.x+box.width<=width+1&&box.y+box.height<=844);}
    await page.locator('#paca-intro').waitFor({state:'detached',timeout:3200});
-   await page.reload({waitUntil:'domcontentloaded'});assert.equal(await page.locator('#paca-intro').count(),0);
+   await page.reload({waitUntil:'domcontentloaded'});assert.equal(await page.locator('#paca-intro').count(),1);
+   await page.locator('#paca-intro').waitFor({state:'detached',timeout:3200});
+   await page.evaluate(()=>location.hash='paula');await page.reload({waitUntil:'domcontentloaded'});assert.equal(await page.locator('#paca-intro').count(),1,'Deep-link reload also shows the logo');
    await page.close();
   }
   const slow=await browser.newPage();watch(slow);
@@ -32,18 +34,23 @@ const url=process.env.PACA_DEPLOYMENT_URL||'http://127.0.0.1:4250/pages/paula/';
   const noGL=await browser.newPage();watch(noGL);await noGL.addInitScript(()=>{sessionStorage.setItem('paca-intro-seen','1');const get=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(type,...args){return /webgl/.test(type)?null:get.call(this,type,...args);};});
   await noGL.goto(url);await noGL.locator('#catalogo').scrollIntoViewIfNeeded();
   await noGL.waitForFunction(()=>document.querySelector('#catalogo').dataset.galleryState==='fallback');
-  await noGL.locator('.work-open').first().click();assert.ok(await noGL.locator('#work-dialog').isHidden());await noGL.close();
+  assert.equal(await noGL.locator('.catalog-fallback img').count(),35);
+  const fallback=await noGL.locator('.catalog-fallback img').evaluateAll(images=>images.map(img=>({src:img.getAttribute('src'),alt:img.alt})));
+  const expected=await noGL.evaluate(()=>window.PacaCatalog.entries.map(entry=>({src:entry.src,alt:entry.alt})));
+  assert.deepEqual(fallback,expected);await noGL.close();
   const context=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true,deviceScaleFactor:3});
   const touch=await context.newPage();watch(touch);await touch.addInitScript(()=>sessionStorage.setItem('paca-intro-seen','1'));await touch.goto(url);
+  await touch.locator('#paca-intro').waitFor({state:'detached',timeout:3200});
   await touch.locator('#catalogo').scrollIntoViewIfNeeded();await touch.waitForFunction(()=>document.querySelector('#catalogo').dataset.galleryState==='ready');await touch.locator('.catalog-stream').scrollIntoViewIfNeeded();
+  assert.ok(await touch.locator('.catalog-stream canvas').evaluate(canvas=>canvas.width<=canvas.clientWidth*1.5+1),'Gallery DPR stays capped on a DPR 3 touch device');
   const client=await context.newCDPSession(touch);
-  async function swipe(selector){
+  async function swipe(selector,vertical=false){
    const r=await touch.locator(selector).boundingBox(),y=Math.min(600,Math.max(220,r.y+r.height*.35)),x=r.x+r.width*.8;
    await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});
-   for(let i=1;i<=8;i++)await client.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x-i*26,y}]});
+   for(let i=1;i<=8;i++)await client.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:vertical?x:x-i*26,y:vertical?y-i*20:y}]});
    await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   }
-  await swipe('.catalog-stream');await touch.waitForFunction(()=>Number(document.querySelector('.catalog-stream').dataset.index)>0);
+  await swipe('.catalog-stream',true);await touch.waitForFunction(()=>Number(document.querySelector('.catalog-stream').dataset.index)>0);
   await touch.locator('.service.is-active').scrollIntoViewIfNeeded();await swipe('.service-list');
   await touch.waitForFunction(()=>document.querySelector('#servicios').dataset.serviceIndex==='1');
   await touch.waitForFunction(()=>document.querySelector('#servicios').dataset.transitioning==='false');
@@ -52,6 +59,6 @@ const url=process.env.PACA_DEPLOYMENT_URL||'http://127.0.0.1:4250/pages/paula/';
   await touch.evaluate(()=>dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true})));
   assert.equal(await touch.locator('.poster-controls').count(),1);assert.equal(await touch.locator('.portrait-light').count(),1);
   await context.close();assert.deepEqual(errors,[]);
-  console.log('OK: loader centering/session/3s/hidden/reduced, no-JS, WebGL fallback, horizontal touch swipes and lifecycle cleanup.');
+  console.log('OK: loader on reload/deep links/3s/hidden/reduced, no-JS, exact WebGL fallback list, vertical gallery swipe, services swipe and lifecycle cleanup.');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
