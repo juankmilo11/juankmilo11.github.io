@@ -260,6 +260,10 @@
     "Yes! Upload an inspiration design photo with every request, even if you selected a catalog reference. Tell Paula what you love and what you would change.": "¡Sí! Adjunta una foto del diseño de inspiración en cada solicitud, incluso si seleccionaste una referencia del catálogo. Cuéntale a Paula qué te gusta y qué cambiarías."
   },
   "en": {
+    "artistAnimation": "Paula Daniela name animation",
+    "animationPause": "Pause animation",
+    "animationPlay": "Play animation",
+    "animationReplay": "Replay animation",
     "gallerySelect": "Select {title}",
     "galleryLabel": "PACA collection, visual navigation",
     "galleryHelp": "Scroll, drag or use arrow keys. Home and End jump to the first and last work. Click and Enter do not open anything.",
@@ -349,6 +353,10 @@
     "slotConflict": "That time is no longer available. Edit your details and choose another date and time."
   },
   "es": {
+    "artistAnimation": "Animación del nombre Paula Daniela",
+    "animationPause": "Pausar animación",
+    "animationPlay": "Reproducir animación",
+    "animationReplay": "Repetir animación",
     "gallerySelect": "Seleccionar {title}",
     "galleryLabel": "Colección PACA, navegación visual",
     "galleryHelp": "Desplázate, arrastra o usa las flechas. Inicio y Fin llevan a la primera y última obra. Clic y Enter no abren nada.",

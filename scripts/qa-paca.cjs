@@ -55,7 +55,7 @@ async function settleAnimations(page, selector) {
     await page.route('**/shared/api.js*',route=>route.fulfill({contentType:'text/javascript',body:fixture}));
     await page.route('**/shared/api-config.js*',route=>route.fulfill({contentType:'text/javascript',body:'/* Browser QA configuration */'}));
     await page.goto(url);
-    await page.locator('.work-card').first().waitFor();
+    await page.locator('.work-card').first().waitFor({state:'attached'});
     assert.equal(await page.locator('.service[open]').count(),0);
     assert.equal(await page.locator('.hero-tabs small').count(),0);
     assert.equal(await page.locator('#motion-toggle,#catalog-search,#total-count,.service-number,#booking-copy,#booking-instagram').count(),0);
@@ -64,20 +64,20 @@ async function settleAnimations(page, selector) {
       const filter=page.locator('[data-filter="'+category+'"]');assert.doesNotMatch(await filter.innerText(),/\d/);await filter.click();assert.ok(await page.locator('.work-card').count()>0);
     }
     await page.locator('[data-filter="all"]').click();
+    await page.emulateMedia({reducedMotion:'reduce'});
     const originalCard=await page.locator('.work-card').first().elementHandle();
     await page.locator('#catalog-more').click();
     assert.equal(await page.locator('.work-card').count(),18);
     assert.ok(await originalCard.evaluate(card=>card===document.querySelector('.work-card')));
-    await page.locator('.artist-portrait').scrollIntoViewIfNeeded();
-    await page.waitForFunction(()=>getComputedStyle(document.querySelector('.artist-portrait img')).animationPlayState==='running');
-    const portraitTime=await page.locator('.artist-portrait img').evaluate(el=>el.getAnimations()[0].currentTime);
-    await page.waitForFunction(time=>document.querySelector('.artist-portrait img').getAnimations()[0].currentTime>time+100,portraitTime);
+    await page.emulateMedia({reducedMotion:'no-preference'});
+    await page.locator('#artist-title').scrollIntoViewIfNeeded();
+    await page.waitForFunction(()=>document.querySelector('#paula').dataset.motionRunning==='true');
     await page.screenshot({path:path.join(output,'artist-motion.png')});
     await page.emulateMedia({reducedMotion:'reduce'});
     assert.equal(await page.locator('.artist-portrait img').evaluate(el=>getComputedStyle(el).animationName),'none');
     await page.emulateMedia({reducedMotion:'no-preference'});
     await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));
-    await page.waitForFunction(()=>getComputedStyle(document.querySelector('.artist-portrait img')).animationPlayState==='paused');
+    await page.waitForFunction(()=>document.querySelector('#paula').dataset.motionRunning==='false');
     await page.locator('.nav-book').click();
     await page.locator('#booking-dialog').waitFor();
     const form=page.locator('#booking-form');

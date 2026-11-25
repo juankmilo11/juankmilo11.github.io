@@ -266,7 +266,7 @@ try {
   const updated=(await (await fetch(origin+'/api/availability')).json());assert.ok(updated.closedDates.includes(date));assert.equal(updated.estimates.fullSet.maxMinutes,135);
   assert.equal((await fetch(origin+'/api/appointments',{method:'POST',headers:{'Idempotency-Key':crypto.randomUUID()},body:submissionForm(overlapPayload)})).status,409,'Saved closure rejects real submissions');
   const catalog=await browser.newPage();await catalog.goto(paca);
-  await catalog.locator('.work-card .service-estimate').first().waitFor();
+  await catalog.locator('.work-card .service-estimate').first().waitFor({state:'attached'});
   assert.match(await catalog.locator('.work-card .service-estimate').first().innerText(),/USD/);
   await catalog.locator('.nav-book').click();await catalog.locator('#booking-form [name="service"]').selectOption('nails');
   await catalog.locator('#booking-form [name="nailType"]').selectOption('fullSet');await catalog.locator('#booking-form [name="removal"]').selectOption('no');

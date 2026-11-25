@@ -44,18 +44,6 @@ window.PacaMotion.mount(signal => {
   addEventListener('resize', measure, { signal });
   measure();
 
-  // Animate only the visible portrait; no per-frame JavaScript or layout reads.
-  const portrait=document.querySelector('.artist-portrait');
-  let portraitObserver;
-  if(portrait && 'IntersectionObserver' in window){
-    const reduced=matchMedia('(prefers-reduced-motion: reduce)');
-    let visible=false;
-    const sync=()=>portrait.classList.toggle('is-animated',visible&&!document.hidden&&!reduced.matches);
-    portraitObserver=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;sync();},{threshold:0.15});
-    portraitObserver.observe(portrait);
-    document.addEventListener('visibilitychange',sync,{signal});
-    reduced.addEventListener('change',sync,{signal});
-  }
   const ticker=document.querySelector('.ticker');
   let tickerVisible=false;
   const syncTicker=()=>{ticker.querySelector('.ticker-track').style.animationPlayState=tickerVisible&&!document.hidden&&!window.PacaMotion.reduced.matches?'running':'paused';};
@@ -63,5 +51,5 @@ window.PacaMotion.mount(signal => {
   tickerObserver.observe(ticker);
   document.addEventListener('visibilitychange',syncTicker,{signal});
   window.PacaMotion.reduced.addEventListener('change',syncTicker,{signal});
-  return ()=>{resize?.disconnect();portraitObserver?.disconnect();tickerObserver.disconnect();cancelAnimationFrame(frame);portrait?.classList.remove('is-animated');};
+  return ()=>{resize?.disconnect();tickerObserver.disconnect();cancelAnimationFrame(frame);};
 });

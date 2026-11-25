@@ -18,7 +18,7 @@ const output = path.join(require('node:os').tmpdir(), 'paca-deployment-qa');
       page.on('pageerror', error => errors.push(error.message));
       page.on('response', response => { if (response.status() >= 400 && response.url().startsWith(url)) failures.push(response.status() + ' ' + response.url()); });
       assert.equal((await page.goto(url)).status(), 200);
-      await page.locator('.work-card').first().waitFor();
+      await page.locator('.work-card').first().waitFor({state:'attached'});
       const live = await page.evaluate(async () => ({ config: await window.ProjectAPI.availability(), lang: document.documentElement.lang }));
       assert.equal(live.config.timeZone, 'America/New_York');
       assert.ok(Array.isArray(live.config.blocked));

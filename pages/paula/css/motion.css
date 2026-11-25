@@ -61,3 +61,14 @@
 .services{overflow:clip}
 .services .light-button{font-size:16px;min-height:44px}
 @media(max-width:600px){.services-fan{margin-top:30px;margin-bottom:22px}}
+.artist-heading h2{position:relative}
+.artist-name-live{display:block}
+.artist-name-drawing{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;display:none}
+.artist-name-drawing text{fill:currentColor;fill-opacity:var(--name-fill,0);stroke:currentColor;stroke-width:1.25px;stroke-opacity:var(--name-stroke,1);stroke-dasharray:600;stroke-dashoffset:var(--name-dash,600);stroke-linecap:round;stroke-linejoin:round;paint-order:stroke fill}
+.is-name-playing .artist-name-live{opacity:0}
+.is-name-playing .artist-name-drawing{display:block}
+.artist-animation-controls{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:24px}
+.artist-animation-controls button{font-size:16px;min-height:44px;padding:10px 16px;border:1px solid var(--line);border-radius:16px;color:var(--ink);background:transparent}
+.artist-animation-controls button:hover{background:var(--pink)}
+.artist-portrait img,.artist-seal{animation:none!important;transform:none}
+@media(prefers-reduced-motion:reduce){.artist-name-live{opacity:1!important}.artist-name-drawing,.artist-animation-controls{display:none!important}}
