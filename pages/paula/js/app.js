@@ -21,6 +21,7 @@
     if (button.dataset.hero === heroKey) { heroRequest++; return; }
     const key = button.dataset.hero, request = ++heroRequest;
     const image = new Image();
+    image.onerror = () => window.PacaMotion?.reportAsset(image.src);
     image.onload = () => {
       if (request !== heroRequest) return;
       heroKey=key;

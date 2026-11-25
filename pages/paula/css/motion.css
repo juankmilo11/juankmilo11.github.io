@@ -33,3 +33,12 @@
  .masthead nav a{padding:8px;font-size:16px}
 }
 @media(prefers-reduced-motion:reduce){.masthead *{transition:none!important}}
+.hero-liquid{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.hero-photo::after{z-index:1;pointer-events:none}
+.hero-star{animation:none}
+.hero-title-live{display:block}
+.hero-stipple{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.hero h1.is-stippling .hero-title-live{opacity:0}
+.hero-tabs button{min-width:44px;min-height:44px}
+.asset-error{padding:16px var(--pad);overflow-wrap:anywhere;font-size:16px}
+@media(prefers-reduced-motion:reduce){.hero-stipple,.hero-liquid{display:none}.hero h1 .hero-title-live{opacity:1;clip-path:none!important}}

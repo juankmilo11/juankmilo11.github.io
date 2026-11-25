@@ -18,6 +18,14 @@ fs.mkdirSync(output,{recursive:true});
    assert.ok(layout.scroll<=width+1,JSON.stringify(layout));
    for(const item of layout.nav){assert.notEqual(item.display,'none',item.text);assert.ok(item.h>=44&&item.w>=44,JSON.stringify(item));}
    await page.screenshot({path:path.join(output,`hero-${width}.png`)});
+   await page.waitForFunction(()=>!document.querySelector('#hero-title').classList.contains('is-stippling'));
+   assert.match(await page.locator('#hero-title').innerText(),/THE ART/);
+   await page.locator('[data-hero="tattoo"]').click();
+   await page.waitForFunction(()=>document.querySelector('#hero-image').src.includes('hero-tattoo'));
+   await page.emulateMedia({reducedMotion:'reduce'});
+   assert.ok(await page.locator('.hero-liquid').isHidden());
+   assert.equal(await page.locator('.hero-title-live').evaluate(el=>getComputedStyle(el).opacity),'1');
+   await page.emulateMedia({reducedMotion:'no-preference'});
    await page.locator('.masthead nav a[href="#servicios"]').click();
    await page.waitForFunction(()=>document.querySelector('.masthead nav a[href="#servicios"]').getAttribute('aria-current')==='location');
    await page.locator('.nav-book').click();assert.ok(await page.locator('#booking-dialog').isVisible());
