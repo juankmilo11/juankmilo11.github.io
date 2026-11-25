@@ -55,3 +55,9 @@
 .catalog .work-overlay,.catalog .work-arrow{display:none}
 .catalog .work-open[aria-pressed=true]{outline:3px solid var(--accent);outline-offset:5px}
 @media(prefers-reduced-motion:reduce){.catalog-stream,.stream-controls{display:none!important}.catalog #catalog-grid{display:grid!important}.catalog #catalog-more:not([hidden]){display:inline-flex!important}}
+.services-fan{position:relative;width:100%;max-width:1000px;height:clamp(170px,31vw,350px);margin:55px auto 45px;isolation:isolate}
+.services-fan svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;transform-origin:50% 90%}
+.services-fan text{font-family:var(--display);font-size:340px;font-weight:800;letter-spacing:-.035em}
+.services{overflow:clip}
+.services .light-button{font-size:16px;min-height:44px}
+@media(max-width:600px){.services-fan{margin-top:30px;margin-bottom:22px}}
