@@ -5,10 +5,26 @@
   let frame = 0;
   let scrollRange = 0;
   let scrolled = false;
+  const events = new AbortController();
+  const links = [...masthead.querySelectorAll('nav a')];
+  const sections = links.map(link => document.querySelector(link.hash));
+  function updateActive() {
+    const edge = masthead.getBoundingClientRect().bottom + 100;
+    let active = null;
+    sections.forEach((section, index) => {
+      const box = section.getBoundingClientRect();
+      if (box.top <= edge && box.bottom > edge) active = links[index];
+    });
+    links.forEach(link => {
+      if (link === active) link.setAttribute('aria-current', 'location');
+      else link.removeAttribute('aria-current');
+    });
+  }
 
   function updateScroll() {
     frame = 0;
     root.style.setProperty('--reading-progress', scrollRange > 0 ? Math.min(1, scrollY / scrollRange) : 0);
+    updateActive();
     const next = scrollY > 12;
     if (next !== scrolled) {
       scrolled = next;
@@ -23,9 +39,11 @@
     schedule();
   }
   // Measure when content changes; scrolling only updates a transform.
-  if ('ResizeObserver' in window) new ResizeObserver(measure).observe(document.body);
-  addEventListener('scroll', schedule, { passive: true });
-  addEventListener('resize', measure);
+  const resize = 'ResizeObserver' in window ? new ResizeObserver(measure) : null;
+  resize?.observe(document.body);
+  addEventListener('scroll', schedule, { passive: true, signal: events.signal });
+  addEventListener('resize', measure, { signal: events.signal });
+  addEventListener('pagehide', () => { events.abort(); resize?.disconnect(); cancelAnimationFrame(frame); }, { once: true });
   measure();
 
   // Animate only the visible portrait; no per-frame JavaScript or layout reads.
