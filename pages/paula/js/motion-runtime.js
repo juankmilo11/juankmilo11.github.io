@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const factories = [], cleanups = [];
+  const factories = [], cleanups = [], failedAssets = new Set();
   let mounted = true;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   function mount(factory) {
@@ -44,6 +44,8 @@
     return {request, get visible() { return visible; }};
   }
   function reportAsset(url) {
+    if(failedAssets.has(url))return;
+    failedAssets.add(url);
     console.error('PACA asset failed: ' + url);
     document.dispatchEvent(new CustomEvent('paca:asset-error', {detail:{url}}));
     const message = document.createElement('p');
@@ -54,4 +56,9 @@
   addEventListener('pagehide', () => { mounted = false; cleanups.splice(0).reverse().forEach(dispose => dispose()); });
   addEventListener('pageshow', event => { if (event.persisted && !mounted) { mounted = true; factories.forEach(start); } });
   window.PacaMotion = {mount, section, reduced, reportAsset};
+  mount(signal=>{
+    document.addEventListener('error',event=>{
+      if(event.target instanceof HTMLImageElement)reportAsset(event.target.currentSrc||event.target.src);
+    },{capture:true,signal});
+  });
 })();

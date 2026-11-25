@@ -51,5 +51,5 @@ window.PacaMotion.mount(signal => {
   tickerObserver.observe(ticker);
   document.addEventListener('visibilitychange',syncTicker,{signal});
   window.PacaMotion.reduced.addEventListener('change',syncTicker,{signal});
-  return ()=>{resize?.disconnect();tickerObserver.disconnect();cancelAnimationFrame(frame);};
+  return ()=>{resize?.disconnect();tickerObserver.disconnect();cancelAnimationFrame(frame);ticker.querySelector('.ticker-track').style.animationPlayState='paused';};
 });

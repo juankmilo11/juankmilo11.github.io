@@ -17,10 +17,11 @@
     let gl, program, texture, buffer, uniforms, clock, started = false, elapsed = 0, ready = false, samples = [];
     let width = 1, height = 1, imageAspect = 1, time = 0, lastX = .5, lastY = .5;
     const pointer = {x:.5,y:.5,vx:0,vy:0,down:0,pressure:0,clickX:.5,clickY:.5,ripple:20};
-    function stopGL() {
+    function stopGL(release=false) {
       surface.hidden = true;
       if (gl) { gl.deleteTexture(texture); gl.deleteBuffer(buffer); gl.deleteProgram(program); }
-      gl = null;
+      const context=gl;gl = null;
+      if(release)context?.getExtension('WEBGL_lose_context')?.loseContext();
     }
     function initGL() {
       if (gl || M.reduced.matches || signal.aborted) return;
@@ -147,7 +148,7 @@
     },{passive:true,signal});
     for(const name of ['pointerup','pointercancel','pointerleave'])hero.addEventListener(name,()=>{pointer.down=0;},{passive:true,signal});
     surface.addEventListener('webglcontextlost',event=>{event.preventDefault();stopGL();},{signal});
-    image.addEventListener('load',upload,{signal});image.addEventListener('error',()=>M.reportAsset(image.src),{signal});
+    image.addEventListener('load',upload,{signal});
     M.reduced.addEventListener('change',()=>{if(!M.reduced.matches)initGL();clock.request();},{signal});
     simple.addEventListener('change',()=>{sampleTitle();},{signal});
     document.addEventListener('paca:language',()=>{sampleTitle();},{signal});
@@ -155,6 +156,6 @@
     const resizeObserver=new ResizeObserver(resize);resizeObserver.observe(hero);resizeObserver.observe(title);
     document.fonts.ready.then(()=>{if(!signal.aborted)sampleTitle();});
     initGL();resize();
-    return ()=>{stopGL();resizeObserver.disconnect();theme.disconnect();live.style.clipPath='';title.classList.remove('is-stippling');glyphs.remove();surface.remove();live.replaceWith(...live.childNodes);};
+    return ()=>{stopGL(true);resizeObserver.disconnect();theme.disconnect();live.style.clipPath='';title.classList.remove('is-stippling');glyphs.remove();surface.remove();live.replaceWith(...live.childNodes);};
   });
 })();
