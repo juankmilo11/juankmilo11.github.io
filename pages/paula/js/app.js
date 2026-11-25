@@ -62,7 +62,7 @@
     const cards = visible.slice(offset).map((entry,relativeIndex) => {
       const index = offset + relativeIndex;
       const article = document.createElement('article'); article.className='work-card';article.style.setProperty('--reveal-order',index%3);
-      const button = document.createElement('button'); button.type='button';button.className='work-open';button.setAttribute('aria-label',t('view',{title:entry.title,category:labels[entry.category]}));
+      const button = document.createElement('button'); button.type='button';button.className='work-open';button.dataset.workId=entry.id;button.setAttribute('aria-label',t('gallerySelect',{title:entry.title}));button.setAttribute('aria-pressed','false');
       const frame=document.createElement('div');frame.className='work-image';
       const img=document.createElement('img');img.src=entry.src;img.alt=entry.alt;img.width=entry.width;img.height=entry.height;img.loading='lazy';img.decoding='async';
       frame.append(img);
@@ -72,7 +72,10 @@
       const copy=document.createElement('div'),title=document.createElement('h3'),tag=document.createElement('p');title.textContent=entry.title;tag.textContent=labels[entry.category];copy.append(title,tag);
       const estimate=document.createElement('p');estimate.className='service-estimate';estimate.dataset.serviceEstimate=entry.category==='makeup'?'beauty':entry.category;copy.append(estimate);
       const arrow=document.createElement('span');arrow.className='work-arrow';arrow.append(icons.create('arrow-up-right'));arrow.setAttribute('aria-hidden','true');meta.append(copy,arrow);
-      button.append(frame,meta);article.append(button);button.addEventListener('click',()=>openWork(index,button));return article;
+      button.append(frame,meta);article.append(button);button.addEventListener('click',()=>{
+        grid.querySelectorAll('.work-open').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
+        document.dispatchEvent(new CustomEvent('paca:catalog-select',{detail:{id:entry.id}}));
+      });return article;
     });
     if (append) grid.append(...cards);
     else grid.replaceChildren(...cards);
@@ -81,6 +84,7 @@
     $('#catalog-status').textContent = filtered.length ? t('workCount',{visible:visible.length,total:filtered.length})+(category!=='all'?' · '+t(category):'') : t('noResults');
     $('#catalog-empty').hidden = filtered.length !== 0;
     more.hidden = filtered.length <= limit;
+    document.dispatchEvent(new CustomEvent('paca:catalog-render',{detail:{entries:filtered}}));
   }
   document.querySelectorAll('[data-filter]').forEach(button => button.addEventListener('click',()=>{
     category=button.dataset.filter;limit=9;
@@ -148,5 +152,6 @@
     if(entries.length&&!loadFailed)render();
     if(activeId){activeIndex=Math.max(0,filtered.findIndex(item=>item.id===activeId));displayWork();}
   });
+  window.PacaCatalog={get entries(){return filtered;}};
   loadCatalog();
 })();

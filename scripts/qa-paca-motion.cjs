@@ -26,6 +26,22 @@ fs.mkdirSync(output,{recursive:true});
    assert.ok(await page.locator('.hero-liquid').isHidden());
    assert.equal(await page.locator('.hero-title-live').evaluate(el=>getComputedStyle(el).opacity),'1');
    await page.emulateMedia({reducedMotion:'no-preference'});
+   await page.locator('.masthead nav a[href="#catalogo"]').click();
+   await page.waitForFunction(()=>document.querySelector('#catalogo').dataset.galleryState==='ready');
+   const stream=page.locator('.catalog-stream');await stream.focus();
+   await stream.press('ArrowDown');await page.waitForFunction(()=>document.querySelector('.catalog-stream').dataset.index==='1');
+   await stream.press('Enter');await stream.click();assert.equal(await page.locator('#work-dialog').isVisible(),false);
+   await page.waitForFunction(()=>document.querySelector('#catalogo').dataset.motionRunning==='false');
+   await page.screenshot({path:path.join(output,`catalog-${width}.png`)});
+   for(const category of ['nails','tattoo','pmu','beauty','all']){
+    await page.locator(`[data-filter="${category}"]`).click();
+    assert.match(await page.locator('.stream-controls span').innerText(),/\/ [1-9]/);
+   }
+   await page.emulateMedia({reducedMotion:'reduce'});
+   await page.waitForFunction(()=>document.querySelector('#catalogo').dataset.galleryState==='static');
+   assert.ok(await page.locator('#catalog-grid').isVisible());
+   await page.locator('.work-open').first().click();assert.equal(await page.locator('#work-dialog').isVisible(),false);
+   await page.emulateMedia({reducedMotion:'no-preference'});
    await page.locator('.masthead nav a[href="#servicios"]').click();
    await page.waitForFunction(()=>document.querySelector('.masthead nav a[href="#servicios"]').getAttribute('aria-current')==='location');
    await page.locator('.nav-book').click();assert.ok(await page.locator('#booking-dialog').isVisible());

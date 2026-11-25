@@ -2,6 +2,7 @@
 (function(root){
   const locales={
   "staticText": {
+    "Scroll, drag or use the arrow keys to explore the collection.": "Desplázate, arrastra o usa las flechas para explorar la colección.",
     "Paula Daniela’s creative universe. Explore real nail art, tattoos and permanent makeup in New Jersey, and prepare your appointment request.": "El universo creativo de Paula Daniela. Explora trabajos reales de uñas, tatuajes y maquillaje permanente en New Jersey y prepara tu solicitud de cita.",
     "Skip to the catalog": "Ir al catálogo",
     "Paula Daniela, home": "Paula Daniela, inicio",
@@ -259,6 +260,12 @@
     "Yes! Upload an inspiration design photo with every request, even if you selected a catalog reference. Tell Paula what you love and what you would change.": "¡Sí! Adjunta una foto del diseño de inspiración en cada solicitud, incluso si seleccionaste una referencia del catálogo. Cuéntale a Paula qué te gusta y qué cambiarías."
   },
   "en": {
+    "gallerySelect": "Select {title}",
+    "galleryLabel": "PACA collection, visual navigation",
+    "galleryHelp": "Scroll, drag or use arrow keys. Home and End jump to the first and last work. Click and Enter do not open anything.",
+    "galleryPrevious": "Previous work",
+    "galleryNext": "Next work",
+    "galleryCurrent": "Work {index} of {total}: {title}",
     "nails": "Nails & nail art",
     "tattoo": "Tattoos",
     "pmu": "Permanent makeup",
@@ -342,6 +349,12 @@
     "slotConflict": "That time is no longer available. Edit your details and choose another date and time."
   },
   "es": {
+    "gallerySelect": "Seleccionar {title}",
+    "galleryLabel": "Colección PACA, navegación visual",
+    "galleryHelp": "Desplázate, arrastra o usa las flechas. Inicio y Fin llevan a la primera y última obra. Clic y Enter no abren nada.",
+    "galleryPrevious": "Trabajo anterior",
+    "galleryNext": "Trabajo siguiente",
+    "galleryCurrent": "Trabajo {index} de {total}: {title}",
     "nails": "Uñas y nail art",
     "tattoo": "Tatuajes",
     "pmu": "Maquillaje permanente",
